@@ -6,6 +6,7 @@ export type Character = {
   name: string;
   tier: 'core' | 'meta' | 'stationed';
   color: string;
+  domain?: string;
   defaultModel?: string;
   systemPrompt?: string;
   skills?: string[];

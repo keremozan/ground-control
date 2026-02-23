@@ -1,6 +1,7 @@
 "use client";
+import { useState } from "react";
 import { mockInbox } from "@/lib/mock-data";
-import { Reply, ClipboardList, Calendar, Archive, Trash2, CornerUpRight, User, GraduationCap, RefreshCw } from "lucide-react";
+import { Reply, ClipboardList, Calendar, Archive, Trash2, CornerUpRight, User, GraduationCap, RefreshCw, X } from "lucide-react";
 
 const accountStyle: Record<string, { color: string; bg: string; icon: React.ElementType }> = {
   personal: { color: "var(--blue)",  bg: "var(--blue-bg)",  icon: User           },
@@ -27,6 +28,47 @@ const itemActions = [
 ];
 
 export default function InboxWidget() {
+  const [actionOutput, setActionOutput] = useState<string>("");
+  const [isRunning, setIsRunning] = useState(false);
+
+  const runAction = async (action: string, email: { from: string; subject: string; account: string }) => {
+    if (isRunning) return;
+    setIsRunning(true);
+    setActionOutput("");
+
+    try {
+      const res = await fetch("/api/action", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: action.toLowerCase(), email }),
+      });
+      if (!res.body) throw new Error("no body");
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split("\n\n");
+        buffer = parts.pop() || "";
+        for (const part of parts) {
+          const eventMatch = part.match(/^event: (\w+)/m);
+          const dataMatch = part.match(/^data: (.+)/m);
+          if (!eventMatch || !dataMatch) continue;
+          try {
+            const parsed = JSON.parse(dataMatch[1]);
+            if (eventMatch[1] === "text") setActionOutput(prev => prev + parsed.text);
+            if (eventMatch[1] === "done") setIsRunning(false);
+          } catch {}
+        }
+      }
+    } catch {
+      setIsRunning(false);
+    }
+  };
+
   return (
     <div className="widget">
       <div className="widget-header">
@@ -58,7 +100,6 @@ export default function InboxWidget() {
               style={{ borderBottom: i < mockInbox.recent.length - 1 ? "1px solid var(--border)" : "none" }}
             >
               <div style={{ padding: "9px 16px 6px", cursor: "pointer" }}>
-                {/* Row 1: sender + account icon + time */}
                 <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
                   <span style={{
                     fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 500,
@@ -73,7 +114,6 @@ export default function InboxWidget() {
                   </span>
                 </div>
 
-                {/* Row 2: subject */}
                 <div style={{
                   fontFamily: "var(--font-body)", fontSize: 11, color: "var(--text-2)",
                   overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
@@ -82,7 +122,6 @@ export default function InboxWidget() {
                   {email.subject}
                 </div>
 
-                {/* Row 3: labels */}
                 {email.labels?.length > 0 && (
                   <div style={{ display: "flex", gap: 4 }}>
                     {email.labels.map((lbl) => {
@@ -102,10 +141,14 @@ export default function InboxWidget() {
                 )}
               </div>
 
-              {/* Hover actions */}
               <div className="item-actions" style={{ padding: "0 16px 6px" }}>
                 {itemActions.map(({ icon: ActionIcon, label, colorClass }) => (
-                  <button key={label} className={`item-action-btn ${colorClass}`} title={label}>
+                  <button
+                    key={label}
+                    className={`item-action-btn ${colorClass}`}
+                    title={label}
+                    onClick={() => runAction(label, { from: email.from, subject: email.subject, account: email.account })}
+                  >
                     <ActionIcon size={12} strokeWidth={1.5} />
                   </button>
                 ))}
@@ -123,6 +166,33 @@ export default function InboxWidget() {
           );
         })}
       </div>
+
+      {/* Action output panel */}
+      {(isRunning || actionOutput) && (
+        <div style={{
+          borderTop: "1px solid var(--border)",
+          background: "var(--cmd-bg)", color: "var(--cmd-text)",
+          fontFamily: "var(--font-mono)", fontSize: 10,
+          padding: "8px 12px", maxHeight: 120, overflowY: "auto",
+          whiteSpace: "pre-wrap", lineHeight: 1.5,
+          position: "relative",
+        }}>
+          {!isRunning && (
+            <button
+              onClick={() => setActionOutput("")}
+              style={{
+                position: "absolute", top: 4, right: 4,
+                background: "transparent", border: "none", color: "#666",
+                cursor: "pointer", padding: 2,
+              }}
+            >
+              <X size={12} strokeWidth={1.5} />
+            </button>
+          )}
+          {isRunning && <span className="led led-on led-pulse" style={{ marginRight: 6 }} />}
+          {actionOutput || "Running..."}
+        </div>
+      )}
     </div>
   );
 }

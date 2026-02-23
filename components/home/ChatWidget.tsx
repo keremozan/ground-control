@@ -1,6 +1,5 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
-import { characters } from "@/lib/mock-data";
 import { charIcon } from "@/lib/char-icons";
 import { useChatTrigger } from "@/lib/chat-store";
 import {
@@ -8,31 +7,30 @@ import {
   Send, Trash2, ChevronDown,
 } from "lucide-react";
 
+type CharacterInfo = {
+  id: string;
+  name: string;
+  color: string;
+  defaultModel?: string;
+};
+
 type Message = {
   role: "user" | "assistant";
   content: string;
   charName?: string;
 };
 
-const demoMessages: Message[] = [
-  { role: "user", content: "Can you help me outline the introduction for the plant sensing paper?" },
-  { role: "assistant", charName: "Scholar", content: "Happy to. Open with a framing question about the boundary between sensing and cognition in living systems — positions the work at the HCI/biology intersection without front-loading theory. Then 2–3 sentences of empirical context, then the research questions." },
-  { role: "user", content: "Should I mention the Cambridge collaboration in the intro?" },
-  { role: "assistant", charName: "Scholar", content: "Yes, briefly. Situate it as empirical context, not the main argument. One sentence anchors the methodology. Don't let it read like a CV item." },
-];
-
-function ThinkingBubble({ charName }: { charName: string }) {
-  const char = characters.find(c => c.name === charName) || characters[1];
-  const TIcon = charIcon[char.name] || BookOpen;
+function ThinkingBubble({ charName, color }: { charName: string; color: string }) {
+  const TIcon = charIcon[charName] || BookOpen;
   return (
     <div className="chat-msg-row chat-msg-assistant">
       <div style={{ display: "flex", gap: 7, alignItems: "flex-start" }}>
         <div style={{
           width: 22, height: 22, borderRadius: 5, flexShrink: 0,
-          background: char.color + "16", border: `1px solid ${char.color}28`,
+          background: color + "16", border: `1px solid ${color}28`,
           display: "flex", alignItems: "center", justifyContent: "center", marginTop: 1,
         }}>
-          <TIcon size={10} strokeWidth={1.5} style={{ color: char.color }} />
+          <TIcon size={10} strokeWidth={1.5} style={{ color }} />
         </div>
         <div className="thinking-dots">
           <span className="thinking-dot" />
@@ -45,23 +43,37 @@ function ThinkingBubble({ charName }: { charName: string }) {
 }
 
 export default function ChatWidget() {
-  const [activeCharName, setActiveCharName] = useState("Scholar");
+  const [characters, setCharacters] = useState<CharacterInfo[]>([]);
+  const [activeCharId, setActiveCharId] = useState<string>("");
   const [showPicker, setShowPicker] = useState(false);
-  const [messages, setMessages] = useState<Message[]>(demoMessages);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const bodyRef = useRef<HTMLDivElement>(null);
   const pickerRef = useRef<HTMLDivElement>(null);
   const { trigger, setTrigger } = useChatTrigger();
 
-  const activeChar = characters.find(c => c.name === activeCharName) || characters[1];
-  const ActiveIcon = charIcon[activeChar.name] || BookOpen;
+  // Load characters
+  useEffect(() => {
+    fetch("/api/characters")
+      .then(r => r.json())
+      .then(d => {
+        const chars = d.characters as CharacterInfo[];
+        setCharacters(chars);
+        const scholar = chars.find(c => c.name === "Scholar");
+        if (scholar) setActiveCharId(scholar.id);
+        else if (chars.length > 0) setActiveCharId(chars[0].id);
+      })
+      .catch(() => {});
+  }, []);
+
+  const activeChar = characters.find(c => c.id === activeCharId) || characters[0];
+  const ActiveIcon = activeChar ? (charIcon[activeChar.name] || BookOpen) : BookOpen;
 
   useEffect(() => {
     if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
   }, [messages, isLoading]);
 
-  // Close picker on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
@@ -74,35 +86,83 @@ export default function ChatWidget() {
 
   // Handle Crew trigger
   useEffect(() => {
-    if (!trigger) return;
-    const { charName, seedPrompt, action } = trigger;
-    setActiveCharName(charName);
+    if (!trigger || characters.length === 0) return;
+    const { charName, seedPrompt } = trigger;
+    const char = characters.find(c => c.name === charName);
+    if (char) setActiveCharId(char.id);
     setMessages(prev => [...prev, { role: "user", content: seedPrompt }]);
     setTrigger(null);
+    if (char) sendMessage(seedPrompt, char.id);
+  }, [trigger, characters]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const sendMessage = async (msg: string, charId?: string) => {
     setIsLoading(true);
-    setTimeout(() => {
-      setMessages(prev => [...prev, {
-        role: "assistant",
-        charName,
-        content: `On it. Starting: ${action}.`,
-      }]);
+    let fullText = '';
+    const targetCharId = charId || activeCharId;
+    const targetChar = characters.find(c => c.id === targetCharId);
+
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ characterId: targetCharId, message: msg }),
+      });
+      if (!res.body) throw new Error('no body');
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split('\n\n');
+        buffer = parts.pop() || '';
+        for (const part of parts) {
+          const eventMatch = part.match(/^event: (\w+)/m);
+          const dataMatch = part.match(/^data: (.+)/m);
+          if (!eventMatch || !dataMatch) continue;
+          try {
+            const parsed = JSON.parse(dataMatch[1]);
+            if (eventMatch[1] === 'text') fullText += parsed.text;
+            if (eventMatch[1] === 'done') {
+              setMessages(prev => [...prev, {
+                role: 'assistant',
+                charName: targetChar?.name,
+                content: fullText || '(no response)',
+              }]);
+              setIsLoading(false);
+            }
+          } catch {}
+        }
+      }
+    } catch {
+      if (fullText) {
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          charName: targetChar?.name,
+          content: fullText,
+        }]);
+      }
       setIsLoading(false);
-    }, 1600);
-  }, [trigger]); // eslint-disable-line react-hooks/exhaustive-deps
+    }
+  };
 
   const handleSend = () => {
-    if (!input.trim() || isLoading) return;
-    setMessages(prev => [...prev, { role: "user", content: input.trim() }]);
+    if (!input.trim() || isLoading || !activeChar) return;
+    const msg = input.trim();
+    setMessages(prev => [...prev, { role: "user", content: msg }]);
     setInput("");
+    sendMessage(msg);
   };
+
+  if (!activeChar) return <div className="widget" style={{ height: "100%" }} />;
 
   return (
     <div className="widget" style={{ position: "relative", height: "100%" }}>
-      {/* Header */}
       <div className="widget-header">
         <span className="widget-header-label">Chat</span>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }} ref={pickerRef}>
-          {/* Character selector */}
           <button
             onClick={() => setShowPicker(v => !v)}
             style={{
@@ -125,12 +185,10 @@ export default function ChatWidget() {
             <ChevronDown size={9} strokeWidth={2} style={{ color: activeChar.color }} />
           </button>
 
-          {/* Clear */}
           <button className="widget-toolbar-btn" title="Clear chat" onClick={() => setMessages([])}>
             <Trash2 size={12} strokeWidth={1.5} />
           </button>
 
-          {/* Dropdown picker */}
           {showPicker && (
             <div style={{
               position: "absolute", top: 42, right: 12, zIndex: 100,
@@ -140,11 +198,11 @@ export default function ChatWidget() {
             }}>
               {characters.map(c => {
                 const CIcon = charIcon[c.name] || BookOpen;
-                const isActive = c.name === activeCharName;
+                const isActive = c.id === activeCharId;
                 return (
                   <button
-                    key={c.name}
-                    onClick={() => { setActiveCharName(c.name); setShowPicker(false); }}
+                    key={c.id}
+                    onClick={() => { setActiveCharId(c.id); setShowPicker(false); }}
                     style={{
                       display: "flex", alignItems: "center", gap: 8, width: "100%",
                       padding: "6px 12px", border: "none", cursor: "pointer", textAlign: "left",
@@ -172,7 +230,6 @@ export default function ChatWidget() {
         </div>
       </div>
 
-      {/* Messages */}
       <div ref={bodyRef} className="widget-body" style={{ padding: "14px" }}>
         {messages.length === 0 && !isLoading && (
           <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
@@ -221,10 +278,9 @@ export default function ChatWidget() {
             </div>
           );
         })}
-        {isLoading && <ThinkingBubble charName={activeCharName} />}
+        {isLoading && <ThinkingBubble charName={activeChar.name} color={activeChar.color} />}
       </div>
 
-      {/* Input */}
       <div className="widget-footer" style={{ padding: "10px 12px", gap: 8, alignItems: "flex-end" }}>
         <textarea
           className="chat-input"
@@ -233,7 +289,7 @@ export default function ChatWidget() {
           onKeyDown={e => {
             if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
           }}
-          placeholder={isLoading ? `${activeCharName} is thinking...` : `Ask ${activeChar.name}...`}
+          placeholder={isLoading ? `${activeChar.name} is thinking...` : `Ask ${activeChar.name}...`}
           rows={1}
           disabled={isLoading}
         />

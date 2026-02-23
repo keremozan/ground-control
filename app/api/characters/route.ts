@@ -7,6 +7,7 @@ export function GET() {
     name: c.name,
     tier: c.tier,
     color: c.color,
+    domain: c.domain,
     defaultModel: c.defaultModel,
   }));
   return Response.json({ characters });
