@@ -37,7 +37,7 @@ export default function StatusBar({ activePage = "home" }: { activePage?: "home"
         color: "var(--text)", letterSpacing: "0.01em", marginRight: 16,
         whiteSpace: "nowrap", flexShrink: 0,
       }}>
-        POCKET CALC
+        GROUND CONTROL
       </span>
 
       {/* Nav links */}
