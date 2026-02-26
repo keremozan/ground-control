@@ -115,99 +115,88 @@ export default function CharacterNode({ data }: NodeProps) {
     <div
       className="nowheel nodrag nopan"
       style={{
-        display: "flex", flexDirection: "column", gap: 8,
-        padding: "12px 16px", borderRadius: 6,
+        display: "flex", flexDirection: "column", gap: 6,
+        padding: "10px 12px", borderRadius: 6,
         background: d.color + (expanded ? "0c" : "06"),
         border: `1px solid ${d.color}${expanded ? "30" : "15"}`,
         transition: "all 0.15s",
-        width: 620,
+        width: 280,
       }}
     >
       <Handle type="target" position={Position.Top} style={{ opacity: 0, width: 6, height: 6 }} />
 
-      {/* ── Top row: header ── */}
+      {/* ── Header ── */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <Icon size={12} strokeWidth={1.5} style={{ color: d.color }} />
-          <span style={mono(T.section, d.color, 700)}>{d.name}</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 5, overflow: "hidden" }}>
+          <Icon size={11} strokeWidth={1.5} style={{ color: d.color, flexShrink: 0 }} />
+          <span style={mono(T.body, d.color, 700)}>{d.name}</span>
           <span style={{
-            ...mono(T.small, "var(--text-3)"),
-            padding: "1px 5px", borderRadius: 3,
+            ...mono(8, "var(--text-3)"),
+            padding: "0 4px", borderRadius: 3,
             background: "var(--surface)", border: "1px solid var(--border)",
           }}>{d.model}</span>
-          <span style={mono(T.small, "var(--text-3)")}>{d.domain}</span>
+          <span style={mono(8, "var(--text-3)")}>{d.domain}</span>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
           {saving && <Loader2 size={8} strokeWidth={1.5} style={{ color: "var(--text-3)", animation: "spin 1s linear infinite" }} />}
           <button
             onClick={() => setExpanded(prev => !prev)}
             title={`${d.name} options`}
             style={{
               display: "flex", alignItems: "center", justifyContent: "center",
-              width: 20, height: 20, borderRadius: 4,
+              width: 18, height: 18, borderRadius: 3,
               background: expanded ? d.color + "18" : "transparent",
               border: `1px solid ${expanded ? d.color + "30" : "transparent"}`,
               cursor: "pointer", color: expanded ? d.color : "var(--text-3)",
               transition: "all 0.15s",
             }}
           >
-            <Settings size={11} strokeWidth={1.5} />
+            <Settings size={10} strokeWidth={1.5} />
           </button>
         </div>
       </div>
 
-      {/* ── Main row: schedules (left) | crew shortcuts (right) ── */}
-      <div style={{ display: "flex", gap: 16 }}>
-
-        {/* Left: schedules */}
-        <div style={{ minWidth: 140, flexShrink: 0 }}>
-          <span style={{ ...sectionLabel, display: "block", marginBottom: 5 }}>Schedules</span>
-          {d.schedules.length > 0 ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-              {d.schedules.map((s, i) => (
-                <div key={`${s.displayName}-${i}`} style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                  <Clock size={8} strokeWidth={1.5} style={{ color: "var(--text-3)", flexShrink: 0 }} />
-                  <span style={mono(T.small, d.color, 500)}>{s.displayName}</span>
-                  <span style={mono(8, "var(--text-3)")}>{s.cron}</span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <span style={mono(T.small, "var(--text-3)")}>No schedules</span>
-          )}
+      {/* ── Schedules ── */}
+      {d.schedules.length > 0 && (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
+          {d.schedules.map((s, i) => (
+            <span key={`${s.displayName}-${i}`} style={{
+              ...mono(8, "var(--text-3)"),
+              display: "inline-flex", alignItems: "center", gap: 3,
+              padding: "1px 5px", borderRadius: 3,
+              background: "var(--surface)", border: "1px solid var(--border)",
+            }}>
+              <Clock size={7} strokeWidth={1.5} style={{ color: d.color, flexShrink: 0 }} />
+              {s.displayName} {s.cron}
+            </span>
+          ))}
         </div>
+      )}
 
-        {/* Divider */}
-        <div style={{ width: 1, background: d.color + "15", flexShrink: 0 }} />
-
-        {/* Right: crew shortcuts (action buttons) */}
-        <div style={{ flex: 1 }}>
-          <span style={{ ...sectionLabel, display: "block", marginBottom: 5 }}>Crew Shortcuts</span>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-            {d.actions.map(a => {
-              const AIcon = a.icon;
-              return (
-                <div key={a.label} style={{
-                  display: "inline-flex", alignItems: "center", gap: 3,
-                  padding: "3px 8px 3px 5px", borderRadius: 3,
-                  background: d.color + "0a", border: `1px solid ${d.color}18`,
-                }} title={a.description}>
-                  <AIcon size={9} strokeWidth={1.5} style={{ color: d.color }} />
-                  <span style={mono(T.small, d.color, 500)}>{a.label}</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+      {/* ── Crew shortcuts ── */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
+        {d.actions.map(a => {
+          const AIcon = a.icon;
+          return (
+            <span key={a.label} style={{
+              display: "inline-flex", alignItems: "center", gap: 2,
+              padding: "2px 6px 2px 4px", borderRadius: 3,
+              background: d.color + "0a", border: `1px solid ${d.color}18`,
+            }} title={a.description}>
+              <AIcon size={8} strokeWidth={1.5} style={{ color: d.color }} />
+              <span style={mono(8, d.color, 500)}>{a.label}</span>
+            </span>
+          );
+        })}
       </div>
 
-      {/* Outputs line */}
+      {/* ── Outputs ── */}
       <div style={{
-        display: "flex", alignItems: "center", gap: 4,
-        paddingTop: 5, borderTop: `1px solid ${d.color}10`,
+        display: "flex", alignItems: "center", gap: 3,
+        paddingTop: 4, borderTop: `1px solid ${d.color}10`,
       }}>
-        <ArrowRight size={9} strokeWidth={1.5} style={{ color: "var(--text-3)", flexShrink: 0 }} />
-        <span style={mono(T.small, "var(--text-3)")}>{d.outputs.join(" · ")}</span>
+        <ArrowRight size={8} strokeWidth={1.5} style={{ color: "var(--text-3)", flexShrink: 0 }} />
+        <span style={mono(8, "var(--text-3)")}>{d.outputs.join(" · ")}</span>
       </div>
 
       {/* ── Expanded: editable options ── */}

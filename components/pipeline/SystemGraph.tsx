@@ -21,11 +21,9 @@ import SystemConfigDrawer from "./SystemConfigDrawer";
 // Node components
 import SourceNode from "./nodes/SourceNode";
 import PostmanNode from "./nodes/PostmanNode";
-import ScheduleNode from "./nodes/ScheduleNode";
 import TanaTagNode from "./nodes/TanaTagNode";
 import CharacterNode from "./nodes/CharacterNode";
 import OutputNode from "./nodes/OutputNode";
-import GroupNode from "./nodes/GroupNode";
 
 // Edge components
 import FlowEdge from "./edges/FlowEdge";
@@ -33,8 +31,8 @@ import FlowEdge from "./edges/FlowEdge";
 // Types
 import type {
   ApiCharacter, ApiConfig,
-  SourceNodeData, PostmanNodeData, ScheduleNodeData,
-  TanaTagNodeData, CharacterNodeData, OutputNodeData, GroupNodeData,
+  SourceNodeData, PostmanNodeData,
+  TanaTagNodeData, CharacterNodeData, OutputNodeData,
 } from "./SystemGraph.types";
 import { tagInfo as TAG_INFO } from "./SystemGraph.types";
 
@@ -43,11 +41,9 @@ const F = "var(--font-mono)";
 const nodeTypes = {
   source: SourceNode,
   postman: PostmanNode,
-  schedule: ScheduleNode,
   tanaTag: TanaTagNode,
   character: CharacterNode,
   output: OutputNode,
-  group: GroupNode,
 };
 
 const edgeTypes = {
@@ -128,14 +124,7 @@ export default function SystemGraph() {
     const newNodes: Node[] = [];
     const newEdges: Edge[] = [];
 
-    // ── Row 0: CAPTURES ──
-    newNodes.push({
-      id: "group-captures",
-      type: "group",
-      position: { x: 0, y: 0 },
-      data: { label: "CAPTURES", note: "Sources scanned by Postman" } satisfies GroupNodeData,
-    });
-
+    // ── Row 0: SOURCES ──
     sources.forEach((s) => {
       const nodeId = `source-${s.label}`;
       newNodes.push({
@@ -162,37 +151,6 @@ export default function SystemGraph() {
     });
 
     // ── Row 1: PROCESSING ──
-
-    // Schedule nodes (global/system-level jobs)
-    enabledJobs.forEach(job => {
-      const nodeId = `schedule-${job.id}`;
-      const charColor = charColorMap[job.charName] || "var(--text-2)";
-      newNodes.push({
-        id: nodeId,
-        type: "schedule",
-        position: { x: 0, y: 0 },
-        data: {
-          jobId: job.id,
-          displayName: job.displayName,
-          charName: job.charName,
-          charColor,
-          cron: job.cron,
-          description: job.description,
-          enabled: job.enabled,
-        } satisfies ScheduleNodeData,
-      });
-      // Edge: schedule → character (schedule type)
-      const targetChar = characters.find(c => c.id === job.charName);
-      if (targetChar) {
-        newEdges.push({
-          id: `e-${nodeId}-${job.charName}`,
-          source: nodeId,
-          target: `char-${job.charName}`,
-          type: "flow",
-          data: { color: charColor, edgeType: "schedule" },
-        });
-      }
-    });
 
     // Postman node
     if (postman) {
