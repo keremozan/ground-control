@@ -1,18 +1,6 @@
-import dagre from "@dagrejs/dagre";
 import type { Node, Edge } from "@xyflow/react";
 
 const STORAGE_KEY = "gc-graph-positions";
-
-/** Node dimensions by type — dagre needs these to route edges around nodes */
-const NODE_SIZES: Record<string, { width: number; height: number }> = {
-  source:    { width: 120, height: 40 },
-  postman:   { width: 200, height: 120 },
-  schedule:  { width: 160, height: 60 },
-  tanaTag:   { width: 140, height: 50 },
-  character: { width: 280, height: 140 },
-  output:    { width: 120, height: 40 },
-  group:     { width: 100, height: 30 },
-};
 
 /** Load saved positions from localStorage */
 function loadPositions(): Record<string, { x: number; y: number }> {
@@ -35,38 +23,118 @@ export function savePositions(nodes: Node[]) {
   } catch {}
 }
 
-/** Run dagre layout, return nodes with positions. Saved positions override dagre. */
-export function buildLayout(nodes: Node[], edges: Edge[]): Node[] {
+/**
+ * Structured grid layout matching the system architecture sketch:
+ *
+ *  ┌─────────────── CAPTURES ─────────────────┐
+ *  │  [Source] [Source] [Source] [Source]       │
+ *  └──────────────────────────────────────────-┘
+ *  ┌─ PROCESSING ──────────────────┐ ┌ OUTPUTS ┐
+ *  │ Schedules │ Postman │ #post   │ │ [out]   │
+ *  │           │         │ #task   │ │ [out]   │
+ *  └───────────────────────────────┘ │ [#log]  │
+ *  ┌─ CHARACTERS ──────────────────┐ │ [out]   │
+ *  │ [Character Row]               │ │         │
+ *  │ [Character Row]               │ │         │
+ *  │ ...                           │ └─────────┘
+ *  └───────────────────────────────┘
+ */
+export function buildLayout(nodes: Node[]): Node[] {
   const saved = loadPositions();
 
-  const g = new dagre.graphlib.Graph();
-  g.setDefaultEdgeLabel(() => ({}));
-  g.setGraph({ rankdir: "TB", ranksep: 80, nodesep: 40, marginx: 40, marginy: 40 });
-
-  for (const node of nodes) {
-    const size = NODE_SIZES[node.type || "source"] || NODE_SIZES.source;
-    g.setNode(node.id, { width: size.width, height: size.height });
+  // Classify nodes by type
+  const byType: Record<string, Node[]> = {};
+  for (const n of nodes) {
+    const t = n.type || "unknown";
+    (byType[t] ||= []).push(n);
   }
 
-  for (const edge of edges) {
-    g.setEdge(edge.source, edge.target);
+  const sources = byType["source"] || [];
+  const postman = byType["postman"] || [];
+  const schedules = byType["schedule"] || [];
+  const tags = byType["tanaTag"] || [];
+  const characters = byType["character"] || [];
+  const outputs = byType["output"] || [];
+  const groups = byType["group"] || [];
+
+  // Layout constants
+  const MAIN_W = 700;       // main content width
+  const OUT_X = MAIN_W + 60; // outputs column x
+  const GAP = 14;
+
+  let y = 0;
+
+  // ── Row 0: CAPTURES label ──
+  const capturesLabel = groups.find(g => (g.data as { label: string }).label === "CAPTURES");
+  if (capturesLabel) capturesLabel.position = { x: MAIN_W / 2 - 40, y };
+  y += 30;
+
+  // Sources: spread horizontally
+  const srcW = 120;
+  const srcTotal = sources.length * srcW + (sources.length - 1) * GAP;
+  const srcStart = (MAIN_W - srcTotal) / 2;
+  sources.forEach((n, i) => {
+    n.position = { x: srcStart + i * (srcW + GAP), y };
+  });
+  y += 60;
+
+  // ── Row 1: PROCESSING ──
+  const procY = y;
+
+  // Schedules (left column)
+  const schedX = 0;
+  schedules.forEach((n, i) => {
+    n.position = { x: schedX, y: procY + i * 70 };
+  });
+
+  // Postman (center)
+  postman.forEach(n => {
+    n.position = { x: 200, y: procY };
+  });
+
+  // Tana tags #post, #task (right of postman)
+  const tagPost = tags.find(t => (t.data as { tag: string }).tag === "#post");
+  const tagTask = tags.find(t => (t.data as { tag: string }).tag === "#task");
+  const tagLog = tags.find(t => (t.data as { tag: string }).tag === "#log");
+  if (tagPost) tagPost.position = { x: 480, y: procY };
+  if (tagTask) tagTask.position = { x: 480, y: procY + 70 };
+
+  const procHeight = Math.max(
+    schedules.length * 70,
+    140,
+    tagTask ? 140 : 70,
+  );
+  y = procY + procHeight + 40;
+
+  // ── Row 2: CHARACTERS ──
+  const charY = y;
+  const CHAR_ROW_H = 170;
+  characters.forEach((n, i) => {
+    n.position = { x: 0, y: charY + i * CHAR_ROW_H };
+  });
+  y = charY + characters.length * CHAR_ROW_H;
+
+  // ── Right column: OUTPUTS ──
+  const outY = procY;
+  outputs.forEach((n, i) => {
+    n.position = { x: OUT_X, y: outY + i * 50 };
+  });
+  // #log at bottom of outputs
+  if (tagLog) {
+    const logY = outY + outputs.length * 50;
+    tagLog.position = { x: OUT_X, y: logY };
   }
 
-  dagre.layout(g);
-
+  // Apply saved positions as overrides
+  const allNodes = [...sources, ...postman, ...schedules, ...tags, ...characters, ...outputs, ...groups];
   return nodes.map(node => {
-    // Use saved position if available, otherwise use dagre result
     if (saved[node.id]) {
       return { ...node, position: saved[node.id] };
     }
-    const pos = g.node(node.id);
-    const size = NODE_SIZES[node.type || "source"] || NODE_SIZES.source;
-    return {
-      ...node,
-      position: {
-        x: pos.x - size.width / 2,
-        y: pos.y - size.height / 2,
-      },
-    };
+    const found = allNodes.find(n => n.id === node.id);
+    if (found?.position) {
+      return { ...node, position: found.position };
+    }
+    return node;
   });
 }

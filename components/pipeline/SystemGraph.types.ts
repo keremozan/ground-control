@@ -81,6 +81,7 @@ export type CharacterNodeData = {
   gates?: string[];
   skills: string[];
   sharedKnowledge: string[];
+  schedules: { displayName: string; cron: string }[];
   onOpenEditor: (title: string, fetchUrl: string, saveUrl: string, lineLimit?: number) => void;
 };
 

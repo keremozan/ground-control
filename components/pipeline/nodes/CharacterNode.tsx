@@ -2,7 +2,8 @@
 import { useState, useEffect, useRef } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import {
-  Settings, Plus, X, Loader2, BookOpenCheck, Brain, AlertTriangle, ArrowRight,
+  Settings, Plus, X, Loader2, BookOpenCheck, Brain, AlertTriangle,
+  ArrowRight, Clock,
   type LucideIcon,
 } from "lucide-react";
 import type { CharacterNodeData } from "../SystemGraph.types";
@@ -98,13 +99,11 @@ export default function CharacterNode({ data }: NodeProps) {
 
   const skillFileExists = (name: string) => {
     if (!fileStatus) return true;
-    const match = fileStatus.skills.find(s => s.name === name);
-    return match ? match.exists : false;
+    return fileStatus.skills.find(s => s.name === name)?.exists ?? false;
   };
   const knowledgeFileExists = (name: string) => {
     if (!fileStatus) return true;
-    const match = fileStatus.knowledge.find(k => k.name === name);
-    return match ? match.exists : false;
+    return fileStatus.knowledge.find(k => k.name === name)?.exists ?? false;
   };
 
   const sectionLabel: React.CSSProperties = {
@@ -117,28 +116,29 @@ export default function CharacterNode({ data }: NodeProps) {
       className="nowheel nodrag nopan"
       style={{
         display: "flex", flexDirection: "column", gap: 8,
-        padding: "12px 14px", borderRadius: 6,
+        padding: "12px 16px", borderRadius: 6,
         background: d.color + (expanded ? "0c" : "06"),
         border: `1px solid ${d.color}${expanded ? "30" : "15"}`,
         transition: "all 0.15s",
-        minWidth: 240, maxWidth: 320,
+        width: 620,
       }}
     >
       <Handle type="target" position={Position.Top} style={{ opacity: 0, width: 6, height: 6 }} />
 
-      {/* Header */}
+      {/* ── Top row: header ── */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-          <Icon size={10} strokeWidth={1.5} style={{ color: d.color }} />
-          <span style={mono(T.section, d.color, 600)}>{d.name}</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <Icon size={12} strokeWidth={1.5} style={{ color: d.color }} />
+          <span style={mono(T.section, d.color, 700)}>{d.name}</span>
+          <span style={{
+            ...mono(T.small, "var(--text-3)"),
+            padding: "1px 5px", borderRadius: 3,
+            background: "var(--surface)", border: "1px solid var(--border)",
+          }}>{d.model}</span>
+          <span style={mono(T.small, "var(--text-3)")}>{d.domain}</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
           {saving && <Loader2 size={8} strokeWidth={1.5} style={{ color: "var(--text-3)", animation: "spin 1s linear infinite" }} />}
-          <span style={{
-            ...mono(T.small, "var(--text-3)"),
-            padding: "1px 4px", borderRadius: 3,
-            background: "var(--surface)", border: "1px solid var(--border)",
-          }}>{d.model}</span>
           <button
             onClick={() => setExpanded(prev => !prev)}
             title={`${d.name} options`}
@@ -156,28 +156,52 @@ export default function CharacterNode({ data }: NodeProps) {
         </div>
       </div>
 
-      {/* Actions */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-        {d.actions.map(a => {
-          const AIcon = a.icon;
-          return (
-            <div key={a.label} style={{ display: "flex", alignItems: "center", gap: 0 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 3, minWidth: 72, flexShrink: 0 }}>
-                <AIcon size={9} strokeWidth={1.5} style={{ color: d.color, flexShrink: 0 }} />
-                <span style={mono(T.body, d.color, 500)}>{a.label}</span>
-              </div>
-              <span style={{
-                ...mono(T.small, "var(--text-3)"),
-                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-              }}>
-                {a.description}
-              </span>
+      {/* ── Main row: schedules (left) | crew shortcuts (right) ── */}
+      <div style={{ display: "flex", gap: 16 }}>
+
+        {/* Left: schedules */}
+        <div style={{ minWidth: 140, flexShrink: 0 }}>
+          <span style={{ ...sectionLabel, display: "block", marginBottom: 5 }}>Schedules</span>
+          {d.schedules.length > 0 ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+              {d.schedules.map(s => (
+                <div key={s.displayName} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <Clock size={8} strokeWidth={1.5} style={{ color: "var(--text-3)", flexShrink: 0 }} />
+                  <span style={mono(T.small, d.color, 500)}>{s.displayName}</span>
+                  <span style={mono(8, "var(--text-3)")}>{s.cron}</span>
+                </div>
+              ))}
             </div>
-          );
-        })}
+          ) : (
+            <span style={mono(T.small, "var(--text-3)")}>No schedules</span>
+          )}
+        </div>
+
+        {/* Divider */}
+        <div style={{ width: 1, background: d.color + "15", flexShrink: 0 }} />
+
+        {/* Right: crew shortcuts (action buttons) */}
+        <div style={{ flex: 1 }}>
+          <span style={{ ...sectionLabel, display: "block", marginBottom: 5 }}>Crew Shortcuts</span>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+            {d.actions.map(a => {
+              const AIcon = a.icon;
+              return (
+                <div key={a.label} style={{
+                  display: "inline-flex", alignItems: "center", gap: 3,
+                  padding: "3px 8px 3px 5px", borderRadius: 3,
+                  background: d.color + "0a", border: `1px solid ${d.color}18`,
+                }} title={a.description}>
+                  <AIcon size={9} strokeWidth={1.5} style={{ color: d.color }} />
+                  <span style={mono(T.small, d.color, 500)}>{a.label}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
-      {/* Outputs */}
+      {/* Outputs line */}
       <div style={{
         display: "flex", alignItems: "center", gap: 4,
         paddingTop: 5, borderTop: `1px solid ${d.color}10`,
@@ -186,7 +210,7 @@ export default function CharacterNode({ data }: NodeProps) {
         <span style={mono(T.small, "var(--text-3)")}>{d.outputs.join(" · ")}</span>
       </div>
 
-      {/* Expanded: editable options */}
+      {/* ── Expanded: editable options ── */}
       {expanded && (
         <div style={{
           borderTop: `1px solid ${d.color}15`,
@@ -368,6 +392,7 @@ export default function CharacterNode({ data }: NodeProps) {
       )}
 
       <Handle type="source" position={Position.Bottom} style={{ opacity: 0, width: 6, height: 6 }} />
+      <Handle type="source" position={Position.Right} id="right" style={{ opacity: 0, width: 6, height: 6 }} />
     </div>
   );
 }

@@ -116,6 +116,15 @@ export default function SystemGraph() {
     const outputs = apiConfig.outputs || [];
     const enabledJobs = SCHEDULE_JOBS.filter(j => j.enabled);
 
+    // Build a map of charName → schedule jobs
+    const charSchedules: Record<string, { displayName: string; cron: string }[]> = {};
+    for (const job of enabledJobs) {
+      (charSchedules[job.charName] ||= []).push({
+        displayName: job.displayName,
+        cron: job.cron,
+      });
+    }
+
     const newNodes: Node[] = [];
     const newEdges: Edge[] = [];
 
@@ -124,7 +133,7 @@ export default function SystemGraph() {
       id: "group-captures",
       type: "group",
       position: { x: 0, y: 0 },
-      data: { label: "CAPTURES", note: "Postman scans sources, classifies input, routes by topic" } satisfies GroupNodeData,
+      data: { label: "CAPTURES", note: "Sources scanned by Postman" } satisfies GroupNodeData,
     });
 
     sources.forEach((s) => {
@@ -140,44 +149,21 @@ export default function SystemGraph() {
           description: s.description,
         } satisfies SourceNodeData,
       });
+      // Edge: source → postman (intake)
       if (postman) {
         newEdges.push({
           id: `e-${nodeId}-postman`,
           source: nodeId,
           target: "postman",
           type: "flow",
-          data: { color: s.color },
+          data: { color: s.color, edgeType: "intake" },
         });
       }
     });
 
     // ── Row 1: PROCESSING ──
-    if (postman) {
-      newNodes.push({
-        id: "postman",
-        type: "postman",
-        position: { x: 0, y: 0 },
-        data: {
-          id: postman.id,
-          name: postman.name,
-          icon: resolveIcon(postman.icon),
-          color: postman.color,
-          model: postman.model,
-          actions: postman.actions.map(a => ({
-            label: a.label, icon: resolveIcon(a.icon), description: a.description,
-          })),
-        } satisfies PostmanNodeData,
-      });
-      newEdges.push({
-        id: "e-postman-post",
-        source: "postman",
-        target: "tag-post",
-        type: "flow",
-        data: { color: postman.color },
-      });
-    }
 
-    // Schedule nodes
+    // Schedule nodes (global/system-level jobs)
     enabledJobs.forEach(job => {
       const nodeId = `schedule-${job.id}`;
       const charColor = charColorMap[job.charName] || "var(--text-2)";
@@ -195,6 +181,7 @@ export default function SystemGraph() {
           enabled: job.enabled,
         } satisfies ScheduleNodeData,
       });
+      // Edge: schedule → character (schedule type)
       const targetChar = characters.find(c => c.id === job.charName);
       if (targetChar) {
         newEdges.push({
@@ -202,10 +189,37 @@ export default function SystemGraph() {
           source: nodeId,
           target: `char-${job.charName}`,
           type: "flow",
-          data: { color: charColor },
+          data: { color: charColor, edgeType: "schedule" },
         });
       }
     });
+
+    // Postman node
+    if (postman) {
+      newNodes.push({
+        id: "postman",
+        type: "postman",
+        position: { x: 0, y: 0 },
+        data: {
+          id: postman.id,
+          name: postman.name,
+          icon: resolveIcon(postman.icon),
+          color: postman.color,
+          model: postman.model,
+          actions: postman.actions.map(a => ({
+            label: a.label, icon: resolveIcon(a.icon), description: a.description,
+          })),
+        } satisfies PostmanNodeData,
+      });
+      // Edge: postman → #post (intake)
+      newEdges.push({
+        id: "e-postman-post",
+        source: "postman",
+        target: "tag-post",
+        type: "flow",
+        data: { color: postman.color, edgeType: "intake" },
+      });
+    }
 
     // TanaTag #post
     newNodes.push({
@@ -219,7 +233,7 @@ export default function SystemGraph() {
       } satisfies TanaTagNodeData,
     });
 
-    // ── Row 2: ROUTING ──
+    // TanaTag #task
     newNodes.push({
       id: "tag-task",
       type: "tanaTag",
@@ -231,15 +245,16 @@ export default function SystemGraph() {
       } satisfies TanaTagNodeData,
     });
 
+    // Edge: #post → #task (routing)
     newEdges.push({
       id: "e-post-task",
       source: "tag-post",
       target: "tag-task",
       type: "flow",
-      data: { color: "#f59e0b" },
+      data: { color: "#f59e0b", edgeType: "routing" },
     });
 
-    // ── Row 3: CHARACTERS ──
+    // ── Row 2: CHARACTERS ──
     characters.forEach(c => {
       const nodeId = `char-${c.id}`;
       newNodes.push({
@@ -261,41 +276,47 @@ export default function SystemGraph() {
           gates: c.gates.length > 0 ? c.gates : undefined,
           skills: c.skills,
           sharedKnowledge: c.sharedKnowledge,
+          schedules: charSchedules[c.id] || [],
           onOpenEditor: openEditor,
         } satisfies CharacterNodeData,
       });
 
+      // Edge: #task → character (routing)
       newEdges.push({
         id: `e-task-${c.id}`,
         source: "tag-task",
         target: nodeId,
         type: "flow",
-        data: { color: c.color },
+        data: { color: c.color, edgeType: "routing" },
       });
 
+      // Edge: character → outputs (output type, from right handle)
       c.outputs.forEach(out => {
         const outputNode = outputs.find(o => o.label === out);
         if (outputNode) {
           newEdges.push({
             id: `e-${c.id}-out-${out}`,
             source: nodeId,
+            sourceHandle: "right",
             target: `output-${out}`,
             type: "flow",
-            data: { color: c.color },
+            data: { color: c.color, edgeType: "output" },
           });
         }
       });
 
+      // Edge: character → #log (archive)
       newEdges.push({
         id: `e-${c.id}-log`,
         source: nodeId,
+        sourceHandle: "right",
         target: "tag-log",
         type: "flow",
-        data: { color: "var(--border-2)" },
+        data: { color: "var(--border-2)", edgeType: "archive" },
       });
     });
 
-    // ── Row 4: OUTPUTS ──
+    // ── Right column: OUTPUTS ──
     outputs.forEach(o => {
       newNodes.push({
         id: `output-${o.label}`,
@@ -309,6 +330,7 @@ export default function SystemGraph() {
       });
     });
 
+    // TanaTag #log (in outputs column)
     newNodes.push({
       id: "tag-log",
       type: "tanaTag",
@@ -320,8 +342,8 @@ export default function SystemGraph() {
       } satisfies TanaTagNodeData,
     });
 
-    // Run dagre layout
-    const layoutedNodes = buildLayout(newNodes, newEdges);
+    // Run structured layout
+    const layoutedNodes = buildLayout(newNodes);
     setNodes(layoutedNodes);
     setEdges(newEdges);
   }, [apiChars, apiConfig, charColorMap, openEditor, setNodes, setEdges]);
@@ -374,8 +396,8 @@ export default function SystemGraph() {
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
           fitView
-          fitViewOptions={{ padding: 0.2 }}
-          minZoom={0.3}
+          fitViewOptions={{ padding: 0.15 }}
+          minZoom={0.2}
           maxZoom={2}
           proOptions={{ hideAttribution: true }}
           style={{ background: "var(--surface-2)" }}

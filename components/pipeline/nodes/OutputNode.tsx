@@ -14,11 +14,11 @@ export default function OutputNode({ data }: NodeProps) {
         background: d.color + "0f", border: `1px solid ${d.color}22`,
       }}
     >
+      <Handle type="target" position={Position.Left} style={{ opacity: 0, width: 6, height: 6 }} />
       <Icon size={11} strokeWidth={1.5} style={{ color: d.color, flexShrink: 0 }} />
       <span style={{ fontFamily: F, fontSize: 10, fontWeight: 500, color: d.color, lineHeight: 1.4 }}>
         {d.label}
       </span>
-      <Handle type="target" position={Position.Top} style={{ opacity: 0, width: 6, height: 6 }} />
     </div>
   );
 }
