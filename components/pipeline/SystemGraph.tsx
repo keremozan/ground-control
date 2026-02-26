@@ -213,7 +213,7 @@ export default function SystemGraph() {
     });
 
     // ── Row 2: CHARACTERS ──
-    characters.forEach(c => {
+    characters.forEach((c, charIdx) => {
       const nodeId = `char-${c.id}`;
       newNodes.push({
         id: nodeId,
@@ -239,17 +239,18 @@ export default function SystemGraph() {
         } satisfies CharacterNodeData,
       });
 
-      // Edge: #task → character (routing)
+      // Edge: #task → character (routing) — offset to separate parallel lines
+      const routeOffset = (charIdx - (characters.length - 1) / 2) * 8;
       newEdges.push({
         id: `e-task-${c.id}`,
         source: "tag-task",
         target: nodeId,
         type: "flow",
-        data: { color: c.color, edgeType: "routing" },
+        data: { color: c.color, edgeType: "routing", offset: routeOffset },
       });
 
       // Edge: character → outputs (output type, from right handle)
-      c.outputs.forEach(out => {
+      c.outputs.forEach((out, outIdx) => {
         const outputNode = outputs.find(o => o.label === out);
         if (outputNode) {
           newEdges.push({
@@ -258,7 +259,7 @@ export default function SystemGraph() {
             sourceHandle: "right",
             target: `output-${out}`,
             type: "flow",
-            data: { color: c.color, edgeType: "output" },
+            data: { color: c.color, edgeType: "output", offset: outIdx * 4 },
           });
         }
       });
@@ -270,7 +271,7 @@ export default function SystemGraph() {
         sourceHandle: "right",
         target: "tag-log",
         type: "flow",
-        data: { color: "var(--border-2)", edgeType: "archive" },
+        data: { color: "var(--border-2)", edgeType: "archive", offset: charIdx * 3 },
       });
     });
 
