@@ -172,18 +172,29 @@ function ChatMarkdown({ text, accent }: { text: string; accent?: string }) {
   );
 }
 
+function ThinkingAvatar({ color, children }: { color: string; children: React.ReactNode }) {
+  return (
+    <div style={{
+      width: 22, height: 22, borderRadius: 5, flexShrink: 0,
+      background: color + "16",
+      border: `1.5px solid ${color}`,
+      display: "flex", alignItems: "center", justifyContent: "center", marginTop: 1,
+      animation: "avatar-pulse 1.5s ease-in-out infinite",
+      boxShadow: `0 0 6px ${color}30`,
+    }}>
+      {children}
+    </div>
+  );
+}
+
 function ThinkingBubble({ charName, color }: { charName: string; color: string }) {
   const TIcon = charIcon[charName] || BookOpen;
   return (
     <div className="chat-msg-row chat-msg-assistant">
       <div style={{ display: "flex", gap: 7, alignItems: "flex-start" }}>
-        <div style={{
-          width: 22, height: 22, borderRadius: 5, flexShrink: 0,
-          background: color + "16", border: `1px solid ${color}28`,
-          display: "flex", alignItems: "center", justifyContent: "center", marginTop: 1,
-        }}>
+        <ThinkingAvatar color={color}>
           <TIcon size={10} strokeWidth={1.5} style={{ color }} />
-        </div>
+        </ThinkingAvatar>
         <div className="thinking-dots">
           <span className="thinking-dot" />
           <span className="thinking-dot" />
@@ -589,13 +600,9 @@ function ChatPanel({
           (streamingText || activeTool) ? (
             <div className="chat-msg-row chat-msg-assistant">
               <div style={{ display: "flex", gap: 7, alignItems: "flex-start" }}>
-                <div style={{
-                  width: 22, height: 22, borderRadius: 5, flexShrink: 0,
-                  background: activeChar.color + "16", border: `1px solid ${activeChar.color}28`,
-                  display: "flex", alignItems: "center", justifyContent: "center", marginTop: 1,
-                }}>
+                <ThinkingAvatar color={activeChar.color}>
                   <ActiveIcon size={10} strokeWidth={1.5} style={{ color: activeChar.color }} />
-                </div>
+                </ThinkingAvatar>
                 <div style={{ maxWidth: "86%", minWidth: 0 }}>
                   {streamingText && (
                     <div className="chat-bubble chat-bubble-assistant" style={{ borderLeftColor: activeChar.color + "40" }}>
