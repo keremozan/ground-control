@@ -164,8 +164,8 @@ export default function CharacterNode({ data }: NodeProps) {
           <span style={{ ...sectionLabel, display: "block", marginBottom: 5 }}>Schedules</span>
           {d.schedules.length > 0 ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-              {d.schedules.map(s => (
-                <div key={s.displayName} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              {d.schedules.map((s, i) => (
+                <div key={`${s.displayName}-${i}`} style={{ display: "flex", alignItems: "center", gap: 4 }}>
                   <Clock size={8} strokeWidth={1.5} style={{ color: "var(--text-3)", flexShrink: 0 }} />
                   <span style={mono(T.small, d.color, 500)}>{s.displayName}</span>
                   <span style={mono(8, "var(--text-3)")}>{s.cron}</span>
