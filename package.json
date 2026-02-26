@@ -1,14 +1,17 @@
 {
   "name": "ground-control",
-  "version": "0.1.0",
+  "version": "0.2.9",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "setup": "npx tsx scripts/setup.ts"
   },
   "dependencies": {
+    "@dagrejs/dagre": "^2.0.4",
     "@tailwindcss/postcss": "^4.2.1",
+    "@xyflow/react": "^12.10.1",
     "lucide-react": "^0.575.0",
     "next": "16.1.6",
     "postcss": "^8.5.6",
