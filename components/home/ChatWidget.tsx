@@ -400,6 +400,10 @@ function ChatPanel({
         }
       }
     } catch (e) {
+      // Ignore stale requests (StrictMode double-execution: first request aborted,
+      // second request active — don't let stale catch overwrite active state)
+      if (abortRef.current !== controller) return;
+
       const duration = (Date.now() - startTime) / 1000;
       if (fullText) {
         const tokens = Math.round((msg.length + fullText.length) / 4);
@@ -411,7 +415,6 @@ function ChatPanel({
           tokens,
         }]);
       } else if (e instanceof DOMException && e.name === 'AbortError') {
-        // Skip ghost "(stopped)" from React StrictMode double-execution (instant aborts)
         if (duration >= 0.5) {
           setMessages(prev => [...prev, {
             role: 'assistant',
