@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.0.1 — 2026-02-28
+
+### [new] Config-driven calendar event colors
+- CalendarWidget now reads color patterns from `calendarColorPatterns` in config
+- Same pattern as TasksWidget and InboxWidget — hex color key, regex value
+
+### [refactor] Hex colors as keys in all pattern configs
+- `trackColorPatterns`, `calendarColorPatterns`, and `emailColorPatterns` all use the same format: hex color → regex pattern
+- Removes dependency on charColor map — any hex color works without a matching character entry
+
 ## v1.0.0 — 2026-02-28
 
 Initial public release.
