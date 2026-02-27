@@ -61,7 +61,7 @@ The system is self-evolving. A nightly watcher reviews logs, identifies recurrin
 ## Quick Start
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/ground-control.git
+git clone https://github.com/keremozan/ground-control.git
 cd ground-control
 npm install
 npm run setup    # interactive wizard
