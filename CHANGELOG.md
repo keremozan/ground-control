@@ -2,48 +2,49 @@
 
 ## v1.0.1 — 2026-02-28
 
-### [new] Config-driven calendar event colors
-- CalendarWidget now reads color patterns from `calendarColorPatterns` in config
-- Same pattern as TasksWidget and InboxWidget — hex color key, regex value
+### New
+-  config-driven calendar event colors
 
-### [refactor] Hex colors as keys in all pattern configs
-- `trackColorPatterns`, `calendarColorPatterns`, and `emailColorPatterns` all use the same format: hex color → regex pattern
-- Removes dependency on charColor map — any hex color works without a matching character entry
+### Fixed
+-  restore proctor/curator colors for config-driven patterns
+-  update clone URL to actual repo
+
+### Changed
+-  use hex colors as keys in all pattern configs
 
 ## v1.0.0 — 2026-02-28
 
-Initial public release.
+### New
+-  pulsing avatar indicator while character is thinking
+-  switch to orthogonal step edges with offset separation
+-  rework layout to structured spatial grid matching wireframe
+-  rewrite SystemGraph as ReactFlow canvas with spatial layout
+-  add SystemConfigDrawer slide-out panel
+-  add CharacterNode with full expand/edit functionality
+-  add PostmanNode and ScheduleNode components
+-  add leaf node components — Source, Output, TanaTag, Group
+-  add custom FlowEdge component with character color
+-  add dagre layout builder with localStorage position persistence
+-  install reactflow + dagre, add shared types
+-  home page assembled with real backend
+-  API routes (characters, tasks, task dispatch, chat, action)
+-  task definitions + SSE spawn helper
+-  skills reader, shared knowledge loader, prompt builder
+-  character singleton loader
 
-### Dashboard
-- 6-widget home page: Inbox, Calendar, Tasks, Chat, Crew, Quick Actions
-- Real-time SSE streaming chat with multi-tab support
-- Tool activity visibility (shows commands, files, patterns being processed)
-- Context compression for long conversations
-- Config-driven color coding for tasks and email classification
+### Fixed
+-  chat loading indicator not showing on triggered messages
+-  clean up SystemGraph layout + fix ghost chat stopped message
+-  use unique key for schedule items in CharacterNode
+-  restore original TasksWidget with personal tasks
+-  add character colors, rename status bar brand
 
-### Pipeline
-- Visual flow graph: Sources -> Postman -> Characters -> Outputs
-- Expandable character cards with routing keywords, skills, gates, memory
-- Editable schedule pills on character cards
-- Logs widget with clickable job results
-- Run Full Cycle toolbar (3-phase: scan, check tasks, spawn characters)
+### Other
+- v1.0.0 — Initial public release
+- wire: CrewWidget, ChatWidget, TasksWidget, InboxWidget to real APIs
+- port: home components, chat-store, mock-data, useSSE hook from prototype
+- port: css, layout, char-icons from prototype
+- scaffold: next.js 15 project
+- plan: ground-control implementation plan (21 tasks)
+- Add ground-control design doc
 
-### Characters
-- JSON-driven character configs (no code changes needed)
-- 6 example characters: Postman, Scholar, Clerk, Coach, Architect, Oracle
-- Tiered system: core, meta, stationed
-- Per-character memory, skills, knowledge, routing
-- Model escalation (Haiku -> Sonnet -> Opus)
-
-### Automation
-- Scheduled jobs via macOS launchd
-- 10 example jobs: email scans, task processing, reviews, maintenance, self-learning
-- Self-evolving: nightly watcher reviews logs, fixes errors, writes memory lessons
-- System maintenance: memory hygiene, skill verification, routing consistency
-
-### Infrastructure
-- 26 API routes
-- Interactive setup wizard (`npm run setup`)
-- Git-ignored config file with full schema template
-- MCP server integration (Tana required, Gmail/Calendar/WhatsApp optional)
-- Health monitoring for all connected services

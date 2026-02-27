@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "setup": "npx tsx scripts/setup.ts"
+    "setup": "npx tsx scripts/setup.ts",
+    "changelog": "bash scripts/changelog.sh"
   },
   "dependencies": {
     "@dagrejs/dagre": "^2.0.4",
