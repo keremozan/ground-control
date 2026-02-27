@@ -41,3 +41,23 @@ New users: `npm install && npm run setup` — interactive wizard generates your 
 - Gmail/Calendar credentials paths
 - Scheduler jobs
 - Pipeline sources and outputs
+- UI color patterns (tracks, email, calendar) — all use hex color → regex format
+
+## Color patterns
+
+All three widget color configs use the same format: `{ "#hexcolor": "regex pattern" }`
+
+- `trackColorPatterns` — TasksWidget track left borders
+- `emailColorPatterns` — InboxWidget email classification
+- `calendarColorPatterns` — CalendarWidget event left borders
+
+Patterns are served via `/api/system/config` and fetched by widgets on mount.
+
+## Git workflow
+
+- GitHub: https://github.com/keremozan/ground-control
+- `ground-control.config.ts`, `mcp-tasks.json`, `docs/plans/`, `data/` are git-ignored
+- Use conventional commits: `feat:`, `fix:`, `refactor:`
+- Tag releases: `git tag v1.0.2`
+- Generate changelog: `npm run changelog` (reads git tags + commits)
+- Commit the generated CHANGELOG.md and push
