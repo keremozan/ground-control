@@ -5,6 +5,9 @@ export type ChatTrigger = {
   charName: string;
   seedPrompt: string;
   action: string;
+  context?: string;
+  openOnly?: boolean;
+  model?: string;
 } | null;
 
 type ChatContextValue = {

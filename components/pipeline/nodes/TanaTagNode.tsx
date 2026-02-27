@@ -13,7 +13,7 @@ export default function TanaTagNode({ data }: NodeProps) {
           padding: "4px 14px", borderRadius: 4,
           background: "#f59e0b0c", border: "1px solid #f59e0b20",
         }}
-        title={d.description}
+        data-tip={d.description}
       >
         <span style={{ fontFamily: F, fontSize: 11, fontWeight: 700, color: "#b45309", lineHeight: 1.4 }}>
           {d.tag}

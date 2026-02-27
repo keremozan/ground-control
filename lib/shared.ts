@@ -1,8 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-
-const HOME = process.env.HOME || '/Users/keremozanbayraktar';
-const SHARED_DIR = path.join(HOME, '.claude', 'shared');
+import { SHARED_DIR } from './config';
 
 let _cache: Record<string, string> | null = null;
 
@@ -19,3 +17,5 @@ export function getSharedKnowledge(): Record<string, string> {
   _cache = result;
   return result;
 }
+
+export function clearSharedCache() { _cache = null; }

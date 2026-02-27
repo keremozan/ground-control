@@ -13,7 +13,6 @@ import {
 import "@xyflow/react/dist/style.css";
 import { Loader2, Settings } from "lucide-react";
 import { resolveIcon } from "@/lib/icon-map";
-import { SCHEDULE_JOBS } from "@/lib/scheduler";
 import { buildLayout, savePositions } from "./layout/buildLayout";
 import FileEditorModal from "./FileEditorModal";
 import SystemConfigDrawer from "./SystemConfigDrawer";
@@ -110,17 +109,6 @@ export default function SystemGraph() {
     const characters = apiChars.filter(c => c.id !== "postman" && c.tier !== "stationed");
     const sources = apiConfig.sources || [];
     const outputs = apiConfig.outputs || [];
-    const enabledJobs = SCHEDULE_JOBS.filter(j => j.enabled);
-
-    // Build a map of charName → schedule jobs
-    const charSchedules: Record<string, { displayName: string; cron: string }[]> = {};
-    for (const job of enabledJobs) {
-      (charSchedules[job.charName] ||= []).push({
-        displayName: job.displayName,
-        cron: job.cron,
-      });
-    }
-
     const newNodes: Node[] = [];
     const newEdges: Edge[] = [];
 
@@ -234,7 +222,8 @@ export default function SystemGraph() {
           gates: c.gates.length > 0 ? c.gates : undefined,
           skills: c.skills,
           sharedKnowledge: c.sharedKnowledge,
-          schedules: charSchedules[c.id] || [],
+          schedules: c.schedules || [],
+          mcpServers: apiConfig.mcpServers || [],
           onOpenEditor: openEditor,
         } satisfies CharacterNodeData,
       });

@@ -6,7 +6,8 @@ import {
   ArrowRight, Clock,
   type LucideIcon,
 } from "lucide-react";
-import type { CharacterNodeData } from "../SystemGraph.types";
+import type { CharacterNodeData, CharSchedule } from "../SystemGraph.types";
+import { resolveIcon } from "@/lib/icon-map";
 
 const F = "var(--font-mono)";
 const mono = (size: number, color: string, weight = 400): React.CSSProperties => ({
@@ -18,6 +19,7 @@ type LiveCharData = {
   skills: string[];
   routingKeywords: string[];
   sharedKnowledge: string[];
+  schedules: CharSchedule[];
 };
 
 type LiveFileStatus = {
@@ -38,9 +40,13 @@ export default function CharacterNode({ data }: NodeProps) {
   const [newKeyword, setNewKeyword] = useState("");
   const [addingSkill, setAddingSkill] = useState(false);
   const [newSkill, setNewSkill] = useState("");
+  const [addingSchedule, setAddingSchedule] = useState(false);
+  const [newSchedName, setNewSchedName] = useState("");
+  const [newSchedCron, setNewSchedCron] = useState("");
   const [saving, setSaving] = useState(false);
   const keywordInputRef = useRef<HTMLInputElement>(null);
   const skillInputRef = useRef<HTMLInputElement>(null);
+  const schedNameRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!expanded) return;
@@ -52,6 +58,7 @@ export default function CharacterNode({ data }: NodeProps) {
             skills: res.character.skills || [],
             routingKeywords: res.character.routingKeywords || [],
             sharedKnowledge: res.character.sharedKnowledge || [],
+            schedules: res.character.schedules || [],
           });
         }
       })
@@ -65,8 +72,9 @@ export default function CharacterNode({ data }: NodeProps) {
   const currentKeywords = live?.routingKeywords ?? d.routing;
   const currentSkills = live?.skills ?? d.skills;
   const currentKnowledge = live?.sharedKnowledge ?? d.sharedKnowledge;
+  const currentSchedules: CharSchedule[] = live?.schedules ?? d.schedules ?? [];
 
-  const updateChar = async (field: string, value: string[]) => {
+  const updateChar = async (field: string, value: unknown) => {
     setSaving(true);
     try {
       await fetch(`/api/system/character?name=${charId}`, {
@@ -95,6 +103,19 @@ export default function CharacterNode({ data }: NodeProps) {
     updateChar("skills", [...currentSkills, s]);
     setNewSkill("");
     setAddingSkill(false);
+  };
+
+  const removeSchedule = (id: string) => updateChar("schedules", currentSchedules.filter(s => s.id !== id));
+  const toggleSchedule = (id: string) => updateChar("schedules", currentSchedules.map(s => s.id === id ? { ...s, enabled: !s.enabled } : s));
+  const addSchedule = () => {
+    const name = newSchedName.trim();
+    const cron = newSchedCron.trim();
+    if (!name || !cron) return;
+    const id = `${charId}-${name.toLowerCase().replace(/\s+/g, '-')}`;
+    if (currentSchedules.some(s => s.id === id)) return;
+    const sched: CharSchedule = { id, displayName: name, seedPrompt: "", cron, label: name.toLowerCase(), enabled: true };
+    updateChar("schedules", [...currentSchedules, sched]);
+    setNewSchedName(""); setNewSchedCron(""); setAddingSchedule(false);
   };
 
   const skillFileExists = (name: string) => {
@@ -141,7 +162,7 @@ export default function CharacterNode({ data }: NodeProps) {
           {saving && <Loader2 size={8} strokeWidth={1.5} style={{ color: "var(--text-3)", animation: "spin 1s linear infinite" }} />}
           <button
             onClick={() => setExpanded(prev => !prev)}
-            title={`${d.name} options`}
+            data-tip={`${d.name} options`}
             style={{
               display: "flex", alignItems: "center", justifyContent: "center",
               width: 18, height: 18, borderRadius: 3,
@@ -157,19 +178,66 @@ export default function CharacterNode({ data }: NodeProps) {
       </div>
 
       {/* ── Schedules ── */}
-      {d.schedules.length > 0 && (
+      {(expanded ? true : currentSchedules.some(s => s.enabled)) && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
-          {d.schedules.map((s, i) => (
-            <span key={`${s.displayName}-${i}`} style={{
-              ...mono(8, "var(--text-3)"),
-              display: "inline-flex", alignItems: "center", gap: 3,
-              padding: "1px 5px", borderRadius: 3,
-              background: "var(--surface)", border: "1px solid var(--border)",
-            }}>
+          {(expanded ? currentSchedules : currentSchedules.filter(s => s.enabled)).map(s => (
+            <span key={s.id} data-tip={expanded ? "Click to toggle" : s.seedPrompt || s.displayName}
+              onClick={expanded ? () => toggleSchedule(s.id) : undefined}
+              style={{
+                ...mono(8, "var(--text-3)"),
+                display: "inline-flex", alignItems: "center", gap: 3,
+                padding: expanded ? "1px 4px 1px 5px" : "1px 5px", borderRadius: 3,
+                background: "var(--surface)", border: "1px solid var(--border)",
+                opacity: s.enabled ? 1 : 0.4,
+                cursor: expanded ? "pointer" : "default",
+                transition: "opacity 0.1s",
+              }}>
               <Clock size={7} strokeWidth={1.5} style={{ color: d.color, flexShrink: 0 }} />
               {s.displayName} {s.cron}
+              {expanded && (
+                <button onClick={e => { e.stopPropagation(); removeSchedule(s.id); }} style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 12, height: 12, borderRadius: 2, background: "transparent", border: "none", cursor: "pointer", color: "var(--text-3)", opacity: 0.4 }}><X size={7} strokeWidth={2} /></button>
+              )}
             </span>
           ))}
+          {expanded && (
+            addingSchedule ? (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 2 }}>
+                <input ref={schedNameRef} value={newSchedName} onChange={e => setNewSchedName(e.target.value)} placeholder="name"
+                  onKeyDown={e => { if (e.key === "Escape") { setAddingSchedule(false); setNewSchedName(""); setNewSchedCron(""); } }}
+                  style={{ ...mono(8, "var(--text-2)"), width: 60, padding: "1px 4px", borderRadius: 3, background: "var(--surface)", border: "1px solid var(--border)", outline: "none" }} />
+                <input value={newSchedCron} onChange={e => setNewSchedCron(e.target.value)} placeholder="08:00 daily"
+                  onKeyDown={e => { if (e.key === "Enter") addSchedule(); if (e.key === "Escape") { setAddingSchedule(false); setNewSchedName(""); setNewSchedCron(""); } }}
+                  onBlur={() => { if (newSchedName.trim() && newSchedCron.trim()) addSchedule(); else if (!newSchedName.trim() && !newSchedCron.trim()) setAddingSchedule(false); }}
+                  style={{ ...mono(8, "var(--text-2)"), width: 80, padding: "1px 4px", borderRadius: 3, background: "var(--surface)", border: "1px solid var(--border)", outline: "none" }} />
+              </span>
+            ) : (
+              <button onClick={() => { setAddingSchedule(true); setTimeout(() => schedNameRef.current?.focus(), 50); }} style={{
+                display: "flex", alignItems: "center", justifyContent: "center", width: 14, height: 14, borderRadius: 3,
+                background: "var(--surface)", border: "1px solid var(--border)", cursor: "pointer", color: "var(--text-3)",
+              }}><Plus size={8} strokeWidth={2} /></button>
+            )
+          )}
+        </div>
+      )}
+      {expanded && currentSchedules.length === 0 && (
+        <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+          <span style={mono(8, "var(--text-3)")}>No schedules</span>
+          {addingSchedule ? (
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 2 }}>
+              <input ref={schedNameRef} value={newSchedName} onChange={e => setNewSchedName(e.target.value)} placeholder="name"
+                onKeyDown={e => { if (e.key === "Escape") { setAddingSchedule(false); setNewSchedName(""); setNewSchedCron(""); } }}
+                style={{ ...mono(8, "var(--text-2)"), width: 60, padding: "1px 4px", borderRadius: 3, background: "var(--surface)", border: "1px solid var(--border)", outline: "none" }} />
+              <input value={newSchedCron} onChange={e => setNewSchedCron(e.target.value)} placeholder="08:00 daily"
+                onKeyDown={e => { if (e.key === "Enter") addSchedule(); if (e.key === "Escape") { setAddingSchedule(false); setNewSchedName(""); setNewSchedCron(""); } }}
+                onBlur={() => { if (newSchedName.trim() && newSchedCron.trim()) addSchedule(); else if (!newSchedName.trim() && !newSchedCron.trim()) setAddingSchedule(false); }}
+                style={{ ...mono(8, "var(--text-2)"), width: 80, padding: "1px 4px", borderRadius: 3, background: "var(--surface)", border: "1px solid var(--border)", outline: "none" }} />
+            </span>
+          ) : (
+            <button onClick={() => { setAddingSchedule(true); setTimeout(() => schedNameRef.current?.focus(), 50); }} style={{
+              display: "flex", alignItems: "center", justifyContent: "center", width: 14, height: 14, borderRadius: 3,
+              background: "var(--surface)", border: "1px solid var(--border)", cursor: "pointer", color: "var(--text-3)",
+            }}><Plus size={8} strokeWidth={2} /></button>
+          )}
         </div>
       )}
 
@@ -182,13 +250,31 @@ export default function CharacterNode({ data }: NodeProps) {
               display: "inline-flex", alignItems: "center", gap: 2,
               padding: "2px 6px 2px 4px", borderRadius: 3,
               background: d.color + "0a", border: `1px solid ${d.color}18`,
-            }} title={a.description}>
+            }} data-tip={a.description}>
               <AIcon size={8} strokeWidth={1.5} style={{ color: d.color }} />
               <span style={mono(8, d.color, 500)}>{a.label}</span>
             </span>
           );
         })}
       </div>
+
+      {/* ── MCP Tools ── */}
+      {d.mcpServers && d.mcpServers.length > 0 && (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
+          {d.mcpServers.map(s => {
+            const SIcon = resolveIcon(s.iconName);
+            return (
+              <span key={s.name} data-tip={s.name} style={{
+                display: "inline-flex", alignItems: "center", justifyContent: "center",
+                width: 18, height: 18, borderRadius: 3,
+                background: "var(--surface)", border: "1px solid var(--border)",
+              }}>
+                <SIcon size={9} strokeWidth={1.5} style={{ color: "var(--text-3)" }} />
+              </span>
+            );
+          })}
+        </div>
+      )}
 
       {/* ── Outputs ── */}
       <div style={{

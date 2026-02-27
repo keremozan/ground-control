@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "tana-local": {
+      "type": "http",
+      "url": "$TANA_MCP_URL",
+      "headers": {
+        "Authorization": "Bearer $TANA_MCP_TOKEN"
+      }
+    }
+  }
+}

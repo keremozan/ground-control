@@ -37,7 +37,7 @@ export default function PostmanNode({ data }: NodeProps) {
               display: "inline-flex", alignItems: "center", gap: 3,
               padding: "2px 6px 2px 4px", borderRadius: 3,
               background: d.color + "0a", border: `1px solid ${d.color}18`,
-            }} title={a.description}>
+            }} data-tip={a.description}>
               <AIcon size={8} strokeWidth={1.5} style={{ color: d.color }} />
               <span style={{ fontFamily: F, fontSize: 9, fontWeight: 500, color: d.color, lineHeight: 1.4 }}>
                 {a.label}

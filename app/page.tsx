@@ -23,7 +23,7 @@ export default function Home() {
         <InboxWidget />
         <CalendarWidget />
         <TasksWidget />
-        <div style={{ gridColumn: "span 2", height: "100%" }}>
+        <div style={{ gridColumn: "span 2", height: "100%", minHeight: 0, overflow: "hidden" }}>
           <ChatWidget />
         </div>
         <CrewWidget />

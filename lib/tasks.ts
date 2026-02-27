@@ -47,15 +47,6 @@ export const TASKS: Record<string, Task> = {
     maxTurns: 15,
     prompt: () => buildCharacterPrompt('postman', 'Run postman-scan-whatsapp skill.'),
   },
-  'ta-briefing': {
-    label: 'TA Briefing',
-    description: 'Draft briefing emails for teaching assistants',
-    category: 'email',
-    character: 'proctor',
-    model: 'sonnet',
-    maxTurns: 15,
-    prompt: () => buildCharacterPrompt('proctor', 'Run proctor-ta-ops skill. Draft briefing emails for teaching assistants.'),
-  },
   'oracle-review': {
     label: 'Oracle Review',
     description: 'Strategic review of recent activity',
@@ -65,13 +56,32 @@ export const TASKS: Record<string, Task> = {
     maxTurns: 20,
     prompt: () => buildCharacterPrompt('oracle', 'Do a comprehensive review of recent activity across Tana, email, and calendar. Surface patterns, risks, and recommendations.'),
   },
+  'postman-cycle': {
+    label: 'Postman Cycle',
+    description: 'Full scan-process-deliver cycle',
+    category: 'email',
+    character: 'postman',
+    model: 'haiku',
+    maxTurns: 30,
+    prompt: () => buildCharacterPrompt('postman', 'Run a full scan-process-deliver cycle. Mode: full.'),
+  },
+  'reschedule-overdue': {
+    label: 'Reschedule Overdue',
+    description: 'Reschedule all overdue tasks based on calendar + patterns',
+    category: 'admin',
+    character: 'clerk',
+    model: 'sonnet',
+    maxTurns: 20,
+    prompt: () => buildCharacterPrompt('clerk',
+      'Reschedule all overdue tasks. Use the clerk-reschedule skill.'
+    ),
+  },
 };
 
 // Maps frontend action names to character IDs
 export const ACTION_CHARACTERS: Record<string, string> = {
   'reply': 'postman',
   'task': 'postman',
-  'schedule': 'scholar',
+  'schedule': 'clerk',
   'archive': 'postman',
-  'summarize': 'postman',
 };

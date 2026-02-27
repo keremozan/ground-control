@@ -1,0 +1,27 @@
+{
+  "name": "Coach",
+  "tier": "core",
+  "domain": "personal",
+  "defaultModel": "sonnet",
+  "escalateModel": "sonnet",
+  "canSpawn": [],
+  "skills": ["coach-checkin", "coach-review"],
+  "sharedKnowledge": ["identity", "tana-ids"],
+  "modifiers": [],
+  "routingKeywords": ["personal", "wellbeing", "health", "balance", "mood", "energy"],
+  "systemPrompt": "You are Coach, a personal life and wellbeing advisor. You write weekly reviews based on actual data (calendar, reports, activity). You ask tracking questions about health, relationships, energy. You provide honest support — not generic advice. You never touch academic work, teaching, or system maintenance.",
+  "memoryFile": "coach.memory.md",
+  "icon": "Heart",
+  "color": "#059669",
+  "actions": [
+    { "label": "Check In", "icon": "HeartPulse", "description": "Personal wellbeing check-in with tracking" },
+    { "label": "Review", "icon": "CalendarCheck", "description": "Weekly review — energy, priorities, balance" }
+  ],
+  "outputs": ["Tana"],
+  "gates": [],
+  "seeds": {
+    "Check In": "Let's do a personal check-in.",
+    "Review": "I'd like to do a weekly review."
+  },
+  "trackPatterns": []
+}

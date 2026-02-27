@@ -1,119 +1,172 @@
 "use client";
-import { useState, useEffect } from "react";
-import { charIcon, charSeeds } from "@/lib/char-icons";
+import { useState, useEffect, useRef } from "react";
+import { resolveIcon } from "@/lib/icon-map";
 import { useChatTrigger } from "@/lib/chat-store";
-import { BookOpen } from "lucide-react";
+import { logAction } from "@/lib/action-log";
+import { Loader2 } from "lucide-react";
+
+type ActionInfo = {
+  label: string;
+  icon: string;
+  description: string;
+  autonomous?: boolean;
+};
 
 type CharacterInfo = {
   id: string;
   name: string;
   tier: string;
+  icon: string;
   color: string;
   domain?: string;
-  defaultModel?: string;
-};
-
-const modelBadge: Record<string, { label: string; color: string; bg: string }> = {
-  haiku:  { label: "haiku",  color: "var(--text-3)", bg: "var(--bg)"      },
-  sonnet: { label: "sonnet", color: "var(--blue)",   bg: "var(--blue-bg)" },
-  opus:   { label: "opus",   color: "#9333ea",       bg: "#f5f0ff"        },
+  actions?: ActionInfo[];
+  seeds?: Record<string, string>;
 };
 
 export default function CrewWidget() {
   const { setTrigger } = useChatTrigger();
   const [characters, setCharacters] = useState<CharacterInfo[]>([]);
+  const [runningActions, setRunningActions] = useState<Set<string>>(new Set());
+  const runningRef = useRef(new Set<string>());
 
   useEffect(() => {
     fetch("/api/characters")
       .then(r => r.json())
-      .then(d => setCharacters(d.characters))
+      .then(d => {
+        setCharacters((d.characters || []).filter((c: CharacterInfo) => c.tier === "core" || c.tier === "meta"));
+      })
       .catch(() => {});
   }, []);
+
+  const runAutonomous = async (charName: string, action: string, seedPrompt: string) => {
+    const key = `${charName}:${action}`;
+    if (runningRef.current.has(key)) return;
+    runningRef.current.add(key);
+    setRunningActions(prev => new Set(prev).add(key));
+
+    try {
+      const res = await fetch("/api/schedule/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ charName: charName.toLowerCase(), seedPrompt, label: `${charName} ${action}` }),
+      });
+      const data = await res.json();
+      if (data.ok && data.result) {
+        logAction({
+          widget: "scheduler",
+          action: "run",
+          target: `${charName} ${action}`,
+          character: charName,
+          detail: `${Math.round(data.result.durationMs / 1000)}s`,
+          jobId: data.result.jobId,
+        });
+      }
+    } catch {
+      // silent
+    } finally {
+      runningRef.current.delete(key);
+      setRunningActions(prev => { const n = new Set(prev); n.delete(key); return n; });
+    }
+  };
 
   return (
     <div className="widget">
       <div className="widget-header">
         <span className="widget-header-label">Crew</span>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-3)" }}>
-          {characters.length}
-        </span>
       </div>
 
-      <div className="widget-body" style={{ padding: "4px 0" }}>
-        {characters.map((char, i) => {
-          const Icon = charIcon[char.name] || BookOpen;
-          const model = modelBadge[char.defaultModel || "haiku"] || modelBadge.haiku;
-          const seeds = charSeeds[char.name] || {};
-          const actions = Object.keys(seeds);
+      <div className="widget-body" style={{ padding: "4px 10px 6px" }}>
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: "6px",
+        }}>
+          {characters.map((char) => {
+            const Icon = resolveIcon(char.icon);
+            const seeds = char.seeds || {};
+            const actions = char.actions || [];
+            const charBusy = [...runningActions].some(k => k.startsWith(`${char.name}:`));
 
-          return (
-            <div
-              className="item-row"
-              key={char.id}
-              style={{ borderTop: i === 0 ? "none" : "1px solid var(--border)" }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 16px", cursor: "pointer" }}>
-                <div style={{
-                  width: 30, height: 30, borderRadius: 7, flexShrink: 0,
-                  background: char.color + "16",
-                  border: `1px solid ${char.color}28`,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                }}>
-                  <Icon size={14} strokeWidth={1.5} style={{ color: char.color }} />
+            return (
+              <div
+                key={char.id}
+                className="crew-card"
+                style={{
+                  padding: "6px 6px 5px",
+                  border: "1px solid var(--border)",
+                  borderRadius: 6,
+                }}
+              >
+                <div
+                  style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}
+                  onClick={() => setTrigger({ charName: char.name, seedPrompt: '', action: 'chat', openOnly: true })}
+                >
+                  <div style={{
+                    width: 26, height: 26, borderRadius: 6, flexShrink: 0,
+                    background: char.color + "16",
+                    border: `1px solid ${char.color}28`,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    animation: charBusy ? "pulse-crew 1.5s ease-in-out infinite" : undefined,
+                  }}>
+                    <Icon size={12} strokeWidth={1.5} style={{ color: char.color }} />
+                  </div>
+
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{
+                      fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 500,
+                      color: "var(--text)", lineHeight: 1.3,
+                    }}>
+                      {char.name}
+                    </div>
+                    <div style={{
+                      fontFamily: "var(--font-body)", fontSize: 9,
+                      color: "var(--text-3)", textTransform: "capitalize",
+                    }}>
+                      {char.domain || char.tier}
+                    </div>
+                  </div>
                 </div>
 
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{
-                    fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 500,
-                    color: "var(--text)", lineHeight: 1.3,
-                  }}>
-                    {char.name}
+                {actions.length > 0 && (
+                  <div className="crew-card-actions" style={{ flexWrap: "wrap", gap: 3, marginTop: 4 }}>
+                    {actions.map((action) => {
+                      const seedPrompt = seeds[action.label];
+                      const AIcon = resolveIcon(action.icon);
+                      const isAuto = action.autonomous === true;
+                      const isRunning = runningActions.has(`${char.name}:${action.label}`);
+                      return (
+                        <button
+                          key={action.label}
+                          className="item-action-btn"
+                          data-tip={action.description || action.label}
+                          disabled={isRunning}
+                          onClick={seedPrompt
+                            ? isAuto
+                              ? () => runAutonomous(char.name, action.label, seedPrompt)
+                              : () => setTrigger({ charName: char.name, seedPrompt, action: action.label })
+                            : undefined
+                          }
+                          style={{
+                            width: "auto", height: 18, gap: 3, padding: "0 5px 0 4px",
+                            opacity: isRunning ? 0.5 : 1,
+                            color: char.color,
+                            borderRadius: 3, fontSize: 9,
+                          }}
+                        >
+                          {isRunning
+                            ? <Loader2 size={9} strokeWidth={1.5} style={{ animation: "spin 1s linear infinite" }} />
+                            : <AIcon size={9} strokeWidth={1.5} />
+                          }
+                          <span style={{ fontFamily: "var(--font-mono)", fontSize: 9 }}>{action.label}</span>
+                        </button>
+                      );
+                    })}
                   </div>
-                  <div style={{
-                    fontFamily: "var(--font-body)", fontSize: 10,
-                    color: "var(--text-3)", textTransform: "capitalize",
-                  }}>
-                    {char.domain || char.tier}
-                  </div>
-                </div>
-
-                <span style={{
-                  fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 500,
-                  color: model.color, background: model.bg,
-                  padding: "2px 5px", borderRadius: 3,
-                  textTransform: "uppercase", letterSpacing: "0.04em", flexShrink: 0,
-                }}>
-                  {model.label}
-                </span>
+                )}
               </div>
-
-              {actions.length > 0 && (
-                <div className="item-actions" style={{ padding: "0 16px 5px", gap: 3 }}>
-                  {actions.map((action) => {
-                    const seedPrompt = seeds[action];
-                    return (
-                      <button
-                        key={action}
-                        className="item-action-btn"
-                        title={seedPrompt || action}
-                        onClick={seedPrompt
-                          ? () => setTrigger({ charName: char.name, seedPrompt, action })
-                          : undefined
-                        }
-                        style={{
-                          fontFamily: "var(--font-mono)", fontSize: 9,
-                          width: "auto", padding: "0 6px", height: 20,
-                        }}
-                      >
-                        {action}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </div>
   );

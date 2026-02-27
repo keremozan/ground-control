@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { CHARACTERS_DIR } from './config';
 
 export type Character = {
   id: string;
@@ -14,19 +15,22 @@ export type Character = {
   sharedKnowledge?: string[];
   knowledgeFile?: string;
   memory: string;
+  icon?: string;
+  actions?: { label: string; icon: string; description: string; autonomous?: boolean }[];
+  outputs?: string[];
+  gates?: string[];
+  seeds?: Record<string, string>;
+  trackPatterns?: string[];
+  routingKeywords?: string[];
+  schedules?: { id: string; displayName: string; seedPrompt: string; cron: string; label: string; enabled: boolean }[];
 };
 
-const HOME = process.env.HOME || '/Users/keremozanbayraktar';
-const CHARACTERS_DIR = path.join(HOME, '.claude', 'characters');
-
 // Character colors — matches CSS vars in globals.css
-const CHARACTER_COLORS: Record<string, string> = {
+export const CHARACTER_COLORS: Record<string, string> = {
   postman:   '#4f46e5',
   scholar:   '#7c3aed',
-  proctor:   '#db2777',
   clerk:     '#b45309',
   coach:     '#047857',
-  curator:   '#e11d48',
   architect: '#475569',
   oracle:    '#9333ea',
 };
@@ -34,7 +38,7 @@ const CHARACTER_COLORS: Record<string, string> = {
 let _cache: Record<string, Character> | null = null;
 
 export function getCharacters(): Record<string, Character> {
-  if (_cache) return _cache;
+  if (_cache && process.env.NODE_ENV !== 'development') return _cache;
 
   const result: Record<string, Character> = {};
 
@@ -61,6 +65,8 @@ export function getCharacters(): Record<string, Character> {
   _cache = result;
   return result;
 }
+
+export function clearCharacterCache() { _cache = null; }
 
 export function getCharacterList(): Character[] {
   return Object.values(getCharacters());

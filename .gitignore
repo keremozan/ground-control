@@ -39,3 +39,13 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# job results (server-side state)
+/data/
+
+# user config (secrets)
+ground-control.config.ts
+mcp-tasks.json
+
+# internal design docs (may contain personal data)
+/docs/plans/

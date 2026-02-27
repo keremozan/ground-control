@@ -146,7 +146,7 @@ export default function SystemConfigDrawer({ onClose, onOpenEditor, charColorMap
                       <span style={{
                         ...mono(T.small, "var(--text-3)"),
                         overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                      }} title={p.value}>{p.value}</span>
+                      }} data-tip={p.value}>{p.value}</span>
                     </div>
                   ))}
                 </div>

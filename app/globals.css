@@ -9,10 +9,8 @@
 
   --c-postman: #4f46e5;
   --c-scholar: #7c3aed;
-  --c-proctor: #0284c7;
   --c-clerk: #b45309;
   --c-coach: #047857;
-  --c-curator: #e11d48;
   --c-architect: #475569;
   --c-oracle: #9333ea;
 }
@@ -101,6 +99,10 @@ body {
   0%, 100% { transform: scale(1); opacity: 1; }
   50% { transform: scale(1.08); opacity: 0.7; }
 }
+.crew-card-actions { display: none; }
+.crew-card:hover .crew-card-actions { display: flex; }
+
+
 @keyframes avatar-pulse {
   0%, 100% { opacity: 1; box-shadow: 0 0 0 0 var(--pulse-color, rgba(0,0,0,0.15)); }
   50% { opacity: 0.75; box-shadow: 0 0 8px 2px var(--pulse-color, rgba(0,0,0,0.1)); }
@@ -524,14 +526,15 @@ body {
 .chat-msg-row:last-child { margin-bottom: 0; }
 
 .chat-msg-user      { display: flex; flex-direction: column; align-items: flex-start; }
-.chat-msg-assistant { display: flex; flex-direction: column; align-items: flex-start; }
+.chat-msg-assistant { display: flex; flex-direction: column; align-items: stretch; }
 
 .chat-bubble {
   font-family: var(--font-body);
   font-size: 12px;
   line-height: 1.55;
-  max-width: 86%;
   padding: 7px 11px;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 .chat-bubble-user {
   background: var(--blue-bg);

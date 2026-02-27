@@ -2,6 +2,15 @@ import type { LucideIcon } from "lucide-react";
 
 // ── API response types (same as current SystemGraph) ──
 
+export type CharSchedule = {
+  id: string;
+  displayName: string;
+  seedPrompt: string;
+  cron: string;
+  label: string;
+  enabled: boolean;
+};
+
 export type ApiCharacter = {
   id: string;
   name: string;
@@ -13,6 +22,7 @@ export type ApiCharacter = {
   skills: string[];
   routingKeywords: string[];
   sharedKnowledge: string[];
+  schedules?: CharSchedule[];
   actions: { label: string; icon: string; description: string }[];
   outputs: string[];
   gates: string[];
@@ -21,6 +31,8 @@ export type ApiCharacter = {
 
 export type ApiSource = { label: string; icon: string; color: string; description?: string };
 export type ApiOutput = { label: string; icon: string; color: string; description?: string };
+
+export type ApiMcpServer = { name: string; iconName: string };
 
 export type ApiConfig = {
   paths: { label: string; value: string }[];
@@ -32,6 +44,7 @@ export type ApiConfig = {
   knowledge: string[];
   sources: ApiSource[];
   outputs: ApiOutput[];
+  mcpServers: ApiMcpServer[];
 };
 
 // ── Node data payloads ──
@@ -81,7 +94,8 @@ export type CharacterNodeData = {
   gates?: string[];
   skills: string[];
   sharedKnowledge: string[];
-  schedules: { displayName: string; cron: string }[];
+  schedules: CharSchedule[];
+  mcpServers: ApiMcpServer[];
   onOpenEditor: (title: string, fetchUrl: string, saveUrl: string, lineLimit?: number) => void;
 };
 

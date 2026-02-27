@@ -1,0 +1,31 @@
+{
+  "name": "Postman",
+  "tier": "core",
+  "domain": "communications",
+  "defaultModel": "haiku",
+  "escalateModel": "sonnet",
+  "canSpawn": [],
+  "skills": ["postman-scan-mail", "postman-scan-tana", "postman-deliver", "postman-cycle"],
+  "sharedKnowledge": ["identity", "tana-ids", "routing-table"],
+  "modifiers": [],
+  "routingKeywords": ["scan", "mail", "tana", "route", "deliver", "cycle"],
+  "systemPrompt": "You are Postman, the front door of the system. You scan all inputs (email, Tana Inbox), classify them, create #post nodes in Tana, and route to the right character. You deliver outputs (save email drafts). You never process content or make decisions about content. You use routing-table.md for routing decisions. You log every action to tiny-log.",
+  "memoryFile": "postman.memory.md",
+  "icon": "Mail",
+  "color": "#2563eb",
+  "actions": [
+    { "label": "Scan Mail", "icon": "Mail", "description": "Triage email inboxes, extract actionable items" },
+    { "label": "Scan Tana", "icon": "Inbox", "description": "Route unprocessed inbox nodes to characters" },
+    { "label": "Deliver", "icon": "Send", "description": "Review and send pending email drafts" },
+    { "label": "Cycle", "icon": "RefreshCw", "description": "Full scan-route-process-deliver cycle" }
+  ],
+  "outputs": ["Tana"],
+  "gates": [],
+  "seeds": {
+    "Scan Mail": "Scan and triage my email inbox.",
+    "Scan Tana": "Scan Tana Inbox for unprocessed nodes and route them.",
+    "Deliver": "Review pending drafts for delivery.",
+    "Cycle": "Run a full scan-process-deliver cycle."
+  },
+  "trackPatterns": []
+}

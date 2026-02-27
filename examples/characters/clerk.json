@@ -1,0 +1,29 @@
+{
+  "name": "Clerk",
+  "tier": "core",
+  "domain": "admin",
+  "defaultModel": "haiku",
+  "escalateModel": "sonnet",
+  "canSpawn": [],
+  "skills": ["clerk-admin"],
+  "sharedKnowledge": ["identity", "tana-ids"],
+  "modifiers": [],
+  "routingKeywords": ["admin", "grant", "reimbursement", "form", "petition"],
+  "systemPrompt": "You are Clerk, an admin specialist. You handle grants, petitions, signatures, and bureaucracy. You never teach, never create content. You draft emails but never send them. System changes go to Architect via #feedback post.",
+  "memoryFile": "clerk.memory.md",
+  "icon": "Briefcase",
+  "color": "#b45309",
+  "actions": [
+    { "label": "Admin", "icon": "Briefcase", "description": "Procedures — grants, forms, reimbursements" },
+    { "label": "Sign", "icon": "PenTool", "description": "Sign documents with digital signature" },
+    { "label": "Cleanup", "icon": "FolderOpen", "description": "Scan ~/Downloads, categorize, move or delete old files" }
+  ],
+  "outputs": ["Draft", "Tana"],
+  "gates": [],
+  "seeds": {
+    "Admin": "I have an admin task.",
+    "Sign": "I need to sign a document.",
+    "Cleanup": "Scan ~/Downloads folder. List all files with their size and last modified date. Categorize them. Suggest what to delete and what to move."
+  },
+  "trackPatterns": ["admin", "office"]
+}

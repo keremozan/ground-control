@@ -4,8 +4,10 @@ import { charIcon } from "@/lib/char-icons";
 import { useChatTrigger, type ChatTrigger } from "@/lib/chat-store";
 import { logAction } from "@/lib/action-log";
 import TanaIcon from "@/components/icons/TanaIcon";
+import { parseToolName } from "@/lib/mcp-icons";
+import { resolveIcon } from "@/lib/icon-map";
 import {
-  BookOpen, Copy, CornerUpRight, Loader2,
+  BookOpen, Bug, Copy, CornerUpRight, Loader2,
   Send, Square, Trash2, Plus, X,
 } from "lucide-react";
 
@@ -16,6 +18,7 @@ type CharacterInfo = {
   name: string;
   color: string;
   defaultModel?: string;
+  model?: string;
 };
 
 type Message = {
@@ -30,11 +33,62 @@ type TabMeta = {
   id: string;
   charId: string;
   messages: Message[];
+  modelOverride?: string;
 };
+
+/** Extract a short label from tool input JSON for display */
+function toolInputLabel(tool: string, raw: string): string {
+  try {
+    const obj = JSON.parse(raw);
+    if (tool === "Bash" && obj.command) {
+      const cmd = obj.command.length > 60 ? obj.command.slice(0, 57) + "..." : obj.command;
+      return cmd;
+    }
+    if ((tool === "Read" || tool === "Edit" || tool === "Write") && obj.file_path) {
+      return obj.file_path.split("/").pop() || obj.file_path;
+    }
+    if (tool === "Glob" && obj.pattern) return obj.pattern;
+    if (tool === "Grep" && obj.pattern) return obj.pattern;
+  } catch {}
+  return "";
+}
 
 // ─── Helpers (unchanged) ────────────────────────────────────────────────────
 
 /** Split assistant message into self-talk (preamble) and structured output */
+function openTanaNode(nodeId: string) {
+  fetch("/api/tana-tasks/action", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ nodeId, action: "open" }),
+  }).catch(() => {});
+}
+
+function openGmail(threadId: string, account: string) {
+  const idx = account === "school" ? 1 : 0;
+  window.open(`https://mail.google.com/mail/u/${idx}/#inbox/${threadId}`, "_blank");
+}
+
+const LINK_RE = /(\[[^\]]+\]\((?:tana|gmail):[^)]+\))/g;
+const TANA_LINK_RE = /^\[([^\]]+)\]\(tana:([^)]+)\)$/;
+const GMAIL_LINK_RE = /^\[([^\]]+)\]\(gmail:([^:]+):([^)]+)\)$/;
+
+function processLinks(s: string, accent?: string): React.ReactNode[] {
+  const parts = s.split(LINK_RE);
+  return parts.map((p, j) => {
+    const tana = p.match(TANA_LINK_RE);
+    if (tana) return <span key={j} onClick={() => openTanaNode(tana[2])} style={{
+      color: accent || "var(--blue)", cursor: "pointer", fontWeight: 600,
+      borderBottom: `1.5px solid ${accent || "var(--blue)"}40`, paddingBottom: 0.5,
+    }}>{tana[1]}</span>;
+    const gmail = p.match(GMAIL_LINK_RE);
+    if (gmail) return <span key={j} onClick={() => openGmail(gmail[2], gmail[3])} style={{
+      color: accent || "var(--blue)", cursor: "pointer", fontWeight: 600,
+      borderBottom: `1.5px solid ${accent || "var(--blue)"}40`, paddingBottom: 0.5,
+    }}>{gmail[1]}</span>;
+    return p;
+  });
+}
+
 function splitMessage(text: string): { thinking: string; output: string } {
   const lines = text.split('\n');
   for (let i = 0; i < lines.length; i++) {
@@ -53,29 +107,98 @@ function splitMessage(text: string): { thinking: string; output: string } {
   return { thinking: '', output: text };
 }
 
-function ChatMarkdown({ text, accent }: { text: string; accent?: string }) {
+const EMOJI_MAP: Record<string, { label: string; color: string; bg: string }> = {
+  "\u2705": { label: "OK", color: "#16a34a", bg: "#16a34a18" },
+  "\u2714\uFE0F": { label: "OK", color: "#16a34a", bg: "#16a34a18" },
+  "\u274C": { label: "X", color: "#dc2626", bg: "#dc262618" },
+  "\u274E": { label: "X", color: "#dc2626", bg: "#dc262618" },
+  "\u26A0\uFE0F": { label: "!", color: "#d97706", bg: "#d9770618" },
+  "\u2139\uFE0F": { label: "i", color: "#2563eb", bg: "#2563eb18" },
+  "\u{1F4E7}": { label: "MAIL", color: "#6366f1", bg: "#6366f118" },
+  "\u{1F4DD}": { label: "NOTE", color: "#8b5cf6", bg: "#8b5cf618" },
+  "\u{1F4CB}": { label: "LIST", color: "#0891b2", bg: "#0891b218" },
+  "\u{1F4CC}": { label: "PIN", color: "#dc2626", bg: "#dc262618" },
+  "\u{1F50D}": { label: "FIND", color: "#6366f1", bg: "#6366f118" },
+  "\u{1F4C1}": { label: "DIR", color: "#d97706", bg: "#d9770618" },
+  "\u{1F4C4}": { label: "FILE", color: "#6b7280", bg: "#6b728018" },
+  "\u{1F6D1}": { label: "STOP", color: "#dc2626", bg: "#dc262618" },
+  "\u{1F680}": { label: "GO", color: "#2563eb", bg: "#2563eb18" },
+};
+const EMOJI_KEYS = Object.keys(EMOJI_MAP);
+const EMOJI_RE = new RegExp(`(${EMOJI_KEYS.map(e => e.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'gu');
+
+function renderEmoji(seg: string, key: string) {
+  const em = EMOJI_MAP[seg];
+  if (!em) return null;
+  return <span key={key} style={{
+    fontFamily: "var(--font-mono)", fontSize: "0.8em", fontWeight: 600,
+    color: em.color, background: em.bg,
+    padding: "1px 4px", borderRadius: 3, letterSpacing: 0.5,
+    display: "inline-block", lineHeight: 1.4,
+  }}>{em.label}</span>;
+}
+
+function expandEmoji(text: string, keyPrefix: string): React.ReactNode[] {
+  EMOJI_RE.lastIndex = 0;
+  if (!EMOJI_RE.test(text)) return [text];
+  EMOJI_RE.lastIndex = 0;
+  const parts = text.split(EMOJI_RE);
+  return parts.map((seg, i) => {
+    const em = renderEmoji(seg, `${keyPrefix}-e${i}`);
+    return em || (seg ? <span key={`${keyPrefix}-e${i}`}>{seg}</span> : null);
+  }).filter(Boolean) as React.ReactNode[];
+}
+
+function ChatMarkdown({ text, accent, onQuickReply }: { text: string; accent?: string; onQuickReply?: (text: string) => void }) {
   const processInline = (s: string): React.ReactNode[] => {
-    const parts = s.split(/(==[^=]+=+=|==\S[^=]*\S==|\*\*[^*]+\*\*|`[^`]+`)/g);
-    return parts.map((p, j) => {
-      if (p.startsWith('==') && p.endsWith('=='))
-        return <mark key={j} style={{
+    const parts = s.split(/(==[^=]+=+=|==\S[^=]*\S==|\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\((?:tana|gmail):[^)]+\))/g);
+    const nodes: React.ReactNode[] = [];
+    parts.forEach((p, j) => {
+      const tanaMatch = p.match(TANA_LINK_RE);
+      if (tanaMatch) {
+        nodes.push(<span key={j} onClick={() => openTanaNode(tanaMatch[2])} style={{
+          color: accent || 'var(--blue)', cursor: 'pointer', fontWeight: 600,
+          borderBottom: `1.5px solid ${accent || 'var(--blue)'}40`,
+          paddingBottom: 0.5,
+        }}>{tanaMatch[1]}</span>);
+        return;
+      }
+      const gmailMatch = p.match(GMAIL_LINK_RE);
+      if (gmailMatch) {
+        nodes.push(<span key={j} onClick={() => openGmail(gmailMatch[2], gmailMatch[3])} style={{
+          color: accent || 'var(--blue)', cursor: 'pointer', fontWeight: 600,
+          borderBottom: `1.5px solid ${accent || 'var(--blue)'}40`,
+          paddingBottom: 0.5,
+        }}>{gmailMatch[1]}</span>);
+        return;
+      }
+      if (p.startsWith('==') && p.endsWith('==')) {
+        nodes.push(<mark key={j} style={{
           background: 'linear-gradient(transparent 60%, #fde68a 60%)',
           color: 'var(--text)', padding: 0, borderRadius: 0,
-        }}>{p.slice(2, -2)}</mark>;
-      if (p.startsWith('**') && p.endsWith('**'))
-        return <strong key={j} style={{
+        }}>{p.slice(2, -2)}</mark>);
+        return;
+      }
+      if (p.startsWith('**') && p.endsWith('**')) {
+        nodes.push(<strong key={j} style={{
           color: accent || 'var(--text)',
           borderBottom: `1.5px solid ${accent || 'var(--text)'}30`,
           paddingBottom: 0.5,
-        }}>{p.slice(2, -2)}</strong>;
-      if (p.startsWith('`') && p.endsWith('`'))
-        return <code key={j} style={{
+        }}>{p.slice(2, -2)}</strong>);
+        return;
+      }
+      if (p.startsWith('`') && p.endsWith('`')) {
+        nodes.push(<code key={j} style={{
           fontFamily: 'var(--font-mono)', fontSize: '0.9em',
           background: 'var(--bg-2)', padding: '1px 4px', borderRadius: 3,
           color: accent || 'var(--text)',
-        }}>{p.slice(1, -1)}</code>;
-      return p;
+        }}>{p.slice(1, -1)}</code>);
+        return;
+      }
+      // Plain text — expand emoji to styled labels
+      nodes.push(...expandEmoji(p, `${j}`));
     });
+    return nodes;
   };
 
   const parseTableCells = (row: string) =>
@@ -166,6 +289,34 @@ function ChatMarkdown({ text, accent }: { text: string; accent?: string }) {
               <span style={{ paddingLeft: 6 }}>{processInline(t.replace(/^\d+\.\s*/, ''))}</span>
             </div>
           );
+        // Quick-reply buttons
+        const qrMatch = t.match(/^\[quick-reply:\s*(.+)\]$/);
+        if (qrMatch) {
+          const options = qrMatch[1].split('|').map(o => o.trim().replace(/^"(.*)"$/, '$1'));
+          return (
+            <div key={bi} style={{ display: 'flex', flexWrap: 'wrap', gap: 3, margin: '6px 0' }}>
+              {options.map((opt, oi) => (
+                <button
+                  key={oi}
+                  onClick={() => onQuickReply?.(opt)}
+                  style={{
+                    fontFamily: 'var(--font-mono)', fontSize: 10,
+                    padding: '4px 8px', borderRadius: 4, minWidth: 28, textAlign: 'center' as const,
+                    border: `1px solid ${accent || 'var(--border)'}`,
+                    background: 'transparent',
+                    color: accent || 'var(--text)',
+                    cursor: onQuickReply ? 'pointer' : 'default',
+                    transition: 'background 0.12s',
+                  }}
+                  onMouseEnter={e => { if (onQuickReply) e.currentTarget.style.background = (accent || 'var(--text)') + '12'; }}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
+          );
+        }
         return <div key={bi}>{processInline(t)}</div>;
       })}
     </div>
@@ -233,6 +384,7 @@ type ChatPanelProps = {
   characters: CharacterInfo[];
   charId: string;
   initialMessages: Message[];
+  initialModel?: string;
   onMessagesChange: (msgs: Message[]) => void;
   onLoadingChange: (loading: boolean) => void;
   canSend: boolean;
@@ -241,7 +393,7 @@ type ChatPanelProps = {
 };
 
 function ChatPanel({
-  tabId, characters, charId, initialMessages,
+  tabId, characters, charId, initialMessages, initialModel,
   onMessagesChange, onLoadingChange, canSend,
   trigger, onTriggerConsumed,
 }: ChatPanelProps) {
@@ -250,9 +402,13 @@ function ChatPanel({
   const [isLoading, setIsLoading] = useState(false);
   const [streamingText, setStreamingText] = useState("");
   const [activeTool, setActiveTool] = useState<string | null>(null);
+  const [activeToolInput, setActiveToolInput] = useState<string>("");
   const [toolLog, setToolLog] = useState<string[]>([]);
+  const [elapsed, setElapsed] = useState(0);
   const [pendingContext, setPendingContext] = useState<string | null>(null);
   const [compressing, setCompressing] = useState(false);
+  const charDefault = characters.find(c => c.id === charId);
+  const [modelOverride, setModelOverride] = useState<string>(initialModel || charDefault?.model || "sonnet");
   const bodyRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -312,6 +468,13 @@ function ChatPanel({
     onLoadingChange(isLoading);
   }, [isLoading]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Elapsed timer while loading
+  useEffect(() => {
+    if (!isLoading) { setElapsed(0); return; }
+    const t = setInterval(() => setElapsed(e => e + 1), 1000);
+    return () => clearInterval(t);
+  }, [isLoading]);
+
   // Auto-scroll
   useEffect(() => {
     if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
@@ -320,11 +483,12 @@ function ChatPanel({
   // Handle trigger from wrapper
   useEffect(() => {
     if (!trigger || characters.length === 0) return;
-    const { seedPrompt, context } = trigger;
+    const { seedPrompt, context, model } = trigger;
+    if (model) setModelOverride(model);
     setMessages([{ role: "user", content: seedPrompt }]);
     if (context) setPendingContext(context);
     onTriggerConsumed();
-    sendMessage(seedPrompt, charId, context);
+    sendMessage(seedPrompt, charId, context, undefined, model);
   }, [trigger]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Abort on unmount
@@ -332,7 +496,7 @@ function ChatPanel({
     return () => { if (abortRef.current) abortRef.current.abort(); };
   }, []);
 
-  const sendMessage = async (msg: string, targetCharId?: string, context?: string | null, history?: Message[]) => {
+  const sendMessage = async (msg: string, targetCharId?: string, context?: string | null, history?: Message[], modelOverride?: string) => {
     setIsLoading(true);
     setToolLog([]);
     let fullText = '';
@@ -359,6 +523,7 @@ function ChatPanel({
           message: msg,
           ...(ctxToSend ? { context: ctxToSend } : {}),
           ...(historyToSend ? { history: historyToSend } : {}),
+          ...(modelOverride ? { model: modelOverride } : {}),
         }),
         signal: controller.signal,
       });
@@ -386,10 +551,12 @@ function ChatPanel({
             }
             if (eventMatch[1] === 'tool_call') {
               setActiveTool(parsed.tool);
+              setActiveToolInput(parsed.input || "");
               setToolLog(prev => [...prev, parsed.tool]);
             }
             if (eventMatch[1] === 'tool_result') {
-              setActiveTool(null);
+              // Don't clear activeTool — keep showing last tool until next tool_call or text replaces it
+              // Prevents flash where tool name appears and vanishes too fast to read
             }
             if (eventMatch[1] === 'done') {
               const duration = (Date.now() - startTime) / 1000;
@@ -448,7 +615,8 @@ function ChatPanel({
     const currentMessages = [...messages];
     setMessages(prev => [...prev, { role: "user", content: msg }]);
     setInput("");
-    sendMessage(msg, undefined, null, currentMessages);
+    const effectiveModel = modelOverride !== activeChar?.model ? modelOverride : undefined;
+    sendMessage(msg, undefined, null, currentMessages, effectiveModel);
   };
 
   const handleStop = () => {
@@ -456,6 +624,12 @@ function ChatPanel({
       abortRef.current.abort();
       abortRef.current = null;
     }
+    logAction({ widget: "chat", action: "stop", target: activeChar?.name || "unknown", character: activeChar?.id });
+    // Immediately clear loading state so UI resets
+    setStreamingText("");
+    setActiveTool(null);
+    setToolLog([]);
+    setIsLoading(false);
   };
 
   const copyToClipboard = (text: string) => {
@@ -488,6 +662,7 @@ function ChatPanel({
           subject: content.slice(0, 80),
         }),
       });
+      logAction({ widget: "chat", action: "send-to-postman", target: content.slice(0, 80), character: activeChar?.id });
     } catch {}
   };
 
@@ -526,15 +701,15 @@ function ChatPanel({
                       padding: "2px 0 2px 6px",
                       wordBreak: "break-word" as const,
                     }}>
-                      {msg.content}
+                      {processLinks(msg.content)}
                     </div>
                   </div>
                 </div>
                 <div className="chat-msg-actions" style={{ marginLeft: 29 }}>
-                  <button className="item-action-btn" title="Copy" onClick={() => copyToClipboard(msg.content)}>
+                  <button className="item-action-btn" data-tip="Copy" onClick={() => copyToClipboard(msg.content)}>
                     <Copy size={10} strokeWidth={1.5} />
                   </button>
-                  <button className="item-action-btn" title="Send to Tana today" onClick={() => sendMsgToTana(msg.content)}>
+                  <button className="item-action-btn" data-tip="Send to Tana today" onClick={() => sendMsgToTana(msg.content)}>
                     <TanaIcon size={10} strokeWidth={1.5} />
                   </button>
                 </div>
@@ -565,7 +740,14 @@ function ChatPanel({
                     </div>
                   )}
                   <div className="chat-bubble chat-bubble-assistant" style={{ borderLeftColor: msgChar.color + "40" }}>
-                    <ChatMarkdown text={output} accent={msgChar.color} />
+                    <ChatMarkdown text={output} accent={msgChar.color} onQuickReply={(text) => {
+                      if (!isLoading && canSend) {
+                        const current = [...messages];
+                        setMessages(prev => [...prev, { role: "user", content: text }]);
+                        const effectiveModel = modelOverride !== activeChar?.model ? modelOverride : undefined;
+                        sendMessage(text, undefined, null, current, effectiveModel);
+                      }
+                    }} />
                   </div>
                   {msg.duration != null && (
                     <div style={{
@@ -580,13 +762,13 @@ function ChatPanel({
                 </div>
               </div>
               <div className="chat-msg-actions" style={{ marginLeft: 29 }}>
-                <button className="item-action-btn" title="Copy" onClick={() => copyToClipboard(output)}>
+                <button className="item-action-btn" data-tip="Copy" onClick={() => copyToClipboard(output)}>
                   <Copy size={10} strokeWidth={1.5} />
                 </button>
-                <button className="item-action-btn" title="Send to Tana today" onClick={() => sendMsgToTana(output, msg.charName)}>
+                <button className="item-action-btn" data-tip="Send to Tana today" onClick={() => sendMsgToTana(output, msg.charName)}>
                   <TanaIcon size={10} strokeWidth={1.5} />
                 </button>
-                <button className="item-action-btn" title="Send to Postman" onClick={() => sendToPostman(output)} style={{
+                <button className="item-action-btn" data-tip="Send to Postman" onClick={() => sendToPostman(output)} style={{
                   fontFamily: "var(--font-mono)", fontSize: 9, width: "auto",
                   padding: "0 5px", display: "flex", alignItems: "center", gap: 3,
                 }}>
@@ -603,7 +785,7 @@ function ChatPanel({
                 <ThinkingAvatar color={activeChar.color}>
                   <ActiveIcon size={10} strokeWidth={1.5} style={{ color: activeChar.color }} />
                 </ThinkingAvatar>
-                <div style={{ maxWidth: "86%", minWidth: 0 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
                   {streamingText && (
                     <div className="chat-bubble chat-bubble-assistant" style={{ borderLeftColor: activeChar.color + "40" }}>
                       <ChatMarkdown text={splitMessage(streamingText).output} accent={activeChar.color} />
@@ -611,31 +793,42 @@ function ChatPanel({
                   )}
                   {(activeTool || (!streamingText && toolLog.length > 0)) && (
                     <div style={{
-                      fontFamily: "var(--font-mono)", fontSize: 9, color: "var(--text-3)",
-                      marginTop: streamingText ? 3 : 0, paddingLeft: 2,
-                      display: "flex", alignItems: "center", gap: 5,
+                      fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-2)",
+                      marginTop: streamingText ? 4 : 0, paddingLeft: 2,
+                      display: "flex", alignItems: "center", gap: 6,
                     }}>
-                      {activeTool ? (
-                        <>
-                          <Loader2 size={8} strokeWidth={1.5} style={{ animation: "spin 1s linear infinite" }} />
-                          <span>{activeTool}</span>
-                        </>
-                      ) : (
-                        <>
-                          <Loader2 size={8} strokeWidth={1.5} style={{ animation: "spin 1s linear infinite" }} />
-                          <span>Working...</span>
-                        </>
-                      )}
+                      <Loader2 size={10} strokeWidth={1.5} style={{ animation: "spin 1s linear infinite", color: activeChar.color, opacity: 0.7 }} />
+                      {(() => {
+                        if (!activeTool) return <span>Working...</span>;
+                        const info = parseToolName(activeTool);
+                        const ToolIcon = resolveIcon(info.iconName);
+                        const label = activeToolInput ? toolInputLabel(activeTool, activeToolInput) : "";
+                        return (
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 3, minWidth: 0 }}>
+                            <ToolIcon size={10} strokeWidth={1.5} style={{ flexShrink: 0, color: activeChar.color, opacity: 0.6 }} />
+                            <span>{info.displayName}</span>
+                            {label && <span style={{ opacity: 0.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</span>}
+                          </span>
+                        );
+                      })()}
                       {toolLog.length > 1 && (
-                        <span style={{ opacity: 0.5 }}>{toolLog.length} steps</span>
+                        <span style={{ opacity: 0.4 }}>{toolLog.length} steps</span>
+                      )}
+                      {elapsed > 0 && (
+                        <span style={{ opacity: 0.35 }}>{elapsed}s</span>
                       )}
                     </div>
                   )}
                   {!streamingText && !activeTool && toolLog.length === 0 && (
-                    <div className="thinking-dots">
-                      <span className="thinking-dot" />
-                      <span className="thinking-dot" />
-                      <span className="thinking-dot" />
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <div className="thinking-dots">
+                        <span className="thinking-dot" />
+                        <span className="thinking-dot" />
+                        <span className="thinking-dot" />
+                      </div>
+                      {elapsed > 2 && (
+                        <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "var(--text-3)", opacity: 0.5 }}>{elapsed}s</span>
+                      )}
                     </div>
                   )}
                 </div>
@@ -679,17 +872,42 @@ function ChatPanel({
             if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
           }}
           placeholder={
-            isLoading ? `${activeChar.name} is thinking...`
+            isLoading
+              ? activeTool
+                ? `${activeChar.name}: ${parseToolName(activeTool).displayName}${activeToolInput ? ` ${toolInputLabel(activeTool, activeToolInput)}` : ""}...`
+                : toolLog.length > 0
+                  ? `${activeChar.name}: working (${toolLog.length} steps, ${elapsed}s)...`
+                  : `${activeChar.name} is thinking...`
             : !canSend ? "2 chats running — wait or stop one"
             : `Ask ${activeChar.name}...`
           }
           rows={1}
           disabled={isLoading || !canSend}
         />
+        <button
+          onClick={() => {
+            const models = ["haiku", "sonnet", "opus"];
+            const idx = models.indexOf(modelOverride);
+            setModelOverride(models[(idx + 1) % models.length]);
+          }}
+          data-tip={`Model: ${modelOverride}${modelOverride === activeChar?.model ? " (default)" : " (override)"} — click to cycle`}
+          style={{
+            fontFamily: "var(--font-mono)", fontSize: 8, letterSpacing: "0.04em",
+            padding: 0, cursor: "pointer", flexShrink: 0, alignSelf: "center",
+            border: "none", background: "transparent",
+            color: modelOverride !== activeChar?.model
+              ? activeChar?.color || "var(--text)"
+              : "var(--text-3)",
+            opacity: modelOverride !== activeChar?.model ? 1 : 0.5,
+            transition: "all 0.12s",
+          }}
+        >
+          {modelOverride}
+        </button>
         {isLoading ? (
           <button
             onClick={handleStop}
-            title="Stop"
+            data-tip="Stop"
             style={{
               width: 30, height: 30, borderRadius: 5, cursor: "pointer", flexShrink: 0,
               background: "#dc262618", border: "1px solid #dc262630",
@@ -703,7 +921,7 @@ function ChatPanel({
           <button
             onClick={handleSend}
             disabled={!canSend}
-            title={!canSend ? "2 chats already running" : undefined}
+            data-tip={!canSend ? "2 chats already running" : undefined}
             style={{
               width: 30, height: 30, borderRadius: 5, flexShrink: 0,
               cursor: canSend ? "pointer" : "default",
@@ -808,15 +1026,19 @@ export default function ChatWidget() {
     const char = characters.find(c => c.name === charName);
     if (!char) { setTrigger(null); return; }
 
-    const newTab: TabMeta = { id: genTabId(), charId: char.id, messages: [] };
+    const newTab: TabMeta = { id: genTabId(), charId: char.id, messages: [], modelOverride: trigger.model };
     setTabs(prev => [...prev, newTab]);
     setActiveTabId(newTab.id);
-    setPendingTrigger({ tabId: newTab.id, trigger });
+
+    // openOnly = just open the tab, don't send a seed message
+    if (!trigger.openOnly) {
+      setPendingTrigger({ tabId: newTab.id, trigger });
+    }
 
     logAction({
       widget: "chat",
       action: `trigger:${action}`,
-      target: seedPrompt.slice(0, 60),
+      target: seedPrompt.slice(0, 60) || charName,
       character: charName,
     });
 
@@ -874,17 +1096,34 @@ export default function ChatWidget() {
     } catch {}
   }, [tabs, activeTabId, characters, formatChat]);
 
-  const clearCurrentTab = useCallback(() => {
+  const sendToArchitect = useCallback(() => {
     const tab = tabs.find(t => t.id === activeTabId);
-    if (!tab) return;
-    // Replace with fresh tab (same character, new key forces remount)
+    if (!tab || tab.messages.length === 0) return;
+    const architect = characters.find(c => c.name === "Architect");
+    if (!architect) return;
+    const chatContent = formatChat(tab.messages);
+    const newTab: TabMeta = { id: genTabId(), charId: architect.id, messages: [] };
+    setTabs(prev => [...prev, newTab]);
+    setActiveTabId(newTab.id);
+    setPendingTrigger({
+      tabId: newTab.id,
+      trigger: {
+        charName: "Architect",
+        seedPrompt: "Review this conversation and help me address any issues or errors.",
+        context: chatContent,
+        action: "forward-to-architect",
+      },
+    });
+  }, [tabs, activeTabId, characters, formatChat]);
+
+  const clearAllChats = useCallback(() => {
+    const tab = tabs.find(t => t.id === activeTabId);
+    const charId = tab?.charId || (characters[0]?.id ?? "");
     const newId = genTabId();
-    setTabs(prev => prev.map(t =>
-      t.id === activeTabId ? { id: newId, charId: t.charId, messages: [] } : t
-    ));
-    setLoadingTabIds(prev => prev.filter(id => id !== activeTabId));
+    setTabs([{ id: newId, charId, messages: [] }]);
+    setLoadingTabIds([]);
     setActiveTabId(newId);
-  }, [tabs, activeTabId]);
+  }, [tabs, activeTabId, characters]);
 
   const handleMessagesChange = useCallback((tabId: string, msgs: Message[]) => {
     setTabs(prev => prev.map(t => t.id === tabId ? { ...t, messages: msgs } : t));
@@ -911,13 +1150,16 @@ export default function ChatWidget() {
       <div className="widget-header">
         <span className="widget-header-label">Chat</span>
         <div style={{ display: "flex", gap: 2 }}>
-          <button className="widget-toolbar-btn" title="Send to Tana today" onClick={sendAllToTana}>
+          <button className="widget-toolbar-btn" data-tip="Send to Tana today" onClick={sendAllToTana}>
             <TanaIcon size={12} strokeWidth={1.5} />
           </button>
-          <button className="widget-toolbar-btn" title="Copy all" onClick={copyAllChat}>
+          <button className="widget-toolbar-btn" data-tip="Send to Architect" onClick={sendToArchitect}>
+            <Bug size={12} strokeWidth={1.5} />
+          </button>
+          <button className="widget-toolbar-btn" data-tip="Copy all" onClick={copyAllChat}>
             <Copy size={12} strokeWidth={1.5} />
           </button>
-          <button className="widget-toolbar-btn" title="Clear chat" onClick={clearCurrentTab}>
+          <button className="widget-toolbar-btn" data-tip="Clear all chats" onClick={clearAllChats}>
             <Trash2 size={12} strokeWidth={1.5} />
           </button>
         </div>
@@ -1046,6 +1288,7 @@ export default function ChatWidget() {
               characters={characters}
               charId={tab.charId}
               initialMessages={tab.messages}
+              initialModel={tab.modelOverride}
               onMessagesChange={msgs => handleMessagesChange(tab.id, msgs)}
               onLoadingChange={loading => handleLoadingChange(tab.id, loading)}
               canSend={canSend}

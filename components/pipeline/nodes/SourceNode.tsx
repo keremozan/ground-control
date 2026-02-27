@@ -14,7 +14,7 @@ export default function SourceNode({ data }: NodeProps) {
         background: d.color + "0f", border: `1px solid ${d.color}22`,
         cursor: "default",
       }}
-      title={d.description}
+      data-tip={d.description}
     >
       <Icon size={11} strokeWidth={1.5} style={{ color: d.color, flexShrink: 0 }} />
       <span style={{ fontFamily: F, fontSize: 10, fontWeight: 500, color: d.color, lineHeight: 1.4 }}>
