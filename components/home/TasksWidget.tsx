@@ -46,9 +46,9 @@ const statusStyle: Record<string, { color: string; bg: string; label: string }> 
 };
 
 function buildTrackColor(patterns: Record<string, string>): (track: string) => string {
-  const compiled = Object.entries(patterns).map(([char, pattern]) => ({
+  const compiled = Object.entries(patterns).map(([color, pattern]) => ({
     regex: new RegExp(pattern, 'i'),
-    color: charColor[char] || "#9c9b95",
+    color,
   }));
   return (track: string) => {
     for (const { regex, color } of compiled) {

@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { ListChecks, Trash2, MapPin, RefreshCw, Loader2, ExternalLink, Plus, X } from "lucide-react";
-import { charColor } from "@/lib/char-icons";
+
 
 type CalEvent = {
   id: string;
@@ -15,9 +15,9 @@ type CalEvent = {
 };
 
 function buildEventColor(patterns: Record<string, string>): (title: string) => string {
-  const compiled = Object.entries(patterns).map(([char, pattern]) => ({
+  const compiled = Object.entries(patterns).map(([color, pattern]) => ({
     regex: new RegExp(pattern, 'i'),
-    color: charColor[char] || "#94a3b8",
+    color,
   }));
   return (title: string) => {
     for (const { regex, color } of compiled) {

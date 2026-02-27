@@ -160,12 +160,12 @@ const config = {
     { label: "Calendar", icon: "CalendarDays", color: "#0891b2" },
   ] as { label: string; icon: string; color: string }[],
 
-  // Track name → character color mapping (regex patterns, case-insensitive)
+  // Track color mapping: hex color → regex pattern (case-insensitive)
   // Used by TasksWidget to color-code tasks by workstream
   trackColorPatterns: {
-    scholar:   "research|writing|thesis",
-    architect: "system|automation|dashboard|code",
-    clerk:     "admin|office|visa|travel",
+    "#7c3aed": "research|writing|thesis",
+    "#475569": "system|automation|dashboard|code",
+    "#b45309": "admin|office|visa|travel",
   } as Record<string, string>,
 
   // Email classification patterns (regex, case-insensitive)
@@ -178,12 +178,12 @@ const config = {
   // Gmail label → color/bg overrides (label names must be lowercase)
   emailLabelColors: {} as Record<string, { color: string; bg: string }>,
 
-  // Calendar event title → character color mapping (regex patterns, case-insensitive)
+  // Calendar event color mapping: hex color → regex pattern (case-insensitive)
   // Used by CalendarWidget to color-code event left borders
   calendarColorPatterns: {
-    scholar:   "thesis|research|paper|conference|workshop",
-    coach:     "yoga|gym|wellbeing",
-    clerk:     "admin|meeting|office|budget",
+    "#7c3aed": "thesis|research|paper|conference|workshop",
+    "#059669": "yoga|gym|wellbeing",
+    "#b45309": "admin|meeting|office|budget",
   } as Record<string, string>,
 };
 

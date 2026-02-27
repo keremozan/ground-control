@@ -15,9 +15,6 @@ export const charColor: Record<string, string> = {
   architect: '#475569',  // slate
   oracle:    '#0891b2',  // cyan/teal
   system:    '#64748b',  // gray
-  // Additional colors for user-defined characters (used by config-driven patterns)
-  proctor:   '#c026d3',  // fuchsia
-  curator:   '#dc2626',  // red
 };
 
 export const charIcon: Record<string, LucideIcon> = {
