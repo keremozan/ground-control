@@ -14,12 +14,20 @@ type CalEvent = {
   htmlLink?: string;
 };
 
-function eventColor(title: string): string {
-  if (/thesis|research|paper|conference|workshop/i.test(title)) return charColor.scholar;
-  if (/yoga|gym|check.?in|wellbeing/i.test(title)) return charColor.coach;
-  if (/admin|meeting|office|budget/i.test(title)) return charColor.clerk;
-  return "#94a3b8";
+function buildEventColor(patterns: Record<string, string>): (title: string) => string {
+  const compiled = Object.entries(patterns).map(([char, pattern]) => ({
+    regex: new RegExp(pattern, 'i'),
+    color: charColor[char] || "#94a3b8",
+  }));
+  return (title: string) => {
+    for (const { regex, color } of compiled) {
+      if (regex.test(title)) return color;
+    }
+    return "#94a3b8";
+  };
 }
+
+const defaultEventColor = (_title: string) => "#94a3b8";
 
 function formatTime(iso: string, allDay: boolean): string {
   if (allDay) return "all day";
@@ -67,6 +75,15 @@ export default function CalendarWidget() {
   const [newEventEnd, setNewEventEnd] = useState("");
   const [creatingEvent, setCreatingEvent] = useState(false);
   const newEventRef = useRef<HTMLInputElement>(null);
+  const [eventColor, setEventColor] = useState<(title: string) => string>(() => defaultEventColor);
+
+  useEffect(() => {
+    fetch("/api/system/config").then(r => r.json())
+      .then(d => {
+        if (d.calendarColorPatterns) setEventColor(() => buildEventColor(d.calendarColorPatterns));
+      })
+      .catch(() => {});
+  }, []);
 
   const fetchEvents = useCallback(() => {
     setLoading(true);

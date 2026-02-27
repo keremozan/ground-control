@@ -177,6 +177,14 @@ const config = {
 
   // Gmail label → color/bg overrides (label names must be lowercase)
   emailLabelColors: {} as Record<string, { color: string; bg: string }>,
+
+  // Calendar event title → character color mapping (regex patterns, case-insensitive)
+  // Used by CalendarWidget to color-code event left borders
+  calendarColorPatterns: {
+    scholar:   "thesis|research|paper|conference|workshop",
+    coach:     "yoga|gym|wellbeing",
+    clerk:     "admin|meeting|office|budget",
+  } as Record<string, string>,
 };
 
 export default config;

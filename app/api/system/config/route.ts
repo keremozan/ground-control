@@ -9,6 +9,7 @@ import {
   PIPELINE_SOURCES, PIPELINE_OUTPUTS,
   MCP_TASKS_CONFIG,
   TRACK_COLOR_PATTERNS, EMAIL_COLOR_PATTERNS, EMAIL_LABEL_COLORS,
+  CALENDAR_COLOR_PATTERNS,
 } from '@/lib/config';
 import { MCP_SERVER_ICON_MAP } from '@/lib/mcp-icons';
 
@@ -104,5 +105,6 @@ export async function GET() {
     trackColorPatterns: TRACK_COLOR_PATTERNS,
     emailColorPatterns: EMAIL_COLOR_PATTERNS,
     emailLabelColors: EMAIL_LABEL_COLORS,
+    calendarColorPatterns: CALENDAR_COLOR_PATTERNS,
   });
 }

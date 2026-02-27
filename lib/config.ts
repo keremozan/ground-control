@@ -72,3 +72,6 @@ export const EMAIL_COLOR_PATTERNS: Record<string, string> = userConfig.emailColo
 
 /** Gmail label → color overrides */
 export const EMAIL_LABEL_COLORS: Record<string, { color: string; bg: string }> = userConfig.emailLabelColors || {};
+
+/** Calendar event title → character color mapping (regex patterns) */
+export const CALENDAR_COLOR_PATTERNS: Record<string, string> = (userConfig as Record<string, unknown>).calendarColorPatterns as Record<string, string> || {};
