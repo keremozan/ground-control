@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
-import { Bug, X, Mail, CalendarDays, Monitor, RefreshCw, RotateCw } from "lucide-react";
+import { Bug, X, Mail, CalendarDays, Monitor, RefreshCw, RotateCw, PenTool } from "lucide-react";
 import { logAction } from "@/lib/action-log";
 import TanaIcon from "@/components/icons/TanaIcon";
 import pkg from "@/package.json";
@@ -14,6 +14,7 @@ type Status = {
   gmail: { personal: boolean; school: boolean };
   calendar: boolean;
   playwright: boolean;
+  miro: boolean;
   lastCycle: string | null;
 };
 
@@ -177,7 +178,7 @@ export default function StatusBar({ activePage = "home" }: { activePage?: "home"
   // Derived health states
   const gmailOk = status ? (status.gmail.personal && status.gmail.school) : null;
   const gmailPartial = status ? (status.gmail.personal || status.gmail.school) && !gmailOk : false;
-  const allOk = status ? (status.tana && gmailOk && status.calendar && status.playwright) : null;
+  const allOk = status ? (status.tana && gmailOk && status.calendar && status.playwright && status.miro) : null;
 
   const navStyle = (page: string) => ({
     fontFamily: "var(--font-body)" as const,
@@ -293,6 +294,11 @@ export default function StatusBar({ activePage = "home" }: { activePage?: "home"
             <Monitor size={10} strokeWidth={1.5} style={{ color: "var(--text-3)" }} />
             <ServiceDot ok={status?.playwright ?? null} label="Playwright" />
           </div>
+          {/* Miro */}
+          <div style={{ display: "flex", alignItems: "center", gap: 4 }} data-tip="Miro">
+            <PenTool size={10} strokeWidth={1.5} style={{ color: "var(--text-3)" }} />
+            <ServiceDot ok={status?.miro ?? null} label="Miro" />
+          </div>
         </button>
 
         {/* Health detail dropdown */}
@@ -316,6 +322,7 @@ export default function StatusBar({ activePage = "home" }: { activePage?: "home"
               { name: "Gmail (school)", ok: status?.gmail.school ?? null },
               { name: "Google Calendar", ok: status?.calendar ?? null },
               { name: "Playwright", ok: status?.playwright ?? null },
+              { name: "Miro", ok: status?.miro ?? null },
             ].map(svc => (
               <div key={svc.name} style={{
                 display: "flex", alignItems: "center", justifyContent: "space-between",

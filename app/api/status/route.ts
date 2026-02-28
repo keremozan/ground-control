@@ -57,6 +57,20 @@ async function checkPlaywright(): Promise<boolean> {
   }
 }
 
+async function checkMiro(): Promise<boolean> {
+  try {
+    const res = await fetch('https://mcp.miro.com', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', method: 'tools/list', params: {}, id: Date.now() }),
+      signal: AbortSignal.timeout(5000),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 async function checkCalendar(): Promise<boolean> {
   try {
     const token = await getCalendarToken();
@@ -96,13 +110,14 @@ function formatRelative(iso: string): string {
 }
 
 export async function GET() {
-  const [tanaResult, gmailPersonalResult, gmailSchoolResult, calendarResult, playwrightResult, lastCycleIso] =
+  const [tanaResult, gmailPersonalResult, gmailSchoolResult, calendarResult, playwrightResult, miroResult, lastCycleIso] =
     await Promise.allSettled([
       checkTana(),
       checkGmail('personal'),
       checkGmail('school'),
       checkCalendar(),
       checkPlaywright(),
+      checkMiro(),
       Promise.resolve(getLastCycle()),
     ]);
 
@@ -117,6 +132,7 @@ export async function GET() {
     },
     calendar: val(calendarResult, false),
     playwright: val(playwrightResult, false),
+    miro: val(miroResult, false),
     lastCycle: (() => {
       const iso = val(lastCycleIso, null);
       return iso ? formatRelative(iso) : null;
