@@ -65,7 +65,9 @@ async function checkMiro(): Promise<boolean> {
       body: JSON.stringify({ jsonrpc: '2.0', method: 'tools/list', params: {}, id: Date.now() }),
       signal: AbortSignal.timeout(5000),
     });
-    return res.ok;
+    // Miro MCP requires OAuth handled by Claude Code; dashboard can't authenticate.
+    // Any response (including 401) means the service is reachable.
+    return res.status < 500;
   } catch {
     return false;
   }

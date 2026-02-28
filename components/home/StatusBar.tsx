@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
-import { Bug, X, Mail, CalendarDays, Monitor, RefreshCw, RotateCw, PenTool } from "lucide-react";
+import { Bug, X, Mail, CalendarDays, Monitor, RefreshCw, RotateCw, LayoutDashboard } from "lucide-react";
 import { logAction } from "@/lib/action-log";
 import TanaIcon from "@/components/icons/TanaIcon";
 import pkg from "@/package.json";
@@ -296,7 +296,7 @@ export default function StatusBar({ activePage = "home" }: { activePage?: "home"
           </div>
           {/* Miro */}
           <div style={{ display: "flex", alignItems: "center", gap: 4 }} data-tip="Miro">
-            <PenTool size={10} strokeWidth={1.5} style={{ color: "var(--text-3)" }} />
+            <LayoutDashboard size={10} strokeWidth={1.5} style={{ color: "var(--text-3)" }} />
             <ServiceDot ok={status?.miro ?? null} label="Miro" />
           </div>
         </button>

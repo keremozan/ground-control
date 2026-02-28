@@ -1109,7 +1109,7 @@ export default function ChatWidget() {
       tabId: newTab.id,
       trigger: {
         charName: "Architect",
-        seedPrompt: "Review this conversation and help me address any issues or errors.",
+        seedPrompt: "Review this conversation for system-level issues — broken skills, wrong routing, missing tools, character misbehavior, or prompt failures. Diagnose what went wrong at the meta/system level, not the conversation's topic itself.",
         context: chatContent,
         action: "forward-to-architect",
       },
