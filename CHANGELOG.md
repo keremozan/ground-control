@@ -1,9 +1,13 @@
 # Changelog
 
-## Unreleased
+## v1.0.3 — 2026-02-28
+
+### ![New](https://img.shields.io/badge/New-22c55e)
+-  use colored badge labels in changelog
 
 ### ![Fixed](https://img.shields.io/badge/Fixed-ef4444)
 -  add emoji labels to changelog and skip empty unreleased section
+
 ## v1.0.2 — 2026-02-28
 
 ### ![New](https://img.shields.io/badge/New-22c55e)
