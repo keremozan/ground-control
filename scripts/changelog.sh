@@ -33,10 +33,10 @@ categorize() {
     fi
   done <<< "$commits"
 
-  [ -n "$has_feat" ] && echo "### 🚀 New" && echo "$feat"
-  [ -n "$has_fix" ] && echo "### 🐛 Fixed" && echo "$fix"
-  [ -n "$has_refactor" ] && echo "### ✨ Improved" && echo "$refactor"
-  [ -n "$has_other" ] && echo "### 📝 Other" && echo "$other"
+  [ -n "$has_feat" ] && printf '### ![New](https://img.shields.io/badge/New-22c55e)\n%s\n' "$feat"
+  [ -n "$has_fix" ] && printf '### ![Fixed](https://img.shields.io/badge/Fixed-ef4444)\n%s\n' "$fix"
+  [ -n "$has_refactor" ] && printf '### ![Improved](https://img.shields.io/badge/Improved-3b82f6)\n%s\n' "$refactor"
+  [ -n "$has_other" ] && printf '### ![Other](https://img.shields.io/badge/Other-94a3b8)\n%s\n' "$other"
 }
 
 echo "# Changelog" > "$FILE"
