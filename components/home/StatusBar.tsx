@@ -20,16 +20,17 @@ type Status = {
 /* ── Structured changelog types + parser ────────────────────── */
 
 type CLEntry = {
-  type: "new" | "improved" | "fixed" | "refactor" | "cleanup";
-  title: string;
-  area: string;
+  type: "new" | "improved" | "fixed" | "other";
   bullets: string[];
 };
 
 type CLVersion = {
   heading: string;
   entries: CLEntry[];
-  rawLines?: string[];
+};
+
+const BADGE_TYPE_MAP: Record<string, CLEntry["type"]> = {
+  new: "new", fixed: "fixed", improved: "improved", other: "other",
 };
 
 function parseChangelog(raw: string): CLVersion[] {
@@ -45,10 +46,12 @@ function parseChangelog(raw: string): CLVersion[] {
       entry = null;
       continue;
     }
-    const m = line.match(/^### \[(new|improved|fixed|refactor|cleanup)\]\s+(.+?)(?:\s+—\s+(.+))?$/);
-    if (m && cur) {
+    // Match badge format: ### ![New](https://img.shields.io/badge/New-...)
+    const badge = line.match(/^### !\[(New|Fixed|Improved|Other)\]/i);
+    if (badge && cur) {
       if (entry) cur.entries.push(entry);
-      entry = { type: m[1] as CLEntry["type"], title: m[2].trim(), area: m[3]?.trim() || "", bullets: [] };
+      const type = BADGE_TYPE_MAP[badge[1].toLowerCase()] || "other";
+      entry = { type, bullets: [] };
       continue;
     }
     if (line.startsWith("### ") && cur) {
@@ -57,10 +60,7 @@ function parseChangelog(raw: string): CLVersion[] {
       continue;
     }
     if (line.startsWith("- ") && entry) {
-      entry.bullets.push(line.slice(2));
-    } else if (line.startsWith("- ") && cur && !entry) {
-      if (!cur.rawLines) cur.rawLines = [];
-      cur.rawLines.push(line.slice(2));
+      entry.bullets.push(line.slice(2).trim());
     }
   }
   if (entry && cur) cur.entries.push(entry);
@@ -70,10 +70,9 @@ function parseChangelog(raw: string): CLVersion[] {
 
 const TYPE_STYLE: Record<string, { bg: string; color: string }> = {
   new: { bg: "#dcfce7", color: "#166534" },
-  improved: { bg: "#fef3c7", color: "#92400e" },
-  fixed: { bg: "#dbeafe", color: "#1e40af" },
-  refactor: { bg: "#f3e8ff", color: "#6b21a8" },
-  cleanup: { bg: "#f1f5f9", color: "#475569" },
+  improved: { bg: "#dbeafe", color: "#1e40af" },
+  fixed: { bg: "#fee2e2", color: "#991b1b" },
+  other: { bg: "#f1f5f9", color: "#475569" },
 };
 
 /* ── ServiceDot ─────────────────────────────────────────────── */
@@ -433,67 +432,31 @@ export default function StatusBar({ activePage = "home" }: { activePage?: "home"
                 </div>
                 {/* Entries */}
                 {ver.entries.map((entry, ei) => {
-                  const ts = TYPE_STYLE[entry.type] || TYPE_STYLE.improved;
+                  const ts = TYPE_STYLE[entry.type] || TYPE_STYLE.other;
                   return (
-                    <div key={ei} style={{ marginBottom: 14 }}>
-                      {/* Badge + title + area */}
-                      <div style={{ display: "flex", alignItems: "flex-start", gap: 8, flexWrap: "wrap" }}>
-                        <span style={{
-                          fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 600,
-                          padding: "1px 6px", borderRadius: 3, flexShrink: 0,
-                          background: ts.bg, color: ts.color,
-                          textTransform: "capitalize",
-                        }}>
-                          {entry.type}
-                        </span>
-                        <span style={{
-                          fontFamily: "var(--font-body)", fontSize: 12, fontWeight: 500,
-                          color: "var(--text)", lineHeight: 1.4, flex: 1,
-                        }}>
-                          {entry.title}
-                        </span>
-                        {entry.area && (
-                          <span style={{
-                            fontFamily: "var(--font-mono)", fontSize: 9,
-                            color: "var(--text-3)", flexShrink: 0,
-                            padding: "1px 6px", borderRadius: 3,
-                            background: "var(--bg)",
+                    <div key={ei} style={{ marginBottom: 12 }}>
+                      <span style={{
+                        fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 600,
+                        padding: "1px 6px", borderRadius: 3,
+                        background: ts.bg, color: ts.color,
+                        textTransform: "capitalize",
+                      }}>
+                        {entry.type}
+                      </span>
+                      <div style={{ marginTop: 4, paddingLeft: 6 }}>
+                        {entry.bullets.map((b, bi) => (
+                          <div key={bi} style={{
+                            fontFamily: "var(--font-mono)", fontSize: 10.5,
+                            color: "var(--text-2)", lineHeight: 1.6,
                           }}>
-                            {entry.area}
-                          </span>
-                        )}
+                            <span style={{ color: "var(--text-3)", marginRight: 6 }}>&bull;</span>
+                            {b}
+                          </div>
+                        ))}
                       </div>
-                      {/* Bullets */}
-                      {entry.bullets.length > 0 && (
-                        <div style={{ marginTop: 4, paddingLeft: 44 }}>
-                          {entry.bullets.map((b, bi) => (
-                            <div key={bi} style={{
-                              fontFamily: "var(--font-mono)", fontSize: 10.5,
-                              color: "var(--text-2)", lineHeight: 1.6,
-                            }}>
-                              <span style={{ color: "var(--text-3)", marginRight: 6 }}>&bull;</span>
-                              {b}
-                            </div>
-                          ))}
-                        </div>
-                      )}
                     </div>
                   );
                 })}
-                {/* Raw lines for untagged sections (v0.1.0) */}
-                {ver.rawLines && ver.rawLines.length > 0 && (
-                  <div style={{ paddingLeft: 0 }}>
-                    {ver.rawLines.map((line, li) => (
-                      <div key={li} style={{
-                        fontFamily: "var(--font-mono)", fontSize: 10.5,
-                        color: "var(--text-2)", lineHeight: 1.6,
-                      }}>
-                        <span style={{ color: "var(--text-3)", marginRight: 6 }}>&bull;</span>
-                        {line}
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
             )) : (
               <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--text-3)" }}>
