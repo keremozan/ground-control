@@ -59,7 +59,13 @@ export default function SchedulesWidget() {
 
   const formatLastRun = (result: JobResult) => {
     const d = new Date(result.timestamp);
-    return d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+    const now = new Date();
+    const time = d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+    const isToday = d.toDateString() === now.toDateString();
+    if (isToday) return time;
+    const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    return `${days[d.getDay()]} ${d.getDate()} ${months[d.getMonth()]} ${time}`;
   };
 
   const enabledJobs = SCHEDULE_JOBS.filter(j => j.enabled);
