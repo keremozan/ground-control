@@ -33,10 +33,10 @@ categorize() {
     fi
   done <<< "$commits"
 
-  [ -n "$has_feat" ] && echo "### New" && echo "$feat"
-  [ -n "$has_fix" ] && echo "### Fixed" && echo "$fix"
-  [ -n "$has_refactor" ] && echo "### Changed" && echo "$refactor"
-  [ -n "$has_other" ] && echo "### Other" && echo "$other"
+  [ -n "$has_feat" ] && echo "### 🚀 New" && echo "$feat"
+  [ -n "$has_fix" ] && echo "### 🐛 Fixed" && echo "$fix"
+  [ -n "$has_refactor" ] && echo "### ✨ Improved" && echo "$refactor"
+  [ -n "$has_other" ] && echo "### 📝 Other" && echo "$other"
 }
 
 echo "# Changelog" > "$FILE"
@@ -48,9 +48,12 @@ if [ ${#tags[@]} -gt 0 ]; then
   latest_tag="${tags[0]}"
   unreleased=$(git log "$latest_tag"..HEAD --pretty=format:"%s" --no-merges 2>/dev/null)
   if [ -n "$unreleased" ]; then
-    echo "## Unreleased" >> "$FILE"
-    echo "" >> "$FILE"
-    categorize "$unreleased" >> "$FILE"
+    section=$(categorize "$unreleased")
+    if [ -n "$section" ]; then
+      echo "## Unreleased" >> "$FILE"
+      echo "" >> "$FILE"
+      echo "$section" >> "$FILE"
+    fi
   fi
 
   for i in "${!tags[@]}"; do
