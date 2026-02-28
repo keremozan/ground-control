@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.0.2 — 2026-02-28
+
+### New
+-  auto-generate changelog from git tags and commits
+
+### Fixed
+-  increase schedule widget text size and raise chat max turns to 50
+-  show date in schedule last-run when not today
+
 ## v1.0.1 — 2026-02-28
 
 ### New
