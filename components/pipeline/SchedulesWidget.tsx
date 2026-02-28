@@ -101,17 +101,17 @@ export default function SchedulesWidget() {
             >
               {/* Character icon */}
               <div style={{
-                width: 20, height: 20, borderRadius: 4, flexShrink: 0,
+                width: 22, height: 22, borderRadius: 4, flexShrink: 0,
                 background: color + "16",
                 border: `1px solid ${color}28`,
                 display: "flex", alignItems: "center", justifyContent: "center",
               }}>
-                <Icon size={10} strokeWidth={1.5} style={{ color }} />
+                <Icon size={12} strokeWidth={1.5} style={{ color }} />
               </div>
 
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{
-                  fontFamily: "var(--font-mono)", fontSize: 10,
+                  fontFamily: "var(--font-mono)", fontSize: 11,
                   color: "var(--text)",
                   overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                 }}>
@@ -119,7 +119,7 @@ export default function SchedulesWidget() {
                 </div>
                 <div style={{
                   display: "flex", alignItems: "center", gap: 6,
-                  fontFamily: "var(--font-mono)", fontSize: 9,
+                  fontFamily: "var(--font-mono)", fontSize: 10,
                   color: "var(--text-3)", marginTop: 1,
                 }}>
                   <span>{job.cron}</span>
@@ -138,7 +138,7 @@ export default function SchedulesWidget() {
                 data-tip="Do Now"
                 style={{
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  width: 20, height: 20, flexShrink: 0,
+                  width: 22, height: 22, flexShrink: 0,
                   background: "transparent",
                   border: `1px solid ${isRunning ? "var(--border)" : color + "40"}`,
                   borderRadius: 4,
@@ -148,9 +148,9 @@ export default function SchedulesWidget() {
                 }}
               >
                 {isRunning ? (
-                  <Loader2 size={10} strokeWidth={2} style={{ animation: "spin 1s linear infinite" }} />
+                  <Loader2 size={11} strokeWidth={2} style={{ animation: "spin 1s linear infinite" }} />
                 ) : (
-                  <Play size={9} strokeWidth={2} />
+                  <Play size={10} strokeWidth={2} />
                 )}
               </button>
             </div>

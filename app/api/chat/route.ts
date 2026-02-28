@@ -58,7 +58,7 @@ export async function POST(req: Request) {
   const stream = spawnSSEStream({
     prompt,
     model: modelOverride || char.defaultModel || 'sonnet',
-    maxTurns: context ? 30 : 25,
+    maxTurns: context ? 50 : 25,
     label: `Chat: ${char.name}`,
     characterId,
     signal: req.signal,
