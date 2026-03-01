@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { resolveIcon } from "@/lib/icon-map";
 import { useChatTrigger } from "@/lib/chat-store";
 import { logAction } from "@/lib/action-log";
-import { Loader2 } from "lucide-react";
+import { Loader2, Play, X } from "lucide-react";
 
 type ActionInfo = {
   label: string;
@@ -28,6 +28,10 @@ export default function CrewWidget() {
   const [characters, setCharacters] = useState<CharacterInfo[]>([]);
   const [runningActions, setRunningActions] = useState<Set<string>>(new Set());
   const runningRef = useRef(new Set<string>());
+  const [promptAction, setPromptAction] = useState<{ charName: string; label: string; seed: string } | null>(null);
+  const [promptInput, setPromptInput] = useState("");
+  const promptRef = useRef<HTMLInputElement>(null);
+  const [contextOn, setContextOn] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetch("/api/characters")
@@ -67,6 +71,38 @@ export default function CrewWidget() {
       runningRef.current.delete(key);
       setRunningActions(prev => { const n = new Set(prev); n.delete(key); return n; });
     }
+  };
+
+  const toggleContext = (charName: string, label: string) => {
+    const key = `${charName}:${label}`;
+    setContextOn(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const fireAction = (charName: string, action: ActionInfo, seedPrompt: string) => {
+    const key = `${charName}:${action.label}`;
+    if (contextOn.has(key)) {
+      setPromptAction({ charName, label: action.label, seed: seedPrompt });
+      setPromptInput("");
+      setTimeout(() => promptRef.current?.focus(), 50);
+    } else {
+      setTrigger({ charName, seedPrompt, action: action.label });
+    }
+  };
+
+  const submitPrompt = () => {
+    if (!promptAction) return;
+    const ctx = promptInput.trim();
+    const seed = ctx
+      ? `${promptAction.seed}\n\nContext: ${ctx}`
+      : promptAction.seed;
+    setTrigger({ charName: promptAction.charName, seedPrompt: seed, action: promptAction.label });
+    setPromptAction(null);
+    setPromptInput("");
   };
 
   return (
@@ -134,33 +170,97 @@ export default function CrewWidget() {
                       const AIcon = resolveIcon(action.icon);
                       const isAuto = action.autonomous === true;
                       const isRunning = runningActions.has(`${char.name}:${action.label}`);
+                      const ctxKey = `${char.name}:${action.label}`;
+                      const isCtxOn = !isAuto && contextOn.has(ctxKey);
                       return (
-                        <button
-                          key={action.label}
-                          className="item-action-btn"
-                          data-tip={action.description || action.label}
-                          disabled={isRunning}
-                          onClick={seedPrompt
-                            ? isAuto
-                              ? () => runAutonomous(char.name, action.label, seedPrompt)
-                              : () => setTrigger({ charName: char.name, seedPrompt, action: action.label })
-                            : undefined
-                          }
-                          style={{
-                            width: "auto", height: 18, gap: 3, padding: "0 5px 0 4px",
-                            opacity: isRunning ? 0.5 : 1,
-                            color: char.color,
-                            borderRadius: 3, fontSize: 9,
-                          }}
-                        >
-                          {isRunning
-                            ? <Loader2 size={9} strokeWidth={1.5} style={{ animation: "spin 1s linear infinite" }} />
-                            : <AIcon size={9} strokeWidth={1.5} />
-                          }
-                          <span style={{ fontFamily: "var(--font-mono)", fontSize: 9 }}>{action.label}</span>
-                        </button>
+                        <span key={action.label} style={{ display: "inline-flex", alignItems: "center", gap: 0 }}>
+                          <button
+                            className="item-action-btn"
+                            data-tip={action.description || action.label}
+                            disabled={isRunning}
+                            onClick={seedPrompt
+                              ? isAuto
+                                ? () => runAutonomous(char.name, action.label, seedPrompt)
+                                : () => fireAction(char.name, action, seedPrompt)
+                              : undefined
+                            }
+                            style={{
+                              width: "auto", height: 18, gap: 3, padding: "0 5px 0 4px",
+                              opacity: isRunning ? 0.5 : 1,
+                              color: char.color,
+                              borderRadius: 3, fontSize: 9,
+                            }}
+                          >
+                            {isRunning
+                              ? <Loader2 size={9} strokeWidth={1.5} style={{ animation: "spin 1s linear infinite" }} />
+                              : <AIcon size={9} strokeWidth={1.5} />
+                            }
+                            <span style={{ fontFamily: "var(--font-mono)", fontSize: 9 }}>{action.label}</span>
+                          </button>
+                          {!isAuto && (
+                            <span
+                              data-tip={isCtxOn ? "Context on" : "Context off"}
+                              onClick={() => toggleContext(char.name, action.label)}
+                              style={{
+                                display: "inline-flex", alignItems: "center", justifyContent: "center",
+                                width: 14, height: 14, cursor: "pointer", flexShrink: 0,
+                              }}
+                            >
+                              <span style={{
+                                width: 5, height: 5, borderRadius: "50%",
+                                background: isCtxOn ? char.color : "var(--text-3)",
+                                opacity: isCtxOn ? 1 : 0.25,
+                                transition: "all 0.15s",
+                              }} />
+                            </span>
+                          )}
+                        </span>
                       );
                     })}
+                  </div>
+                )}
+
+                {/* Inline context prompt */}
+                {promptAction?.charName === char.name && (
+                  <div style={{
+                    borderTop: "1px solid var(--border)", background: "var(--surface-2)",
+                    borderRadius: "0 0 6px 6px", padding: "6px 6px",
+                    marginTop: 4, marginLeft: -6, marginRight: -6, marginBottom: -5,
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                      <input
+                        ref={promptRef}
+                        type="text"
+                        value={promptInput}
+                        onChange={e => setPromptInput(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === "Enter") submitPrompt();
+                          if (e.key === "Escape") { setPromptAction(null); setPromptInput(""); }
+                        }}
+                        placeholder="context"
+                        style={{
+                          flex: 1, fontFamily: "var(--font-mono)", fontSize: 10,
+                          background: "var(--surface)", border: "1px solid var(--border)",
+                          borderRadius: 4, padding: "4px 8px", color: "var(--text)",
+                          outline: "none",
+                        }}
+                      />
+                      <button
+                        className="item-action-btn item-action-btn-blue"
+                        onClick={submitPrompt}
+                        style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 2, width: "auto", padding: "0 5px", fontFamily: "var(--font-mono)", fontSize: 9, height: 18 }}
+                      >
+                        <Play size={9} strokeWidth={1.5} />
+                        Go
+                      </button>
+                      <button
+                        className="item-action-btn"
+                        onClick={() => { setPromptAction(null); setPromptInput(""); }}
+                        style={{ cursor: "pointer", height: 18 }}
+                      >
+                        <X size={10} strokeWidth={1.5} />
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
