@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic';
 import fs from 'fs';
 import path from 'path';
 import type { JobResult } from '@/lib/scheduler';
-import { getGmailToken, getCalendarToken } from '@/lib/google-auth';
+import { getGmailToken, getCalendarToken, getTasksToken } from '@/lib/google-auth';
 import { TANA_MCP_URL, TANA_MCP_TOKEN, JOB_RESULTS_PATH, HOME } from '@/lib/config';
 
 const RESULTS_FILE = JOB_RESULTS_PATH;
@@ -86,6 +86,19 @@ async function checkCalendar(): Promise<boolean> {
   }
 }
 
+async function checkGoogleTasks(): Promise<boolean> {
+  try {
+    const token = await getTasksToken();
+    const res = await fetch('https://tasks.googleapis.com/tasks/v1/users/@me/lists?maxResults=1', {
+      headers: { Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(5000),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 function getLastCycle(): string | null {
   try {
     const results: JobResult[] = JSON.parse(fs.readFileSync(RESULTS_FILE, 'utf-8'));
@@ -112,7 +125,7 @@ function formatRelative(iso: string): string {
 }
 
 export async function GET() {
-  const [tanaResult, gmailPersonalResult, gmailSchoolResult, calendarResult, playwrightResult, miroResult, lastCycleIso] =
+  const [tanaResult, gmailPersonalResult, gmailSchoolResult, calendarResult, playwrightResult, miroResult, tasksResult, lastCycleIso] =
     await Promise.allSettled([
       checkTana(),
       checkGmail('personal'),
@@ -120,6 +133,7 @@ export async function GET() {
       checkCalendar(),
       checkPlaywright(),
       checkMiro(),
+      checkGoogleTasks(),
       Promise.resolve(getLastCycle()),
     ]);
 
@@ -135,6 +149,7 @@ export async function GET() {
     calendar: val(calendarResult, false),
     playwright: val(playwrightResult, false),
     miro: val(miroResult, false),
+    tasks: val(tasksResult, false),
     lastCycle: (() => {
       const iso = val(lastCycleIso, null);
       return iso ? formatRelative(iso) : null;

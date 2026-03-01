@@ -1,42 +1,87 @@
 #!/bin/bash
 # Generate CHANGELOG.md from git tags + commit messages
-# Commits must use conventional format: feat:, fix:, refactor:, docs:, etc.
+# Commits use conventional format with scope: feat(crew): message, fix(chat): message
+# Commits without scope go under "General"
 # Usage: bash scripts/changelog.sh
-# Tip: tag a release first with: git tag v1.0.0
 
 FILE="CHANGELOG.md"
 
-categorize() {
+# Map scopes to display names
+scope_name() {
+  case "$1" in
+    crew)      echo "Crew" ;;
+    chat)      echo "Chat" ;;
+    tasks)     echo "Tasks" ;;
+    inbox)     echo "Inbox" ;;
+    calendar)  echo "Calendar" ;;
+    status)    echo "Status Bar" ;;
+    schedule)  echo "Schedule" ;;
+    pipeline)  echo "Pipeline" ;;
+    config)    echo "Config" ;;
+    changelog) echo "Changelog" ;;
+    core)      echo "Core" ;;
+    *)         echo "$1" ;;
+  esac
+}
+
+# Process commits into area-grouped format
+# Input: newline-separated commit messages
+# Output: markdown sections grouped by area
+group_by_area() {
   local commits="$1"
-  local has_feat="" has_fix="" has_refactor="" has_other=""
-  local feat="" fix="" refactor="" other=""
+  declare -A areas  # area -> items
 
   while IFS= read -r msg; do
     [ -z "$msg" ] && continue
-    # Skip meta commits
     [[ "$msg" == docs:\ update\ changelog* ]] && continue
     [[ "$msg" == *"Co-Authored-By"* ]] && continue
 
-    # Strip scope: "feat(chat): X" → "X"
-    clean=$(echo "$msg" | sed -E 's/^[a-z]+(\([^)]+\))?:\s*//')
-
-    if [[ "$msg" =~ ^feat ]]; then
-      feat+="- $clean"$'\n'; has_feat=1
-    elif [[ "$msg" =~ ^fix ]]; then
-      fix+="- $clean"$'\n'; has_fix=1
-    elif [[ "$msg" =~ ^refactor ]]; then
-      refactor+="- $clean"$'\n'; has_refactor=1
-    elif [[ "$msg" =~ ^(docs|style|chore|ci|test) ]]; then
-      : # skip docs/style/chore commits from changelog
+    # Extract type and optional scope: feat(crew): message
+    local type="" scope="" clean=""
+    if [[ "$msg" =~ ^([a-z]+)\(([^)]+)\):\ (.*) ]]; then
+      type="${BASH_REMATCH[1]}"
+      scope="${BASH_REMATCH[2]}"
+      clean="${BASH_REMATCH[3]}"
+    elif [[ "$msg" =~ ^([a-z]+):\ (.*) ]]; then
+      type="${BASH_REMATCH[1]}"
+      scope="general"
+      clean="${BASH_REMATCH[2]}"
     else
-      other+="- $msg"$'\n'; has_other=1
+      type="other"
+      scope="general"
+      clean="$msg"
+    fi
+
+    # Skip docs/style/chore
+    [[ "$type" =~ ^(docs|style|chore|ci|test)$ ]] && continue
+
+    # Map type to tag
+    local tag=""
+    case "$type" in
+      feat)     tag="[new]" ;;
+      fix)      tag="[fix]" ;;
+      refactor) tag="[improved]" ;;
+      *)        tag="" ;;
+    esac
+
+    local area
+    area=$(scope_name "$scope")
+    local line="- ${tag:+$tag }$clean"
+
+    if [ -n "${areas[$area]+x}" ]; then
+      areas[$area]+=$'\n'"$line"
+    else
+      areas[$area]="$line"
     fi
   done <<< "$commits"
 
-  [ -n "$has_feat" ] && printf '### ![New](https://img.shields.io/badge/New-22c55e)\n%s\n' "$feat"
-  [ -n "$has_fix" ] && printf '### ![Fixed](https://img.shields.io/badge/Fixed-ef4444)\n%s\n' "$fix"
-  [ -n "$has_refactor" ] && printf '### ![Improved](https://img.shields.io/badge/Improved-3b82f6)\n%s\n' "$refactor"
-  [ -n "$has_other" ] && printf '### ![Other](https://img.shields.io/badge/Other-94a3b8)\n%s\n' "$other"
+  # Output sorted areas (General last)
+  for area in $(echo "${!areas[@]}" | tr ' ' '\n' | grep -v '^General$' | sort); do
+    printf '### %s\n%s\n\n' "$area" "${areas[$area]}"
+  done
+  if [ -n "${areas[General]+x}" ]; then
+    printf '### General\n%s\n\n' "${areas[General]}"
+  fi
 }
 
 echo "# Changelog" > "$FILE"
@@ -48,7 +93,7 @@ if [ ${#tags[@]} -gt 0 ]; then
   latest_tag="${tags[0]}"
   unreleased=$(git log "$latest_tag"..HEAD --pretty=format:"%s" --no-merges 2>/dev/null)
   if [ -n "$unreleased" ]; then
-    section=$(categorize "$unreleased")
+    section=$(group_by_area "$unreleased")
     if [ -n "$section" ]; then
       echo "## Unreleased" >> "$FILE"
       echo "" >> "$FILE"
@@ -69,14 +114,13 @@ if [ ${#tags[@]} -gt 0 ]; then
 
     echo "## $tag — $tag_date" >> "$FILE"
     echo "" >> "$FILE"
-    categorize "$commits" >> "$FILE"
+    group_by_area "$commits" >> "$FILE"
   done
 else
-  # No tags — all commits as v1.0.0
   echo "## v1.0.0 — $(date +%Y-%m-%d)" >> "$FILE"
   echo "" >> "$FILE"
   commits=$(git log --pretty=format:"%s" --no-merges)
-  categorize "$commits" >> "$FILE"
+  group_by_area "$commits" >> "$FILE"
 fi
 
 echo "Generated $FILE"

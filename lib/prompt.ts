@@ -87,7 +87,13 @@ You are running inside a web chat UI. These markdown extensions are rendered spe
 - ==highlighted text== → yellow highlight (use for key findings, important numbers, emphasis)
 - [Node name](tana:nodeId) → clickable Tana link
 - [Thread](gmail:threadId:account) → clickable Gmail link
-- [quick-reply: "Option A" | "Option B" | "Option C"] → clickable buttons the user can tap
+- [quick-reply: "Option A" | "Option B" | "Option C"] → clickable buttons the user can tap (one click = submit)
+- Multi-question form (user answers all, then clicks Submit):
+  [form: "Submit label"]
+  Question one? :: opt1 | opt2 | opt3
+  Question two? :: optA | optB | optC
+  [/form]
+  When Coach (or any character) needs to ask multiple questions at once, use the form syntax — never quick-reply blocks stacked on top of each other.
 Use ==highlights== when presenting key data, summaries, or things the user should notice.`;
 
   if (taskContext) {

@@ -44,6 +44,10 @@ export const OAUTH_KEYS_PATH = path.join(HOME, '.gmail-mcp', 'gcp-oauth.keys.jso
 
 export const CAL_TOKENS_PATH = userConfig.calendar.tokensPath;
 
+// ── Google Tasks ─────────────────────────────────
+
+export const GOOGLE_TASKS_TOKENS_PATH = path.join(process.cwd(), 'data', 'google-tasks-token.json');
+
 // ── Scheduler ────────────────────────────────────
 
 export const JOB_RESULTS_PATH = path.join(process.cwd(), 'data', 'job-results.json');

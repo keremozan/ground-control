@@ -577,13 +577,24 @@ export async function setTaskInProgress(nodeId: string, characterId?: string) {
   }
 }
 
-/** Mark task as done */
+/** Mark task as done — sets both status field and checkbox independently */
 export async function markTaskDone(nodeId: string) {
-  await mcpCall('tools/call', {
-    name: 'set_field_option',
-    arguments: { nodeId, attributeId: STATUS_FIELD_ID, optionId: STATUS_OPTION_IDS.done },
-  });
-  await mcpCall('tools/call', { name: 'check_node', arguments: { nodeId } });
+  const results = await Promise.allSettled([
+    mcpCall('tools/call', {
+      name: 'set_field_option',
+      arguments: { nodeId, attributeId: STATUS_FIELD_ID, optionId: STATUS_OPTION_IDS.done },
+    }),
+    mcpCall('tools/call', { name: 'check_node', arguments: { nodeId } }),
+  ]);
+
+  // If check_node failed, retry once (this is what getTanaTasks filters on)
+  if (results[1].status === 'rejected') {
+    await mcpCall('tools/call', { name: 'check_node', arguments: { nodeId } });
+  }
+
+  // Throw if both failed
+  const allFailed = results.every(r => r.status === 'rejected');
+  if (allFailed) throw new Error('Failed to mark task as done in Tana');
 }
 
 /** Open a node in the desktop Tana app */

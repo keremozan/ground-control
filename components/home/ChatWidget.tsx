@@ -91,6 +91,7 @@ function processLinks(s: string, accent?: string): React.ReactNode[] {
 
 function splitMessage(text: string): { thinking: string; output: string } {
   const lines = text.split('\n');
+  let splitIdx = -1;
   for (let i = 0; i < lines.length; i++) {
     const t = lines[i].trim();
     if (
@@ -99,12 +100,21 @@ function splitMessage(text: string): { thinking: string; output: string } {
       /^[✅🔴🟠🟡🟢❌⚠️☑️✓]/.test(t) ||
       /^\*\*(Status|Summary|Results|Action|Distribution|Routing)/.test(t)
     ) {
-      const thinking = lines.slice(0, i).join('\n').trim();
-      const output = lines.slice(i).join('\n').trim();
-      return { thinking, output };
+      splitIdx = i;
+      break;
     }
   }
-  return { thinking: '', output: text };
+  if (splitIdx === -1) return { thinking: '', output: text };
+  // If a quick-reply block appears before the split, move the split there so it renders as buttons
+  for (let j = 0; j < splitIdx; j++) {
+    if (/^\[quick-reply:/i.test(lines[j].trim())) {
+      splitIdx = j;
+      break;
+    }
+  }
+  const thinking = lines.slice(0, splitIdx).join('\n').trim();
+  const output = lines.slice(splitIdx).join('\n').trim();
+  return { thinking, output };
 }
 
 const EMOJI_MAP: Record<string, { label: string; color: string; bg: string }> = {
@@ -147,6 +157,82 @@ function expandEmoji(text: string, keyPrefix: string): React.ReactNode[] {
     const em = renderEmoji(seg, `${keyPrefix}-e${i}`);
     return em || (seg ? <span key={`${keyPrefix}-e${i}`}>{seg}</span> : null);
   }).filter(Boolean) as React.ReactNode[];
+}
+
+function FormBlock({
+  questions,
+  submitLabel,
+  accent,
+  onSubmit,
+}: {
+  questions: { label: string; options: string[] }[];
+  submitLabel: string;
+  accent?: string;
+  onSubmit?: (text: string) => void;
+}) {
+  const [selected, setSelected] = useState<Record<number, string>>({});
+  const [submitted, setSubmitted] = useState(false);
+  const allAnswered = questions.every((_, i) => selected[i] !== undefined);
+  const c = accent || 'var(--text)';
+  return (
+    <div style={{ margin: '6px 0' }}>
+      {questions.map((q, qi) => (
+        <div key={qi} style={{ marginBottom: 8 }}>
+          <div style={{
+            fontSize: 10, fontStyle: 'italic', color: c,
+            marginBottom: 4, fontFamily: 'var(--font-mono)',
+          }}>
+            {qi + 1}. {q.label}
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+            {q.options.map((opt, oi) => (
+              <button
+                key={oi}
+                disabled={submitted}
+                onClick={() => !submitted && setSelected(s => ({ ...s, [qi]: opt }))}
+                style={{
+                  fontFamily: 'var(--font-mono)', fontSize: 10,
+                  padding: '4px 8px', borderRadius: 4, minWidth: 28, textAlign: 'center' as const,
+                  border: `1px solid ${selected[qi] === opt ? c : c + '40'}`,
+                  background: selected[qi] === opt ? c + '18' : 'transparent',
+                  color: selected[qi] === opt ? c : c + 'aa',
+                  cursor: submitted ? 'default' : 'pointer',
+                  transition: 'background 0.12s, border-color 0.12s',
+                  fontWeight: selected[qi] === opt ? 600 : 400,
+                  opacity: submitted && selected[qi] !== opt ? 0.3 : 1,
+                }}
+                onMouseEnter={e => { if (!submitted && selected[qi] !== opt) e.currentTarget.style.background = c + '0a'; }}
+                onMouseLeave={e => { if (selected[qi] !== opt) e.currentTarget.style.background = 'transparent'; }}
+              >
+                {opt}
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+      <button
+        disabled={!allAnswered || submitted}
+        onClick={() => {
+          if (!allAnswered || submitted) return;
+          setSubmitted(true);
+          const text = questions.map((q, i) => `${q.label.replace(/[?:]+$/, '').trim()}: ${selected[i]}`).join(', ');
+          onSubmit?.(text);
+        }}
+        style={{
+          marginTop: 4,
+          fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 600,
+          padding: '4px 12px', borderRadius: 4,
+          border: `1px solid ${allAnswered && !submitted ? c : c + '30'}`,
+          background: allAnswered && !submitted ? c + '18' : 'transparent',
+          color: allAnswered && !submitted ? c : c + '40',
+          cursor: allAnswered && !submitted ? 'pointer' : 'default',
+          transition: 'background 0.12s, border-color 0.12s',
+        }}
+      >
+        {submitted ? 'Submitted' : submitLabel}
+      </button>
+    </div>
+  );
 }
 
 function ChatMarkdown({ text, accent, onQuickReply }: { text: string; accent?: string; onQuickReply?: (text: string) => void }) {
@@ -206,7 +292,7 @@ function ChatMarkdown({ text, accent, onQuickReply }: { text: string; accent?: s
   const isSeparator = (row: string) => /^\|[\s\-:|]+\|$/.test(row.trim());
 
   const lines = text.split('\n');
-  const blocks: { type: 'line' | 'table'; content: string[] }[] = [];
+  const blocks: { type: 'line' | 'table' | 'form'; content: string[] }[] = [];
   let i = 0;
   while (i < lines.length) {
     const t = lines[i].trim();
@@ -217,6 +303,15 @@ function ChatMarkdown({ text, accent, onQuickReply }: { text: string; accent?: s
         i++;
       }
       blocks.push({ type: 'table', content: tableLines });
+    } else if (/^\[form(\s|:|])/i.test(t)) {
+      const formLines: string[] = [t];
+      i++;
+      while (i < lines.length && !/^\[\/form\]/i.test(lines[i].trim())) {
+        formLines.push(lines[i].trim());
+        i++;
+      }
+      if (i < lines.length) i++; // consume [/form]
+      blocks.push({ type: 'form', content: formLines });
     } else {
       blocks.push({ type: 'line', content: [lines[i]] });
       i++;
@@ -226,6 +321,26 @@ function ChatMarkdown({ text, accent, onQuickReply }: { text: string; accent?: s
   return (
     <div>
       {blocks.map((block, bi) => {
+        if (block.type === 'form') {
+          const headerLine = block.content[0];
+          const submitLabel = headerLine.match(/"([^"]+)"/)?.[1] || 'Submit';
+          const questions = block.content.slice(1).map(line => {
+            const parts = line.split('::');
+            const label = parts[0].trim();
+            const options = (parts[1] || '').split('|').map(o => o.trim()).filter(Boolean);
+            return { label, options };
+          }).filter(q => q.label && q.options.length > 0);
+          if (questions.length === 0) return null;
+          return (
+            <FormBlock
+              key={bi}
+              questions={questions}
+              submitLabel={submitLabel}
+              accent={accent}
+              onSubmit={onQuickReply}
+            />
+          );
+        }
         if (block.type === 'table') {
           const rows = block.content.filter(r => !isSeparator(r));
           if (rows.length === 0) return null;

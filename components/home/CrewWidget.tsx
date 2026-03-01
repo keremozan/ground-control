@@ -10,6 +10,7 @@ type ActionInfo = {
   icon: string;
   description: string;
   autonomous?: boolean;
+  endpoint?: string;
 };
 
 type CharacterInfo = {
@@ -31,7 +32,12 @@ export default function CrewWidget() {
   const [promptAction, setPromptAction] = useState<{ charName: string; label: string; seed: string } | null>(null);
   const [promptInput, setPromptInput] = useState("");
   const promptRef = useRef<HTMLInputElement>(null);
-  const [contextOn, setContextOn] = useState<Set<string>>(new Set());
+  const [contextOn, setContextOn] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem("crew-context-on");
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch { return new Set(); }
+  });
 
   useEffect(() => {
     fetch("/api/characters")
@@ -41,6 +47,30 @@ export default function CrewWidget() {
       })
       .catch(() => {});
   }, []);
+
+  const runEndpoint = async (charName: string, action: string, endpoint: string) => {
+    const key = `${charName}:${action}`;
+    if (runningRef.current.has(key)) return;
+    runningRef.current.add(key);
+    setRunningActions(prev => new Set(prev).add(key));
+
+    try {
+      const res = await fetch(endpoint, { method: "POST" });
+      const data = await res.json();
+      logAction({
+        widget: "crew",
+        action: "endpoint",
+        target: `${charName} ${action}`,
+        character: charName,
+        detail: JSON.stringify(data.report || data),
+      });
+    } catch {
+      // silent
+    } finally {
+      runningRef.current.delete(key);
+      setRunningActions(prev => { const n = new Set(prev); n.delete(key); return n; });
+    }
+  };
 
   const runAutonomous = async (charName: string, action: string, seedPrompt: string) => {
     const key = `${charName}:${action}`;
@@ -79,6 +109,7 @@ export default function CrewWidget() {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key);
       else next.add(key);
+      try { localStorage.setItem("crew-context-on", JSON.stringify([...next])); } catch {}
       return next;
     });
   };
@@ -169,20 +200,23 @@ export default function CrewWidget() {
                       const seedPrompt = seeds[action.label];
                       const AIcon = resolveIcon(action.icon);
                       const isAuto = action.autonomous === true;
+                      const isDirect = !!action.endpoint;
                       const isRunning = runningActions.has(`${char.name}:${action.label}`);
                       const ctxKey = `${char.name}:${action.label}`;
-                      const isCtxOn = !isAuto && contextOn.has(ctxKey);
+                      const isCtxOn = !isAuto && !isDirect && contextOn.has(ctxKey);
                       return (
                         <span key={action.label} style={{ display: "inline-flex", alignItems: "center", gap: 0 }}>
                           <button
                             className="item-action-btn"
                             data-tip={action.description || action.label}
                             disabled={isRunning}
-                            onClick={seedPrompt
-                              ? isAuto
-                                ? () => runAutonomous(char.name, action.label, seedPrompt)
-                                : () => fireAction(char.name, action, seedPrompt)
-                              : undefined
+                            onClick={isDirect
+                              ? () => runEndpoint(char.name, action.label, action.endpoint!)
+                              : seedPrompt
+                                ? isAuto
+                                  ? () => runAutonomous(char.name, action.label, seedPrompt)
+                                  : () => fireAction(char.name, action, seedPrompt)
+                                : undefined
                             }
                             style={{
                               width: "auto", height: 18, gap: 3, padding: "0 5px 0 4px",
@@ -197,7 +231,7 @@ export default function CrewWidget() {
                             }
                             <span style={{ fontFamily: "var(--font-mono)", fontSize: 9 }}>{action.label}</span>
                           </button>
-                          {!isAuto && (
+                          {!isAuto && !isDirect && (
                             <span
                               data-tip={isCtxOn ? "Context on" : "Context off"}
                               onClick={() => toggleContext(char.name, action.label)}

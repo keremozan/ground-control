@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
-import { Bug, X, Mail, CalendarDays, Monitor, RefreshCw, RotateCw, LayoutDashboard } from "lucide-react";
+import { Bug, X, Mail, CalendarDays, Monitor, RefreshCw, RotateCw, LayoutDashboard, ListChecks } from "lucide-react";
 import { logAction } from "@/lib/action-log";
 import TanaIcon from "@/components/icons/TanaIcon";
 import pkg from "@/package.json";
@@ -15,65 +15,69 @@ type Status = {
   calendar: boolean;
   playwright: boolean;
   miro: boolean;
+  tasks: boolean;
   lastCycle: string | null;
 };
 
 /* ── Structured changelog types + parser ────────────────────── */
 
-type CLEntry = {
+type CLItem = {
   type: "new" | "improved" | "fixed" | "other";
-  bullets: string[];
+  text: string;
+};
+
+type CLSection = {
+  area: string;
+  items: CLItem[];
 };
 
 type CLVersion = {
   heading: string;
-  entries: CLEntry[];
+  sections: CLSection[];
 };
 
-const BADGE_TYPE_MAP: Record<string, CLEntry["type"]> = {
-  new: "new", fixed: "fixed", improved: "improved", other: "other",
+const TYPE_MAP: Record<string, CLItem["type"]> = {
+  new: "new", fix: "fixed", fixed: "fixed", improved: "improved",
 };
 
 function parseChangelog(raw: string): CLVersion[] {
   const versions: CLVersion[] = [];
   let cur: CLVersion | null = null;
-  let entry: CLEntry | null = null;
+  let section: CLSection | null = null;
 
   for (const line of raw.split("\n")) {
     if (line.startsWith("## ")) {
-      if (entry && cur) cur.entries.push(entry);
+      if (section && cur) cur.sections.push(section);
       if (cur) versions.push(cur);
-      cur = { heading: line.replace("## ", ""), entries: [] };
-      entry = null;
-      continue;
-    }
-    // Match badge format: ### ![New](https://img.shields.io/badge/New-...)
-    const badge = line.match(/^### !\[(New|Fixed|Improved|Other)\]/i);
-    if (badge && cur) {
-      if (entry) cur.entries.push(entry);
-      const type = BADGE_TYPE_MAP[badge[1].toLowerCase()] || "other";
-      entry = { type, bullets: [] };
+      cur = { heading: line.replace("## ", ""), sections: [] };
+      section = null;
       continue;
     }
     if (line.startsWith("### ") && cur) {
-      if (entry) cur.entries.push(entry);
-      entry = null;
+      if (section) cur.sections.push(section);
+      section = { area: line.replace("### ", ""), items: [] };
       continue;
     }
-    if (line.startsWith("- ") && entry) {
-      entry.bullets.push(line.slice(2).trim());
+    if (line.startsWith("- ") && section) {
+      const text = line.slice(2).trim();
+      const tag = text.match(/^\[(new|fix|fixed|improved)\]\s*/i);
+      if (tag) {
+        section.items.push({ type: TYPE_MAP[tag[1].toLowerCase()] || "other", text: text.slice(tag[0].length) });
+      } else {
+        section.items.push({ type: "other", text });
+      }
     }
   }
-  if (entry && cur) cur.entries.push(entry);
+  if (section && cur) cur.sections.push(section);
   if (cur) versions.push(cur);
   return versions;
 }
 
-const TYPE_STYLE: Record<string, { bg: string; color: string }> = {
-  new: { bg: "#dcfce7", color: "#166534" },
-  improved: { bg: "#dbeafe", color: "#1e40af" },
-  fixed: { bg: "#fee2e2", color: "#991b1b" },
-  other: { bg: "#f1f5f9", color: "#475569" },
+const TYPE_DOT: Record<string, string> = {
+  new: "#22c55e",
+  improved: "#3b82f6",
+  fixed: "#f59e0b",
+  other: "#94a3b8",
 };
 
 /* ── ServiceDot ─────────────────────────────────────────────── */
@@ -178,7 +182,7 @@ export default function StatusBar({ activePage = "home" }: { activePage?: "home"
   // Derived health states
   const gmailOk = status ? (status.gmail.personal && status.gmail.school) : null;
   const gmailPartial = status ? (status.gmail.personal || status.gmail.school) && !gmailOk : false;
-  const allOk = status ? (status.tana && gmailOk && status.calendar && status.playwright && status.miro) : null;
+  const allOk = status ? (status.tana && gmailOk && status.calendar && status.playwright && status.miro && status.tasks) : null;
 
   const navStyle = (page: string) => ({
     fontFamily: "var(--font-body)" as const,
@@ -299,6 +303,11 @@ export default function StatusBar({ activePage = "home" }: { activePage?: "home"
             <LayoutDashboard size={10} strokeWidth={1.5} style={{ color: "var(--text-3)" }} />
             <ServiceDot ok={status?.miro ?? null} label="Miro" />
           </div>
+          {/* Google Tasks */}
+          <div style={{ display: "flex", alignItems: "center", gap: 4 }} data-tip="Google Tasks">
+            <ListChecks size={10} strokeWidth={1.5} style={{ color: "var(--text-3)" }} />
+            <ServiceDot ok={status?.tasks ?? null} label="Google Tasks" />
+          </div>
         </button>
 
         {/* Health detail dropdown */}
@@ -323,6 +332,7 @@ export default function StatusBar({ activePage = "home" }: { activePage?: "home"
               { name: "Google Calendar", ok: status?.calendar ?? null },
               { name: "Playwright", ok: status?.playwright ?? null },
               { name: "Miro", ok: status?.miro ?? null },
+              { name: "Google Tasks", ok: status?.tasks ?? null },
             ].map(svc => (
               <div key={svc.name} style={{
                 display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -402,7 +412,7 @@ export default function StatusBar({ activePage = "home" }: { activePage?: "home"
         <Bug size={11} strokeWidth={1.5} />
       </button>
 
-      {/* Changelog modal — structured */}
+      {/* Changelog modal */}
       {showChangelog && (
         <div
           onClick={() => setShowChangelog(false)}
@@ -415,55 +425,53 @@ export default function StatusBar({ activePage = "home" }: { activePage?: "home"
           <div
             onClick={e => e.stopPropagation()}
             style={{
-              background: "var(--surface)", borderRadius: 8,
+              background: "var(--surface)", borderRadius: 10,
               border: "1px solid var(--border)",
-              width: 580, maxHeight: "75vh", overflow: "auto",
-              padding: "24px 28px",
+              width: 480, maxHeight: "75vh", overflow: "auto",
+              padding: "20px 24px",
             }}
           >
             <div style={{
-              fontFamily: "var(--font-display)", fontSize: 15, fontWeight: 700,
-              color: "var(--text)", marginBottom: 20,
+              fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 600,
+              color: "var(--text-3)", letterSpacing: "0.5px", textTransform: "uppercase",
+              marginBottom: 16,
             }}>
               Changelog
             </div>
             {changelog ? changelog.map((ver, vi) => (
-              <div key={vi} style={{ marginBottom: vi < changelog.length - 1 ? 24 : 0 }}>
-                {/* Version header */}
+              <div key={vi} style={{ marginBottom: vi < changelog.length - 1 ? 20 : 0 }}>
                 <div style={{
                   fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 600,
-                  color: "var(--text)", marginBottom: 12,
-                  paddingBottom: 6, borderBottom: "1px solid var(--border)",
+                  color: "var(--text)", marginBottom: 10,
+                  paddingBottom: 5, borderBottom: "1px solid var(--border)",
                 }}>
                   {ver.heading}
                 </div>
-                {/* Entries */}
-                {ver.entries.map((entry, ei) => {
-                  const ts = TYPE_STYLE[entry.type] || TYPE_STYLE.other;
-                  return (
-                    <div key={ei} style={{ marginBottom: 12 }}>
-                      <span style={{
-                        fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 600,
-                        padding: "1px 6px", borderRadius: 3,
-                        background: ts.bg, color: ts.color,
-                        textTransform: "capitalize",
-                      }}>
-                        {entry.type}
-                      </span>
-                      <div style={{ marginTop: 4, paddingLeft: 6 }}>
-                        {entry.bullets.map((b, bi) => (
-                          <div key={bi} style={{
-                            fontFamily: "var(--font-mono)", fontSize: 10.5,
-                            color: "var(--text-2)", lineHeight: 1.6,
-                          }}>
-                            <span style={{ color: "var(--text-3)", marginRight: 6 }}>&bull;</span>
-                            {b}
-                          </div>
-                        ))}
-                      </div>
+                {ver.sections.map((sec, si) => (
+                  <div key={si} style={{ marginBottom: 10 }}>
+                    <div style={{
+                      fontFamily: "var(--font-mono)", fontSize: 9.5, fontWeight: 600,
+                      color: "var(--text-2)", marginBottom: 3,
+                    }}>
+                      {sec.area}
                     </div>
-                  );
-                })}
+                    {sec.items.map((item, ii) => (
+                      <div key={ii} style={{
+                        display: "flex", alignItems: "baseline", gap: 6,
+                        fontFamily: "var(--font-mono)", fontSize: 10.5,
+                        color: "var(--text-3)", lineHeight: 1.7,
+                        paddingLeft: 2,
+                      }}>
+                        <span style={{
+                          width: 5, height: 5, borderRadius: "50%", flexShrink: 0,
+                          background: TYPE_DOT[item.type] || TYPE_DOT.other,
+                          display: "inline-block", position: "relative", top: -1,
+                        }} />
+                        {item.text}
+                      </div>
+                    ))}
+                  </div>
+                ))}
               </div>
             )) : (
               <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--text-3)" }}>
