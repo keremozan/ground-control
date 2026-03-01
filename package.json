@@ -1,13 +1,13 @@
 {
   "name": "ground-control",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "setup": "npx tsx scripts/setup.ts",
-    "changelog": "bash scripts/changelog.sh"
+    "changelog": "zsh scripts/changelog.sh"
   },
   "dependencies": {
     "@dagrejs/dagre": "^2.0.4",
