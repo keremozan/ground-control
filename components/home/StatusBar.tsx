@@ -123,7 +123,7 @@ export default function StatusBar({ activePage = "home" }: { activePage?: "home"
   const fetchStatus = useCallback(() => {
     fetch("/api/status").then(r => r.json()).then(setStatus).catch(() => {});
   }, []);
-  useEffect(() => { fetchStatus(); const t = setInterval(fetchStatus, 60_000); return () => clearInterval(t); }, [fetchStatus]);
+  useEffect(() => { fetchStatus(); const t = setInterval(fetchStatus, 900_000); return () => clearInterval(t); }, [fetchStatus]);
 
   // Close health dropdown on outside click
   useEffect(() => {

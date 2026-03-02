@@ -6,6 +6,45 @@ import { getCharacters } from './characters';
 
 // Local aliases — keep all downstream code unchanged
 const MCP_URL = TANA_MCP_URL;
+
+// --- Server-side exclusion tracking ---
+// When tasks are trashed/done via dashboard, Tana's search index lags (sometimes >5 min).
+// We record excluded IDs in a persistent file so getTanaTasks() filters them out immediately.
+const EXCLUSION_PATH = path.join(process.cwd(), 'data', 'task-exclusions.json');
+const EXCLUSION_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+type ExclusionEntry = { action: 'done' | 'deleted'; ts: number };
+type ExclusionMap = Record<string, ExclusionEntry>;
+
+function loadExclusions(): ExclusionMap {
+  try { return JSON.parse(fs.readFileSync(EXCLUSION_PATH, 'utf-8')); } catch { return {}; }
+}
+
+function saveExclusions(map: ExclusionMap) {
+  fs.mkdirSync(path.dirname(EXCLUSION_PATH), { recursive: true });
+  fs.writeFileSync(EXCLUSION_PATH, JSON.stringify(map, null, 2));
+}
+
+export function excludeTask(nodeId: string, action: 'done' | 'deleted') {
+  const map = loadExclusions();
+  map[nodeId] = { action, ts: Date.now() };
+  // Prune expired entries
+  const cutoff = Date.now() - EXCLUSION_TTL_MS;
+  for (const [id, entry] of Object.entries(map)) {
+    if (entry.ts < cutoff) delete map[id];
+  }
+  saveExclusions(map);
+}
+
+function getExcludedIds(): Set<string> {
+  const map = loadExclusions();
+  const cutoff = Date.now() - EXCLUSION_TTL_MS;
+  const ids = new Set<string>();
+  for (const [id, entry] of Object.entries(map)) {
+    if (entry.ts >= cutoff) ids.add(id);
+  }
+  return ids;
+}
 const MCP_TOKEN = TANA_MCP_TOKEN;
 const TASK_TAG_ID = TANA.tags.task;
 const WS_TAG_ID = TANA.tags.workstream;
@@ -149,10 +188,14 @@ export async function getTanaTasks(): Promise<TanaTask[]> {
 
   if (!Array.isArray(nodes)) return [];
 
+  // Filter out tasks recently trashed/done via dashboard (Tana search index lags)
+  const excluded = getExcludedIds();
+
   // Deduplicate by node ID — Tana can return the same node multiple times
   // when a task is tagged with both #task and a child supertag (both match hasType)
   const seen = new Set<string>();
   const uniqueNodes = nodes.filter((n: { id: string }) => {
+    if (excluded.has(n.id)) return false;
     if (seen.has(n.id)) return false;
     seen.add(n.id);
     return true;
@@ -580,6 +623,9 @@ export async function setTaskInProgress(nodeId: string, characterId?: string) {
 
 /** Mark task as done — checkbox is critical (getTanaTasks filters on it), status field is secondary */
 export async function markTaskDone(nodeId: string) {
+  // Immediately exclude from getTanaTasks results (Tana search index lags)
+  excludeTask(nodeId, 'done');
+
   // check_node is what matters — getTanaTasks uses { not: { is: 'done' } } which checks the checkbox
   // Do it first, retry up to 3 times with backoff
   let checked = false;
@@ -613,6 +659,8 @@ export async function openNode(nodeId: string) {
 
 /** Trash a task node (idempotent — ignores "already in trash") */
 export async function trashTask(nodeId: string) {
+  // Immediately exclude from getTanaTasks results (Tana search index lags)
+  excludeTask(nodeId, 'deleted');
   try {
     await mcpCall('tools/call', { name: 'trash_node', arguments: { nodeId } });
   } catch (e) {
