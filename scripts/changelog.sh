@@ -123,4 +123,10 @@ else
   group_by_area "$commits" >> "$FILE"
 fi
 
+# Sync package.json version to latest git tag
+if (( ${#tags[@]} > 0 )); then
+  latest="${tags[1]#v}"
+  sed -i '' "s/\"version\": \"[^\"]*\"/\"version\": \"$latest\"/" package.json
+fi
+
 echo "Generated $FILE"
