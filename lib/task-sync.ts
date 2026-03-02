@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { getTanaTasks, markTaskDone } from './tana';
-import { getOrCreateTaskList, listGoogleTasks, createGoogleTask, updateGoogleTask } from './google-tasks';
+import { getOrCreateTaskList, listGoogleTasks, createGoogleTask, updateGoogleTask, deleteGoogleTask } from './google-tasks';
 
 const STATE_PATH = path.join(process.cwd(), 'data', 'task-sync-state.json');
 const TASK_LIST_NAME = 'Tana Tasks';
@@ -11,6 +11,7 @@ type SyncMapping = {
   googleTaskId: string;
   title: string;
   dueDate: string | null;
+  notes?: string;
   status: 'active' | 'done';
   doneAt?: string;
 };
@@ -56,7 +57,16 @@ function buildNotes(task: { track: string; priority: string }): string {
   return parts.join('\n');
 }
 
+// Concurrency lock — if a sync is already running, return its result
+let syncLock: Promise<SyncReport> | null = null;
+
 export async function syncTasks(): Promise<SyncReport> {
+  if (syncLock) return syncLock;
+  syncLock = doSync();
+  try { return await syncLock; } finally { syncLock = null; }
+}
+
+async function doSync(): Promise<SyncReport> {
   const report: SyncReport = { created: 0, updated: 0, completedFromTana: 0, completedFromGoogle: 0, pruned: 0, errors: [] };
 
   // 1. Load or initialize state, always verify task list exists
@@ -81,11 +91,12 @@ export async function syncTasks(): Promise<SyncReport> {
     listGoogleTasks(state.taskListId),
   ]);
 
-  // Safety: if Tana returns 0 tasks, it's likely an MCP error — skip completion sync
+  // Safety: if Tana returns 0 tasks but state has active mappings, it's likely an MCP error — abort entirely
   const activeCount = Object.values(state.mappings).filter(m => m.status === 'active').length;
-  const tanaEmpty = tanaTasks.length === 0 && activeCount > 0;
-  if (tanaEmpty) {
-    report.errors.push('Tana returned 0 tasks but sync state has active mappings — skipping completion sync (likely MCP error)');
+  if (tanaTasks.length === 0 && activeCount > 0) {
+    report.errors.push('Tana returned 0 tasks but sync state has active mappings — aborting sync (likely MCP error)');
+    saveState(state);
+    return report;
   }
 
   const activeTanaIds = new Set(tanaTasks.map((t) => t.id));
@@ -122,8 +133,9 @@ export async function syncTasks(): Promise<SyncReport> {
       // Existing task — update if changed
       const titleChanged = mapping.title !== task.name;
       const dueChanged = mapping.dueDate !== task.dueDate;
+      const notesChanged = (mapping.notes || '') !== notes;
 
-      if (titleChanged || dueChanged) {
+      if (titleChanged || dueChanged || notesChanged) {
         try {
           await updateGoogleTask(state.taskListId, mapping.googleTaskId, {
             title: titleChanged ? task.name : undefined,
@@ -132,6 +144,7 @@ export async function syncTasks(): Promise<SyncReport> {
           });
           mapping.title = task.name;
           mapping.dueDate = task.dueDate;
+          mapping.notes = notes;
           report.updated++;
         } catch (e) {
           report.errors.push(`Update failed for "${task.name}": ${e}`);
@@ -143,9 +156,7 @@ export async function syncTasks(): Promise<SyncReport> {
   // 4. Detect tasks completed in Tana (in state but no longer in active list)
   //    Note: step 4 mutates mapping.status in-place, so step 5's
   //    `if (mapping.status !== 'active')` guard correctly skips these.
-  //    Skipped entirely if Tana returned empty (safety check above).
   for (const [tanaId, mapping] of Object.entries(state.mappings)) {
-    if (tanaEmpty) break;
     if (mapping.status === 'active' && !activeTanaIds.has(tanaId)) {
       try {
         await updateGoogleTask(state.taskListId, mapping.googleTaskId, { status: 'completed' });
@@ -196,4 +207,36 @@ export async function syncTasks(): Promise<SyncReport> {
   saveState(state);
 
   return report;
+}
+
+/**
+ * Update Google Tasks immediately when a dashboard action modifies a Tana task.
+ * Called by the tana-tasks/action route after Tana mutation succeeds.
+ * Failures are logged but never thrown — Google Tasks is secondary.
+ */
+export async function syncGoogleTaskForAction(tanaNodeId: string, action: 'done' | 'deleted'): Promise<void> {
+  try {
+    const state = loadState();
+    if (!state) return;
+
+    const mapping = state.mappings[tanaNodeId];
+    if (!mapping || mapping.status !== 'active') return;
+
+    if (action === 'done') {
+      await updateGoogleTask(state.taskListId, mapping.googleTaskId, { status: 'completed' });
+      mapping.status = 'done';
+      mapping.doneAt = new Date().toISOString();
+    } else if (action === 'deleted') {
+      try {
+        await deleteGoogleTask(state.taskListId, mapping.googleTaskId);
+      } catch {
+        // Google Task may already be deleted — ignore
+      }
+      delete state.mappings[tanaNodeId];
+    }
+
+    saveState(state);
+  } catch {
+    // Never throw — Google Tasks sync is best-effort from dashboard actions
+  }
 }

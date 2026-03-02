@@ -15,13 +15,15 @@
   "color": "#7c3aed",
   "actions": [
     { "label": "Write", "icon": "PenLine", "description": "Articles, papers, abstracts" },
-    { "label": "Research", "icon": "Search", "description": "Literature search, source analysis" }
+    { "label": "Research", "icon": "Search", "description": "Literature search, source analysis" },
+    { "label": "Analyze Call", "icon": "FileSearch", "description": "Evaluate call fit against work" }
   ],
   "outputs": ["Tana", "Draft"],
   "gates": [],
   "seeds": {
     "Write": "Let's work on writing. What are we writing today?",
-    "Research": "What topic should we research?"
+    "Research": "What topic should we research?",
+    "Analyze Call": "Share the call text or URL and tell me which works or exhibition to evaluate against."
   },
   "trackPatterns": ["research", "journal", "thesis"]
 }

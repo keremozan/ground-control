@@ -3,6 +3,7 @@ import {
   readTanaNode, setTaskInProgress, markTaskDone,
   trashTask, archiveTask, resolveCharacter, openNode, setTaskPriority, createTask, createTaskInWorkstream,
 } from '@/lib/tana';
+import { syncGoogleTaskForAction } from '@/lib/task-sync';
 import { buildCharacterPrompt } from '@/lib/prompt';
 import { spawnSSEStream } from '@/lib/spawn';
 
@@ -52,6 +53,7 @@ export async function POST(req: Request) {
   if (action === 'done') {
     try {
       await markTaskDone(nodeId);
+      syncGoogleTaskForAction(nodeId, 'done'); // fire-and-forget
       return Response.json({ ok: true, message: 'Marked as done' });
     } catch (e) {
       return Response.json({ error: String(e) }, { status: 500 });
@@ -61,6 +63,7 @@ export async function POST(req: Request) {
   if (action === 'delete') {
     try {
       await trashTask(nodeId);
+      syncGoogleTaskForAction(nodeId, 'deleted'); // fire-and-forget
       return Response.json({ ok: true, message: 'Deleted' });
     } catch (e) {
       return Response.json({ error: String(e) }, { status: 500 });
@@ -70,6 +73,7 @@ export async function POST(req: Request) {
   if (action === 'archive') {
     try {
       await archiveTask(nodeId, taskName || 'Task', trackId || null);
+      syncGoogleTaskForAction(nodeId, 'deleted'); // fire-and-forget
       return Response.json({ ok: true, message: 'Archived to log' });
     } catch (e) {
       return Response.json({ error: String(e) }, { status: 500 });

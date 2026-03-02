@@ -602,9 +602,14 @@ export async function openNode(nodeId: string) {
   await mcpCall('tools/call', { name: 'open_node', arguments: { nodeId } });
 }
 
-/** Trash a task node */
+/** Trash a task node (idempotent — ignores "already in trash") */
 export async function trashTask(nodeId: string) {
-  await mcpCall('tools/call', { name: 'trash_node', arguments: { nodeId } });
+  try {
+    await mcpCall('tools/call', { name: 'trash_node', arguments: { nodeId } });
+  } catch (e) {
+    if (String(e).includes('already in trash')) return;
+    throw e;
+  }
 }
 
 /**

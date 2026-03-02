@@ -136,7 +136,7 @@ export default function TasksWidget() {
   useEffect(() => {
     fetch("/api/characters").then(r => r.json())
       .then((d: { characters: CharInfo[] }) => {
-        setCharacters((d.characters || []).filter(c => c.tier !== "meta"));
+        setCharacters(d.characters || []);
       })
       .catch(() => {});
     fetch("/api/system/config").then(r => r.json())
