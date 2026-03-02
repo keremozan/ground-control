@@ -3,6 +3,7 @@
 ## v1.0.8 — 2026-03-02
 
 ### General
+- [fix] sync package.json version from git tag in changelog script
 - [fix] server-side exclusion tracking for deleted/done tasks
 
 ## v1.0.7 — 2026-03-02
