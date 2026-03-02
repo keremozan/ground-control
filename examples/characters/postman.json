@@ -27,5 +27,11 @@
     "Deliver": "Review pending drafts for delivery.",
     "Cycle": "Run a full scan-process-deliver cycle."
   },
+  "suggestions": [
+    "Scan email inbox",
+    "Triage Tana inbox",
+    "Deliver pending drafts",
+    "Run full cycle"
+  ],
   "trackPatterns": []
 }

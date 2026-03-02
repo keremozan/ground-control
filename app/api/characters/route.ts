@@ -33,6 +33,7 @@ export function GET() {
       outputs: c.outputs || [],
       gates: c.gates || [],
       seeds: c.seeds || {},
+      suggestions: c.suggestions || [],
     };
   });
   return Response.json({ characters });

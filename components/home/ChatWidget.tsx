@@ -19,6 +19,7 @@ type CharacterInfo = {
   color: string;
   defaultModel?: string;
   model?: string;
+  suggestions?: string[];
 };
 
 type Message = {
@@ -728,10 +729,22 @@ function ChatPanel({
     if (!input.trim() || isLoading || !activeChar || !canSend) return;
     const msg = input.trim();
     const currentMessages = [...messages];
+    if (currentMessages.length === 0) {
+      logAction({ widget: "chat", action: "chat-first-message", target: msg.slice(0, 80), character: activeChar.id, detail: msg });
+    }
     setMessages(prev => [...prev, { role: "user", content: msg }]);
     setInput("");
     const effectiveModel = modelOverride !== activeChar?.model ? modelOverride : undefined;
     sendMessage(msg, undefined, null, currentMessages, effectiveModel);
+  };
+
+  const handleChipClick = (suggestion: string) => {
+    if (isLoading || !activeChar || !canSend) return;
+    const currentMessages = [...messages];
+    logAction({ widget: "chat", action: "chat-first-message", target: suggestion.slice(0, 80), character: activeChar.id, detail: suggestion });
+    setMessages(prev => [...prev, { role: "user", content: suggestion }]);
+    const effectiveModel = modelOverride !== activeChar?.model ? modelOverride : undefined;
+    sendMessage(suggestion, undefined, null, currentMessages, effectiveModel);
   };
 
   const handleStop = () => {
@@ -787,10 +800,43 @@ function ChatPanel({
     <>
       <div ref={bodyRef} className="widget-body" style={{ padding: "14px" }}>
         {messages.length === 0 && !isLoading && (
-          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-3)" }}>
-              Start a conversation
-            </span>
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: 10, padding: "0 20px" }}>
+            {activeChar?.suggestions && activeChar.suggestions.length > 0 ? (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 5, justifyContent: "center", maxWidth: 480 }}>
+                {activeChar.suggestions.map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => handleChipClick(s)}
+                    style={{
+                      fontFamily: "var(--font-mono)",
+                      fontSize: 9,
+                      padding: "3px 8px",
+                      border: `1px solid ${activeChar.color}50`,
+                      borderRadius: 3,
+                      background: "transparent",
+                      color: activeChar.color,
+                      cursor: "pointer",
+                      lineHeight: 1.5,
+                      transition: "background 0.1s, border-color 0.1s",
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.background = `${activeChar.color}18`;
+                      e.currentTarget.style.borderColor = `${activeChar.color}90`;
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.background = "transparent";
+                      e.currentTarget.style.borderColor = `${activeChar.color}50`;
+                    }}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-3)" }}>
+                Start a conversation
+              </span>
+            )}
           </div>
         )}
         {messages.map((msg, i) => {

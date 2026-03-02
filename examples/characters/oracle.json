@@ -21,5 +21,11 @@
   "seeds": {
     "Advise": "I need strategic advice on something important."
   },
+  "suggestions": [
+    "Strategic advice",
+    "Surface cross-domain patterns",
+    "Challenge my assumptions",
+    "Big picture check"
+  ],
   "trackPatterns": []
 }

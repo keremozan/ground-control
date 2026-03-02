@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.0.9 — 2026-03-03
+
+### Chat
+- [new] suggestion chips in empty chat state — character-specific tasks shown as clickable pills
+- [new] first-message logging to tiny-log for watcher-driven suggestion mining
+
+### Characters
+- [new] suggestions field added to all 8 character configs (clerk, proctor, scholar, curator, coach, postman, architect, oracle)
+
+### System
+- [new] watcher skill: suggestion mining section — auto-proposes chips from repeated first messages
+
 ## v1.0.8 — 2026-03-02
 
 ### Tasks

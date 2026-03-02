@@ -20,6 +20,7 @@ export type Character = {
   outputs?: string[];
   gates?: string[];
   seeds?: Record<string, string>;
+  suggestions?: string[];
   trackPatterns?: string[];
   routingKeywords?: string[];
   schedules?: { id: string; displayName: string; seedPrompt: string; cron: string; label: string; enabled: boolean }[];

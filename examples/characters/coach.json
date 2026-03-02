@@ -23,5 +23,12 @@
     "Check In": "Let's do a personal check-in.",
     "Review": "I'd like to do a weekly review."
   },
+  "suggestions": [
+    "Personal check-in",
+    "Weekly review",
+    "Energy and focus today",
+    "Work-life balance check",
+    "Set weekly priorities"
+  ],
   "trackPatterns": []
 }

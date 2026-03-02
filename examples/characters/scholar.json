@@ -25,5 +25,14 @@
     "Research": "What topic should we research?",
     "Analyze Call": "Share the call text or URL and tell me which works or exhibition to evaluate against."
   },
+  "suggestions": [
+    "Brainstorm article concept",
+    "Structure a paper outline",
+    "Review thesis draft",
+    "Critique my writing",
+    "Literature search",
+    "Analyze call for submissions",
+    "Book review draft"
+  ],
   "trackPatterns": ["research", "journal", "thesis"]
 }

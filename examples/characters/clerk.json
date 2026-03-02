@@ -25,5 +25,13 @@
     "Sign": "I need to sign a document.",
     "Cleanup": "Scan ~/Downloads folder. List all files with their size and last modified date. Categorize them. Suggest what to delete and what to move."
   },
+  "suggestions": [
+    "Draft response to student petition",
+    "Reimbursement request",
+    "Grant closure paperwork",
+    "Sign a document",
+    "Travel paperwork",
+    "Reschedule overdue tasks"
+  ],
   "trackPatterns": ["admin", "office"]
 }

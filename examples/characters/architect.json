@@ -27,5 +27,13 @@
     "Build": "Let's build or fix something.",
     "Watch": "Review system logs for errors. Fix what you can, report what needs attention."
   },
+  "suggestions": [
+    "System health check",
+    "Fix a dashboard bug",
+    "Add a new character",
+    "Update routing rules",
+    "Review watcher logs",
+    "Tana schema update"
+  ],
   "trackPatterns": ["system", "automation", "dashboard", "code", "build"]
 }
