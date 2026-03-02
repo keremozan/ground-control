@@ -3,7 +3,9 @@ import { useState, useEffect, useRef } from "react";
 import { resolveIcon } from "@/lib/icon-map";
 import { useChatTrigger } from "@/lib/chat-store";
 import { logAction } from "@/lib/action-log";
-import { Loader2, Play, X } from "lucide-react";
+import { SCHEDULE_JOBS, type JobResult } from "@/lib/scheduler";
+import { charIcon, charColor } from "@/lib/char-icons";
+import { Loader2, Play, X, CalendarDays, BookOpen } from "lucide-react";
 
 type ActionInfo = {
   label: string;
@@ -38,15 +40,73 @@ export default function CrewWidget() {
       return saved ? new Set(JSON.parse(saved)) : new Set();
     } catch { return new Set(); }
   });
+  const [lastRuns, setLastRuns] = useState<Record<string, JobResult>>({});
+  const [runningJobs, setRunningJobs] = useState<Set<string>>(new Set());
+  const runningJobsRef = useRef(new Set<string>());
+
+  const CREW_ORDER = ["postman", "clerk", "scholar", "curator", "proctor", "architect", "coach", "oracle"];
 
   useEffect(() => {
     fetch("/api/characters")
       .then(r => r.json())
       .then(d => {
-        setCharacters((d.characters || []).filter((c: CharacterInfo) => c.tier === "core" || c.tier === "meta"));
+        const filtered = (d.characters || []).filter((c: CharacterInfo) => c.tier === "core" || c.tier === "meta");
+        filtered.sort((a: CharacterInfo, b: CharacterInfo) => {
+          const ai = CREW_ORDER.indexOf(a.id);
+          const bi = CREW_ORDER.indexOf(b.id);
+          return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+        });
+        setCharacters(filtered);
       })
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    fetch("/api/schedule/results")
+      .then(r => r.json())
+      .then(data => {
+        const map: Record<string, JobResult> = {};
+        for (const r of (data.results || []) as JobResult[]) {
+          if (!map[r.jobId]) map[r.jobId] = r;
+        }
+        setLastRuns(map);
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleDoNow = async (jobId: string) => {
+    if (runningJobsRef.current.has(jobId)) return;
+    runningJobsRef.current.add(jobId);
+    setRunningJobs(prev => new Set(prev).add(jobId));
+    const job = SCHEDULE_JOBS.find(j => j.id === jobId);
+    try {
+      const res = await fetch("/api/schedule/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId }),
+      });
+      const data = await res.json();
+      if (data.ok && data.result) {
+        setLastRuns(prev => ({ ...prev, [jobId]: data.result }));
+        logAction({ widget: "scheduler", action: "run", target: job?.label || jobId, character: job?.displayName, detail: `${Math.round(data.result.durationMs / 1000)}s`, jobId });
+      }
+    } catch { /* silent */ } finally {
+      runningJobsRef.current.delete(jobId);
+      setRunningJobs(prev => { const n = new Set(prev); n.delete(jobId); return n; });
+    }
+  };
+
+  const formatLastRun = (result: JobResult) => {
+    const d = new Date(result.timestamp);
+    const now = new Date();
+    const time = d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+    if (d.toDateString() === now.toDateString()) return time;
+    const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    return `${days[d.getDay()]} ${d.getDate()} ${months[d.getMonth()]} ${time}`;
+  };
+
+  const enabledJobs = SCHEDULE_JOBS.filter(j => j.enabled);
 
   const runEndpoint = async (charName: string, action: string, endpoint: string) => {
     const key = `${charName}:${action}`;
@@ -301,6 +361,71 @@ export default function CrewWidget() {
             );
           })}
         </div>
+
+        {enabledJobs.length > 0 && (
+          <>
+            <div style={{
+              borderTop: "1px solid var(--border)", margin: "8px 0 4px",
+              display: "flex", alignItems: "center", gap: 4, paddingTop: 6,
+            }}>
+              <CalendarDays size={10} strokeWidth={1.5} style={{ color: "var(--text-3)" }} />
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                Schedules
+              </span>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              {enabledJobs.map((job, i) => {
+                const Icon = charIcon[job.displayName] || BookOpen;
+                const color = charColor[job.charName] || "#94a3b8";
+                const isRunning = runningJobs.has(job.id);
+                const lastResult = lastRuns[job.id];
+                return (
+                  <div key={job.id} style={{
+                    display: "flex", alignItems: "center", gap: 6,
+                    padding: "4px 4px",
+                    borderRadius: 5,
+                    background: i % 2 === 0 ? "transparent" : "var(--surface-2)",
+                    opacity: isRunning ? 0.6 : 1,
+                  }}>
+                    <div style={{
+                      width: 20, height: 20, borderRadius: 4, flexShrink: 0,
+                      background: color + "16", border: `1px solid ${color}28`,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                    }}>
+                      <Icon size={10} strokeWidth={1.5} style={{ color }} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {job.label}
+                      </div>
+                      <div style={{ display: "flex", gap: 5, fontFamily: "var(--font-mono)", fontSize: 9, color: "var(--text-3)", marginTop: 1 }}>
+                        <span>{job.cron}</span>
+                        {lastResult && <span>last: {formatLastRun(lastResult)}</span>}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleDoNow(job.id)}
+                      disabled={isRunning}
+                      data-tip="Do Now"
+                      style={{
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        width: 20, height: 20, flexShrink: 0,
+                        background: "transparent",
+                        border: `1px solid ${isRunning ? "var(--border)" : color + "40"}`,
+                        borderRadius: 4, cursor: isRunning ? "default" : "pointer",
+                        color: isRunning ? "var(--text-3)" : color, transition: "all 0.15s ease",
+                      }}
+                    >
+                      {isRunning
+                        ? <Loader2 size={10} strokeWidth={2} style={{ animation: "spin 1s linear infinite" }} />
+                        : <Play size={9} strokeWidth={2} />}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

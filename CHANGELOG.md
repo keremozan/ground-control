@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.0.10 — 2026-03-03
+
+### Dashboard
+- [improved] move schedules from pipeline sidebar to dashboard page, below crew grid
+
 ## v1.0.9 — 2026-03-03
 
 ### Chat

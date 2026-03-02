@@ -5,7 +5,6 @@ import { type JobResult } from "@/lib/scheduler";
 import StatusBar from "@/components/home/StatusBar";
 import FlowExplorer from "@/components/pipeline/FlowExplorer";
 import LogsWidget from "@/components/pipeline/LogsWidget";
-import SchedulesWidget from "@/components/pipeline/SchedulesWidget";
 import ProposalsWidget from "@/components/pipeline/ProposalsWidget";
 import CycleToolbar from "@/components/pipeline/CycleToolbar";
 import JobResultModal from "@/components/pipeline/JobResultModal";
@@ -36,9 +35,6 @@ export default function PipelinePage() {
           </div>
           <div style={{ flex: 0.8, minHeight: 0 }}>
             <ProposalsWidget />
-          </div>
-          <div style={{ flex: 1, minHeight: 0 }}>
-            <SchedulesWidget />
           </div>
         </div>
 
