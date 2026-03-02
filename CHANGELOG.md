@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.0.7 — 2026-03-02
+
+### Sync
+- [fix] prevent done/deleted tasks from reappearing
+
 ## v1.0.6 — 2026-03-02
 
 ### Sync
