@@ -2,6 +2,9 @@
 
 ## v1.0.8 — 2026-03-02
 
+### Tasks
+- [fix] stop showing in-progress tasks in all priority tabs
+
 ### General
 - [fix] sync package.json version from git tag in changelog script
 - [fix] server-side exclusion tracking for deleted/done tasks
