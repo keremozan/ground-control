@@ -352,7 +352,7 @@ export default function TasksWidget() {
   // Apply priority filter
   const filtered: Record<string, Task[]> = {};
   for (const [track, tasks] of Object.entries(grouped)) {
-    const match = tasks.filter(t => (taskPriorities[t.id] ?? t.priority) === priority || t.status === "in-progress");
+    const match = tasks.filter(t => (taskPriorities[t.id] ?? t.priority) === priority);
     if (match.length > 0) filtered[track] = match;
   }
 
