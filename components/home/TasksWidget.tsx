@@ -102,14 +102,23 @@ export default function TasksWidget() {
   const { setTrigger } = useChatTrigger();
 
   // Track recently removed task IDs so they stay hidden even if Tana search index still returns them
+  // Persisted to sessionStorage so they survive page refresh
   const removedIdsRef = useRef<Map<string, number>>(new Map());
+  const removedInited = useRef(false);
+  if (!removedInited.current) {
+    removedInited.current = true;
+    try {
+      const saved = sessionStorage.getItem("tasks-removed-ids");
+      if (saved) removedIdsRef.current = new Map(JSON.parse(saved));
+    } catch {}
+  }
 
   const fetchTasks = useCallback(() => {
     setLoading(true);
-    // Expire removed IDs older than 30 seconds
+    // Expire removed IDs older than 5 minutes (Tana search index can lag)
     const now = Date.now();
     for (const [id, ts] of removedIdsRef.current) {
-      if (now - ts > 30_000) removedIdsRef.current.delete(id);
+      if (now - ts > 300_000) removedIdsRef.current.delete(id);
     }
     fetch("/api/tana-tasks")
       .then(r => r.json())
@@ -153,6 +162,7 @@ export default function TasksWidget() {
   // Optimistically remove a task from UI state (Tana search index lags behind trash)
   function removeTaskFromState(taskId: string) {
     removedIdsRef.current.set(taskId, Date.now());
+    try { sessionStorage.setItem("tasks-removed-ids", JSON.stringify([...removedIdsRef.current])); } catch {}
     setGrouped(prev => {
       const next: Record<string, Task[]> = {};
       for (const [track, tasks] of Object.entries(prev)) {

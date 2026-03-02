@@ -373,20 +373,17 @@ export default function CharacterNode({ data }: NodeProps) {
               ><Plus size={8} strokeWidth={2} /></button>
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
-              {currentSkills.map(s => {
-                const exists = skillFileExists(s);
-                return (
+              {currentSkills.filter(s => skillFileExists(s)).map(s => (
                   <span key={s} style={{
-                    ...mono(T.small, exists ? "var(--text-2)" : "#ef4444"),
+                    ...mono(T.small, "var(--text-2)"),
                     padding: "1px 4px 1px 5px", borderRadius: 3,
-                    background: exists ? "var(--surface)" : "#ef44440a",
-                    border: `1px solid ${exists ? "var(--border)" : "#ef444430"}`,
+                    background: "var(--surface)",
+                    border: "1px solid var(--border)",
                     display: "inline-flex", alignItems: "center", gap: 2,
                     cursor: "pointer", transition: "all 0.1s",
                   }}
                     onClick={() => d.onOpenEditor(s, `/api/system/skill?name=${s}`, `/api/system/skill?name=${s}`)}
                   >
-                    {!exists && <AlertTriangle size={7} strokeWidth={2} style={{ color: "#ef4444", flexShrink: 0 }} />}
                     {s}
                     <button
                       onClick={e => { e.stopPropagation(); removeSkill(s); }}
@@ -398,8 +395,7 @@ export default function CharacterNode({ data }: NodeProps) {
                       }}
                     ><X size={7} strokeWidth={2} /></button>
                   </span>
-                );
-              })}
+              ))}
               {addingSkill && (
                 <input
                   ref={skillInputRef}
@@ -418,30 +414,26 @@ export default function CharacterNode({ data }: NodeProps) {
             </div>
           </div>
 
-          {/* Knowledge */}
-          {currentKnowledge.length > 0 && (
+          {/* Knowledge — only show files that exist on disk */}
+          {currentKnowledge.filter(k => knowledgeFileExists(k)).length > 0 && (
             <div>
               <span style={{ ...sectionLabel, display: "block", marginBottom: 4 }}>Knowledge</span>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
-                {currentKnowledge.map(k => {
-                  const exists = knowledgeFileExists(k);
-                  return (
+                {currentKnowledge.filter(k => knowledgeFileExists(k)).map(k => (
                     <span key={k} style={{
-                      ...mono(T.small, exists ? "var(--text-2)" : "#ef4444"),
+                      ...mono(T.small, "var(--text-2)"),
                       padding: "1px 5px", borderRadius: 3,
-                      background: exists ? "var(--surface)" : "#ef44440a",
-                      border: `1px solid ${exists ? "var(--border)" : "#ef444430"}`,
+                      background: "var(--surface)",
+                      border: "1px solid var(--border)",
                       cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 3,
                       transition: "all 0.1s",
                     }}
                       onClick={() => d.onOpenEditor(k + ".md", `/api/system/knowledge?key=${k}`, `/api/system/knowledge?key=${k}`)}
                     >
-                      {!exists && <AlertTriangle size={7} strokeWidth={2} style={{ color: "#ef4444", flexShrink: 0 }} />}
-                      <BookOpenCheck size={8} strokeWidth={1.5} style={{ color: exists ? "#0891b2" : "#ef4444" }} />
+                      <BookOpenCheck size={8} strokeWidth={1.5} style={{ color: "#0891b2" }} />
                       {k}
                     </span>
-                  );
-                })}
+                ))}
               </div>
             </div>
           )}

@@ -139,6 +139,7 @@ export async function getTanaTasks(): Promise<TanaTask[]> {
         and: [
           { hasType: TASK_TAG_ID },
           { not: { is: 'done' } },
+          { not: { field: { fieldId: STATUS_FIELD_ID, nodeId: STATUS_OPTION_IDS.done } } },
           { not: { compare: { fieldId: DUE_DATE_FIELD_ID, operator: 'gt', value: cutoff, type: 'date' } } },
         ],
       },
@@ -577,24 +578,32 @@ export async function setTaskInProgress(nodeId: string, characterId?: string) {
   }
 }
 
-/** Mark task as done — sets both status field and checkbox independently */
+/** Mark task as done — checkbox is critical (getTanaTasks filters on it), status field is secondary */
 export async function markTaskDone(nodeId: string) {
-  const results = await Promise.allSettled([
-    mcpCall('tools/call', {
-      name: 'set_field_option',
-      arguments: { nodeId, attributeId: STATUS_FIELD_ID, optionId: STATUS_OPTION_IDS.done },
-    }),
-    mcpCall('tools/call', { name: 'check_node', arguments: { nodeId } }),
-  ]);
-
-  // If check_node failed, retry once (this is what getTanaTasks filters on)
-  if (results[1].status === 'rejected') {
-    await mcpCall('tools/call', { name: 'check_node', arguments: { nodeId } });
+  // check_node is what matters — getTanaTasks uses { not: { is: 'done' } } which checks the checkbox
+  // Do it first, retry up to 3 times with backoff
+  let checked = false;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      await mcpCall('tools/call', { name: 'check_node', arguments: { nodeId } });
+      checked = true;
+      break;
+    } catch {
+      if (attempt < 2) await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
+    }
   }
 
-  // Throw if both failed
-  const allFailed = results.every(r => r.status === 'rejected');
-  if (allFailed) throw new Error('Failed to mark task as done in Tana');
+  // Status field is secondary — best effort
+  try {
+    await mcpCall('tools/call', {
+      name: 'set_field_option',
+      arguments: { nodeId, attributeId: STATUS_FIELD_ID, optionId: STATUS_OPTION_IDS.done },
+    });
+  } catch {
+    // Status field failure is non-critical
+  }
+
+  if (!checked) throw new Error('Failed to check task as done in Tana (checkbox)');
 }
 
 /** Open a node in the desktop Tana app */
