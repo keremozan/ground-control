@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.0.6 — 2026-03-02
+
+### Sync
+- [fix] cross-platform task sync reliability
+
+### General
+- [fix] changelog script compat with macOS zsh
+
 ## v1.0.5 — 2026-03-01
 
 ### General
