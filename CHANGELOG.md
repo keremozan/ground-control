@@ -5,7 +5,7 @@
 ### Dashboard
 - [new] character detail drawer — skills, keywords, knowledge, memory accessible from crew cards
 - [new] detail button on crew cards opens character detail drawer
-- [new] run full cycle button in crew widget footer
+- [new] schedules tab in crew widget — recurring jobs, pending tasks, run full cycle
 - [new] logs and proposals tabs in crew widget (embedded, no double headers)
 - [new] today/week filter chips in tasks widget alongside priority filters
 - [new] image paste support in chat — paste images, preview thumbnails, send to characters

@@ -55,7 +55,7 @@ export default function CrewWidget() {
   const [cyclePhase, setCyclePhase] = useState("");
   const [cycleSummary, setCycleSummary] = useState("");
   const cycleRef = useRef(false);
-  const [activeTab, setActiveTab] = useState<"crew" | "logs" | "proposals">("crew");
+  const [activeTab, setActiveTab] = useState<"crew" | "schedules" | "logs" | "proposals">("crew");
   const [selectedResult, setSelectedResult] = useState<JobResult | null>(null);
   const [proposalCount, setProposalCount] = useState(0);
   const [scheduledTasks, setScheduledTasks] = useState<Array<{ id: string; charName: string; seedPrompt: string; label: string; scheduledAt: string }>>([]);
@@ -350,6 +350,7 @@ export default function CrewWidget() {
       <div className="widget-header">
         <div style={{ display: "flex", alignItems: "center", gap: 0 }}>
           <CrewTabBtn label="Crew" icon={<Bot size={13} strokeWidth={1.5} />} active={activeTab === "crew"} onClick={() => setActiveTab("crew")} />
+          <CrewTabBtn label="Schedules" icon={<CalendarDays size={13} strokeWidth={1.5} />} active={activeTab === "schedules"} badge={scheduledTasks.length > 0 ? scheduledTasks.length : undefined} onClick={() => setActiveTab("schedules")} />
           <CrewTabBtn label="Logs" icon={<Activity size={13} strokeWidth={1.5} />} active={activeTab === "logs"} onClick={() => setActiveTab("logs")} />
           <CrewTabBtn label="Proposals" icon={<Wrench size={13} strokeWidth={1.5} />} active={activeTab === "proposals"} badge={proposalCount > 0 ? proposalCount : undefined} onClick={() => setActiveTab("proposals")} />
         </div>
@@ -536,187 +537,201 @@ export default function CrewWidget() {
           })}
         </div>
 
-        {enabledJobs.length > 0 && (
-          <>
-            <div style={{
-              borderTop: "1px solid var(--border)", margin: "8px 0 4px",
-              display: "flex", alignItems: "center", gap: 4, paddingTop: 6,
-            }}>
-              <CalendarDays size={10} strokeWidth={1.5} style={{ color: "var(--text-3)" }} />
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                Schedules
-              </span>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-              {enabledJobs.map((job, i) => {
-                const Icon = charIcon[job.displayName] || BookOpen;
-                const color = charColor[job.charName] || "#94a3b8";
-                const isRunning = runningJobs.has(job.id);
-                const lastResult = lastRuns[job.id];
-                return (
-                  <div key={job.id} style={{
-                    display: "flex", alignItems: "center", gap: 6,
-                    padding: "4px 4px",
-                    borderRadius: 5,
-                    background: i % 2 === 0 ? "transparent" : "var(--surface-2)",
-                    opacity: isRunning ? 0.6 : 1,
-                  }}>
-                    <div style={{
-                      width: 20, height: 20, borderRadius: 4, flexShrink: 0,
-                      background: color + "16", border: `1px solid ${color}28`,
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                    }}>
-                      <Icon size={10} strokeWidth={1.5} style={{ color }} />
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {job.label}
-                      </div>
-                      <div style={{ display: "flex", gap: 5, fontFamily: "var(--font-mono)", fontSize: 9, color: "var(--text-3)", marginTop: 1 }}>
-                        <span>{job.cron}</span>
-                        {lastResult && <span>last: {formatLastRun(lastResult)}</span>}
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => handleDoNow(job.id)}
-                      disabled={isRunning}
-                      data-tip="Do Now"
-                      style={{
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        width: 20, height: 20, flexShrink: 0,
-                        background: "transparent",
-                        border: `1px solid ${isRunning ? "var(--border)" : color + "40"}`,
-                        borderRadius: 4, cursor: isRunning ? "default" : "pointer",
-                        color: isRunning ? "var(--text-3)" : color, transition: "all 0.15s ease",
-                      }}
-                    >
-                      {isRunning
-                        ? <Loader2 size={10} strokeWidth={2} style={{ animation: "spin 1s linear infinite" }} />
-                        : <Play size={9} strokeWidth={2} />}
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          </>
-        )}
-
-        {scheduledTasks.length > 0 && (
-          <>
-            <div style={{
-              borderTop: "1px solid var(--border)", margin: "8px 0 4px",
-              display: "flex", alignItems: "center", gap: 4, paddingTop: 6,
-            }}>
-              <Clock size={10} strokeWidth={1.5} style={{ color: "var(--text-3)" }} />
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                Pending
-              </span>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-              {scheduledTasks.map((task, i) => {
-                const Icon = charIcon[task.charName] || Bot;
-                const color = charColor[task.charName] || "#94a3b8";
-                const isDeleting = deletingTask === task.id;
-                const isRunning = runningTask === task.id;
-                const scheduledDate = new Date(task.scheduledAt);
-                const now = new Date();
-                const isOverdue = scheduledDate < now;
-                const timeStr = scheduledDate.toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
-                return (
-                  <div key={task.id} style={{
-                    display: "flex", alignItems: "center", gap: 6,
-                    padding: "4px 4px",
-                    borderRadius: 5,
-                    background: i % 2 === 0 ? "transparent" : "var(--surface-2)",
-                    opacity: isDeleting || isRunning ? 0.5 : 1,
-                  }}>
-                    <div style={{
-                      width: 20, height: 20, borderRadius: 4, flexShrink: 0,
-                      background: color + "16", border: `1px solid ${color}28`,
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                    }}>
-                      <Icon size={10} strokeWidth={1.5} style={{ color }} />
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {task.label}
-                      </div>
-                      <div style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: isOverdue ? "var(--amber, #f59e0b)" : "var(--text-3)", marginTop: 1 }}>
-                        {timeStr}
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => handleRunTaskNow(task)}
-                      disabled={isRunning || isDeleting}
-                      data-tip="Run now"
-                      style={{
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        width: 20, height: 20, flexShrink: 0,
-                        background: "transparent",
-                        border: `1px solid ${color}40`,
-                        borderRadius: 4, cursor: isRunning ? "default" : "pointer",
-                        color, transition: "all 0.15s ease",
-                      }}
-                    >
-                      {isRunning
-                        ? <Loader2 size={10} strokeWidth={2} style={{ animation: "spin 1s linear infinite" }} />
-                        : <Play size={9} strokeWidth={2} />}
-                    </button>
-                    <button
-                      onClick={() => handleDeleteTask(task.id)}
-                      disabled={isDeleting || isRunning}
-                      data-tip="Delete"
-                      style={{
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        width: 20, height: 20, flexShrink: 0,
-                        background: "transparent",
-                        border: "1px solid var(--border)",
-                        borderRadius: 4, cursor: isDeleting ? "default" : "pointer",
-                        color: "var(--text-3)", transition: "all 0.15s ease",
-                      }}
-                    >
-                      {isDeleting
-                        ? <Loader2 size={10} strokeWidth={2} style={{ animation: "spin 1s linear infinite" }} />
-                        : <Trash2 size={9} strokeWidth={2} />}
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          </>
-        )}
-
-        {/* Run Full Cycle */}
-        <div style={{
-          borderTop: "1px solid var(--border)", margin: "8px 0 0",
-          paddingTop: 6, display: "flex", alignItems: "center", justifyContent: "flex-end",
-        }}>
-          <button
-            onClick={handleRunCycle}
-            disabled={cycleStatus === "running"}
-            style={{
-              display: "flex", alignItems: "center", gap: 5,
-              fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.04em",
-              textTransform: "uppercase",
-              color: cycleStatus === "done" ? "var(--green)" : cycleStatus === "error" ? "var(--red, #ef4444)" : "var(--text-2)",
-              background: "transparent", border: "1px solid var(--border)",
-              borderRadius: 3, padding: "3px 10px",
-              cursor: cycleStatus === "running" ? "default" : "pointer",
-              opacity: cycleStatus === "running" ? 0.6 : 1,
-            }}
-          >
-            {cycleStatus === "running" && <Loader2 size={8} strokeWidth={2} style={{ animation: "spin 1s linear infinite" }} />}
-            {cycleStatus === "done" && <CheckCircle size={8} strokeWidth={2} />}
-            {cycleStatus === "error" && <AlertCircle size={8} strokeWidth={2} />}
-            {cycleStatus === "idle" && <Play size={8} strokeWidth={2} />}
-            {cycleStatus === "running"
-              ? cyclePhase
-              : cycleStatus === "done" || cycleStatus === "error"
-                ? cycleSummary || "done"
-                : "run full cycle"}
-          </button>
-        </div>
         </>}
+
+        {activeTab === "schedules" && (
+          <div style={{ padding: "4px 10px 6px" }}>
+            {enabledJobs.length > 0 && (
+              <>
+                <div style={{
+                  display: "flex", alignItems: "center", gap: 4, marginBottom: 4,
+                }}>
+                  <CalendarDays size={10} strokeWidth={1.5} style={{ color: "var(--text-3)" }} />
+                  <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                    Recurring
+                  </span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                  {enabledJobs.map((job, i) => {
+                    const Icon = charIcon[job.displayName] || BookOpen;
+                    const color = charColor[job.charName] || "#94a3b8";
+                    const isRunning = runningJobs.has(job.id);
+                    const lastResult = lastRuns[job.id];
+                    return (
+                      <div key={job.id} style={{
+                        display: "flex", alignItems: "center", gap: 6,
+                        padding: "4px 4px",
+                        borderRadius: 5,
+                        background: i % 2 === 0 ? "transparent" : "var(--surface-2)",
+                        opacity: isRunning ? 0.6 : 1,
+                      }}>
+                        <div style={{
+                          width: 20, height: 20, borderRadius: 4, flexShrink: 0,
+                          background: color + "16", border: `1px solid ${color}28`,
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                        }}>
+                          <Icon size={10} strokeWidth={1.5} style={{ color }} />
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {job.label}
+                          </div>
+                          <div style={{ display: "flex", gap: 5, fontFamily: "var(--font-mono)", fontSize: 9, color: "var(--text-3)", marginTop: 1 }}>
+                            <span>{job.cron}</span>
+                            {lastResult && <span>last: {formatLastRun(lastResult)}</span>}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleDoNow(job.id)}
+                          disabled={isRunning}
+                          data-tip="Do Now"
+                          style={{
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            width: 20, height: 20, flexShrink: 0,
+                            background: "transparent",
+                            border: `1px solid ${isRunning ? "var(--border)" : color + "40"}`,
+                            borderRadius: 4, cursor: isRunning ? "default" : "pointer",
+                            color: isRunning ? "var(--text-3)" : color, transition: "all 0.15s ease",
+                          }}
+                        >
+                          {isRunning
+                            ? <Loader2 size={10} strokeWidth={2} style={{ animation: "spin 1s linear infinite" }} />
+                            : <Play size={9} strokeWidth={2} />}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+
+            {scheduledTasks.length > 0 && (
+              <>
+                <div style={{
+                  borderTop: enabledJobs.length > 0 ? "1px solid var(--border)" : "none",
+                  margin: enabledJobs.length > 0 ? "8px 0 4px" : "0 0 4px",
+                  display: "flex", alignItems: "center", gap: 4,
+                  paddingTop: enabledJobs.length > 0 ? 6 : 0,
+                }}>
+                  <Clock size={10} strokeWidth={1.5} style={{ color: "var(--text-3)" }} />
+                  <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                    Pending
+                  </span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                  {scheduledTasks.map((task, i) => {
+                    const Icon = charIcon[task.charName] || Bot;
+                    const color = charColor[task.charName] || "#94a3b8";
+                    const isDeleting = deletingTask === task.id;
+                    const isRunning = runningTask === task.id;
+                    const scheduledDate = new Date(task.scheduledAt);
+                    const now = new Date();
+                    const isOverdue = scheduledDate < now;
+                    const timeStr = scheduledDate.toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+                    return (
+                      <div key={task.id} style={{
+                        display: "flex", alignItems: "center", gap: 6,
+                        padding: "4px 4px",
+                        borderRadius: 5,
+                        background: i % 2 === 0 ? "transparent" : "var(--surface-2)",
+                        opacity: isDeleting || isRunning ? 0.5 : 1,
+                      }}>
+                        <div style={{
+                          width: 20, height: 20, borderRadius: 4, flexShrink: 0,
+                          background: color + "16", border: `1px solid ${color}28`,
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                        }}>
+                          <Icon size={10} strokeWidth={1.5} style={{ color }} />
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {task.label}
+                          </div>
+                          <div style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: isOverdue ? "var(--amber, #f59e0b)" : "var(--text-3)", marginTop: 1 }}>
+                            {timeStr}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleRunTaskNow(task)}
+                          disabled={isRunning || isDeleting}
+                          data-tip="Run now"
+                          style={{
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            width: 20, height: 20, flexShrink: 0,
+                            background: "transparent",
+                            border: `1px solid ${color}40`,
+                            borderRadius: 4, cursor: isRunning ? "default" : "pointer",
+                            color, transition: "all 0.15s ease",
+                          }}
+                        >
+                          {isRunning
+                            ? <Loader2 size={10} strokeWidth={2} style={{ animation: "spin 1s linear infinite" }} />
+                            : <Play size={9} strokeWidth={2} />}
+                        </button>
+                        <button
+                          onClick={() => handleDeleteTask(task.id)}
+                          disabled={isDeleting || isRunning}
+                          data-tip="Delete"
+                          style={{
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            width: 20, height: 20, flexShrink: 0,
+                            background: "transparent",
+                            border: "1px solid var(--border)",
+                            borderRadius: 4, cursor: isDeleting ? "default" : "pointer",
+                            color: "var(--text-3)", transition: "all 0.15s ease",
+                          }}
+                        >
+                          {isDeleting
+                            ? <Loader2 size={10} strokeWidth={2} style={{ animation: "spin 1s linear infinite" }} />
+                            : <Trash2 size={9} strokeWidth={2} />}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+
+            {enabledJobs.length === 0 && scheduledTasks.length === 0 && (
+              <div style={{ padding: "16px 0", textAlign: "center" }}>
+                <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-3)" }}>
+                  No schedules
+                </span>
+              </div>
+            )}
+
+            {/* Run Full Cycle */}
+            <div style={{
+              borderTop: "1px solid var(--border)", margin: "8px 0 0",
+              paddingTop: 6, display: "flex", alignItems: "center", justifyContent: "flex-end",
+            }}>
+              <button
+                onClick={handleRunCycle}
+                disabled={cycleStatus === "running"}
+                style={{
+                  display: "flex", alignItems: "center", gap: 5,
+                  fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.04em",
+                  textTransform: "uppercase",
+                  color: cycleStatus === "done" ? "var(--green)" : cycleStatus === "error" ? "var(--red, #ef4444)" : "var(--text-2)",
+                  background: "transparent", border: "1px solid var(--border)",
+                  borderRadius: 3, padding: "3px 10px",
+                  cursor: cycleStatus === "running" ? "default" : "pointer",
+                  opacity: cycleStatus === "running" ? 0.6 : 1,
+                }}
+              >
+                {cycleStatus === "running" && <Loader2 size={8} strokeWidth={2} style={{ animation: "spin 1s linear infinite" }} />}
+                {cycleStatus === "done" && <CheckCircle size={8} strokeWidth={2} />}
+                {cycleStatus === "error" && <AlertCircle size={8} strokeWidth={2} />}
+                {cycleStatus === "idle" && <Play size={8} strokeWidth={2} />}
+                {cycleStatus === "running"
+                  ? cyclePhase
+                  : cycleStatus === "done" || cycleStatus === "error"
+                    ? cycleSummary || "done"
+                    : "run full cycle"}
+              </button>
+            </div>
+          </div>
+        )}
 
         {activeTab === "logs" && (
           <div style={{ height: "100%", minHeight: 0, overflow: "hidden" }}>
