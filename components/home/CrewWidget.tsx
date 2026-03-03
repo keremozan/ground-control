@@ -2,10 +2,10 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { resolveIcon } from "@/lib/icon-map";
 import { useChatTrigger } from "@/lib/chat-store";
-import { logAction } from "@/lib/action-log";
+import { logAction, clearLog } from "@/lib/action-log";
 import { SCHEDULE_JOBS, type JobResult } from "@/lib/scheduler";
 import { charIcon, charColor } from "@/lib/char-icons";
-import { Loader2, Play, X, CalendarDays, BookOpen, SlidersHorizontal, CheckCircle, AlertCircle, Activity, Wrench, Users } from "lucide-react";
+import { Loader2, Play, X, CalendarDays, BookOpen, SlidersHorizontal, CheckCircle, AlertCircle, Activity, Wrench, Bot, Trash2, Clock } from "lucide-react";
 import CharDetailDrawer from "@/components/home/CharDetailDrawer";
 import LogsWidget from "@/components/pipeline/LogsWidget";
 import ProposalsWidget from "@/components/pipeline/ProposalsWidget";
@@ -58,6 +58,9 @@ export default function CrewWidget() {
   const [activeTab, setActiveTab] = useState<"crew" | "logs" | "proposals">("crew");
   const [selectedResult, setSelectedResult] = useState<JobResult | null>(null);
   const [proposalCount, setProposalCount] = useState(0);
+  const [scheduledTasks, setScheduledTasks] = useState<Array<{ id: string; charName: string; seedPrompt: string; label: string; scheduledAt: string }>>([]);
+  const [deletingTask, setDeletingTask] = useState<string | null>(null);
+  const [runningTask, setRunningTask] = useState<string | null>(null);
 
   const CREW_ORDER = ["postman", "clerk", "scholar", "curator", "proctor", "architect", "coach", "oracle"];
 
@@ -98,14 +101,53 @@ export default function CrewWidget() {
 
   useEffect(() => { fetchProposalCount(); }, [fetchProposalCount]);
 
+  const fetchScheduledTasks = useCallback(() => {
+    fetch("/api/schedule/tasks")
+      .then(r => r.json())
+      .then(d => setScheduledTasks(d.tasks || []))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => { fetchScheduledTasks(); }, [fetchScheduledTasks]);
+
+  const handleDeleteTask = async (id: string) => {
+    setDeletingTask(id);
+    try {
+      await fetch(`/api/schedule/tasks?id=${id}`, { method: "DELETE" });
+      setScheduledTasks(prev => prev.filter(t => t.id !== id));
+    } catch { /* silent */ } finally {
+      setDeletingTask(null);
+    }
+  };
+
+  const handleRunTaskNow = async (task: { id: string; charName: string; seedPrompt: string; label: string }) => {
+    setRunningTask(task.id);
+    try {
+      await fetch("/api/schedule/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ charName: task.charName, seedPrompt: task.seedPrompt, label: task.label }),
+      });
+      await fetch(`/api/schedule/tasks?id=${task.id}`, { method: "DELETE" });
+      setScheduledTasks(prev => prev.filter(t => t.id !== task.id));
+      logAction({ widget: "scheduler", action: "run", target: task.label, character: task.charName });
+    } catch { /* silent */ } finally {
+      setRunningTask(null);
+    }
+  };
+
   // Check and run overdue scheduled tasks on mount + every 15 min
   useEffect(() => {
-    fetch("/api/schedule/tasks/check", { method: "POST" }).catch(() => {});
+    fetch("/api/schedule/tasks/check", { method: "POST" })
+      .then(() => fetchScheduledTasks())
+      .catch(() => {});
     const interval = setInterval(() => {
-      fetch("/api/schedule/tasks/check", { method: "POST" }).catch(() => {});
+      fetch("/api/schedule/tasks/check", { method: "POST" })
+        .then(() => fetchScheduledTasks())
+        .catch(() => {});
     }, 15 * 60 * 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchScheduledTasks]);
 
   const handleDoNow = async (jobId: string) => {
     if (runningJobsRef.current.has(jobId)) return;
@@ -307,10 +349,15 @@ export default function CrewWidget() {
     <div className="widget">
       <div className="widget-header">
         <div style={{ display: "flex", alignItems: "center", gap: 0 }}>
-          <CrewTabBtn label="Crew" icon={<Users size={13} strokeWidth={1.5} />} active={activeTab === "crew"} onClick={() => setActiveTab("crew")} />
+          <CrewTabBtn label="Crew" icon={<Bot size={13} strokeWidth={1.5} />} active={activeTab === "crew"} onClick={() => setActiveTab("crew")} />
           <CrewTabBtn label="Logs" icon={<Activity size={13} strokeWidth={1.5} />} active={activeTab === "logs"} onClick={() => setActiveTab("logs")} />
           <CrewTabBtn label="Proposals" icon={<Wrench size={13} strokeWidth={1.5} />} active={activeTab === "proposals"} badge={proposalCount > 0 ? proposalCount : undefined} onClick={() => setActiveTab("proposals")} />
         </div>
+        {activeTab === "logs" && (
+          <button className="widget-toolbar-btn" data-tip="Clear logs" onClick={() => clearLog()}>
+            <Trash2 size={12} strokeWidth={1.5} />
+          </button>
+        )}
       </div>
 
       <div className="widget-body" style={{ padding: activeTab === "crew" ? "4px 10px 6px" : 0 }}>
@@ -546,6 +593,91 @@ export default function CrewWidget() {
                       {isRunning
                         ? <Loader2 size={10} strokeWidth={2} style={{ animation: "spin 1s linear infinite" }} />
                         : <Play size={9} strokeWidth={2} />}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        {scheduledTasks.length > 0 && (
+          <>
+            <div style={{
+              borderTop: "1px solid var(--border)", margin: "8px 0 4px",
+              display: "flex", alignItems: "center", gap: 4, paddingTop: 6,
+            }}>
+              <Clock size={10} strokeWidth={1.5} style={{ color: "var(--text-3)" }} />
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                Pending
+              </span>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              {scheduledTasks.map((task, i) => {
+                const Icon = charIcon[task.charName] || Bot;
+                const color = charColor[task.charName] || "#94a3b8";
+                const isDeleting = deletingTask === task.id;
+                const isRunning = runningTask === task.id;
+                const scheduledDate = new Date(task.scheduledAt);
+                const now = new Date();
+                const isOverdue = scheduledDate < now;
+                const timeStr = scheduledDate.toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+                return (
+                  <div key={task.id} style={{
+                    display: "flex", alignItems: "center", gap: 6,
+                    padding: "4px 4px",
+                    borderRadius: 5,
+                    background: i % 2 === 0 ? "transparent" : "var(--surface-2)",
+                    opacity: isDeleting || isRunning ? 0.5 : 1,
+                  }}>
+                    <div style={{
+                      width: 20, height: 20, borderRadius: 4, flexShrink: 0,
+                      background: color + "16", border: `1px solid ${color}28`,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                    }}>
+                      <Icon size={10} strokeWidth={1.5} style={{ color }} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {task.label}
+                      </div>
+                      <div style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: isOverdue ? "var(--amber, #f59e0b)" : "var(--text-3)", marginTop: 1 }}>
+                        {timeStr}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleRunTaskNow(task)}
+                      disabled={isRunning || isDeleting}
+                      data-tip="Run now"
+                      style={{
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        width: 20, height: 20, flexShrink: 0,
+                        background: "transparent",
+                        border: `1px solid ${color}40`,
+                        borderRadius: 4, cursor: isRunning ? "default" : "pointer",
+                        color, transition: "all 0.15s ease",
+                      }}
+                    >
+                      {isRunning
+                        ? <Loader2 size={10} strokeWidth={2} style={{ animation: "spin 1s linear infinite" }} />
+                        : <Play size={9} strokeWidth={2} />}
+                    </button>
+                    <button
+                      onClick={() => handleDeleteTask(task.id)}
+                      disabled={isDeleting || isRunning}
+                      data-tip="Delete"
+                      style={{
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        width: 20, height: 20, flexShrink: 0,
+                        background: "transparent",
+                        border: "1px solid var(--border)",
+                        borderRadius: 4, cursor: isDeleting ? "default" : "pointer",
+                        color: "var(--text-3)", transition: "all 0.15s ease",
+                      }}
+                    >
+                      {isDeleting
+                        ? <Loader2 size={10} strokeWidth={2} style={{ animation: "spin 1s linear infinite" }} />
+                        : <Trash2 size={9} strokeWidth={2} />}
                     </button>
                   </div>
                 );

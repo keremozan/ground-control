@@ -201,31 +201,26 @@ export async function getTanaTasks(): Promise<TanaTask[]> {
     return true;
   });
 
+  // Sequential — Tana MCP server doesn't support concurrent requests
   const tasks: TanaTask[] = [];
-  const BATCH = 5;
 
-  for (let i = 0; i < uniqueNodes.length; i += BATCH) {
-    const batch = uniqueNodes.slice(i, i + BATCH);
-    const results = await Promise.all(
-      batch.map(async (node: { id: string; name: string }) => {
-        try {
-          const md = await mcpCall('tools/call', {
-            name: 'read_node',
-            arguments: { nodeId: node.id },
-          });
-          if (typeof md !== 'string') return null;
-          const fields = parseFields(md);
-          const cleanName = node.name
-            .replace(/<span[^>]*>[^<]*<\/span>/g, '')
-            .replace(/\s*—\s*$/, '')
-            .trim();
-          return { id: node.id, name: cleanName, ...fields };
-        } catch {
-          return { id: node.id, name: node.name, status: 'backlog', priority: 'medium', track: 'Uncategorized', trackId: null, assigned: null, dueDate: null };
-        }
-      })
-    );
-    tasks.push(...results.filter((t): t is TanaTask => t !== null));
+  for (const node of uniqueNodes) {
+    try {
+      const md = await mcpCall('tools/call', {
+        name: 'read_node',
+        arguments: { nodeId: (node as { id: string }).id },
+      });
+      if (typeof md !== 'string') continue;
+      const fields = parseFields(md);
+      const cleanName = (node as { id: string; name: string }).name
+        .replace(/<span[^>]*>[^<]*<\/span>/g, '')
+        .replace(/\s*—\s*$/, '')
+        .trim();
+      tasks.push({ id: (node as { id: string }).id, name: cleanName, ...fields });
+    } catch {
+      const n = node as { id: string; name: string };
+      tasks.push({ id: n.id, name: n.name, status: 'backlog', priority: 'medium', track: 'Uncategorized', trackId: null, assigned: null, dueDate: null });
+    }
   }
 
   return tasks;
@@ -255,27 +250,26 @@ function parseWorkstreamFields(markdown: string): { status: string; track: strin
 export async function getTanaPhases(): Promise<TanaPhase[]> {
   // Search for #workstream parent tag + legacy #phase tag
   const LEGACY_PHASE_TAG = TANA.tags.phaseLegacy;
-  const [wsNodes, legacyNodes] = await Promise.all([
-    mcpCall('tools/call', {
-      name: 'search_nodes',
-      arguments: {
-        query: {
-          and: [
-            { hasType: WS_TAG_ID },
-            { not: { field: { fieldId: WS_STATUS_FIELD_ID, nodeId: TANA.wsStatusByName.completed } } },
-          ],
-        },
-        limit: 50,
+  // Sequential — Tana MCP server doesn't support concurrent requests
+  const wsNodes = await mcpCall('tools/call', {
+    name: 'search_nodes',
+    arguments: {
+      query: {
+        and: [
+          { hasType: WS_TAG_ID },
+          { not: { field: { fieldId: WS_STATUS_FIELD_ID, nodeId: TANA.wsStatusByName.completed } } },
+        ],
       },
-    }),
-    mcpCall('tools/call', {
-      name: 'search_nodes',
-      arguments: {
-        query: { hasType: LEGACY_PHASE_TAG },
-        limit: 50,
-      },
-    }),
-  ]);
+      limit: 50,
+    },
+  });
+  const legacyNodes = await mcpCall('tools/call', {
+    name: 'search_nodes',
+    arguments: {
+      query: { hasType: LEGACY_PHASE_TAG },
+      limit: 50,
+    },
+  });
 
   const seen = new Set<string>();
   const nodes: { id: string; name: string }[] = [];

@@ -3,7 +3,9 @@ import { getTanaTasks, getTanaPhases, resolveCharacter, type TanaPhase } from '@
 
 export async function GET() {
   try {
-    const [raw, phases] = await Promise.all([getTanaTasks(), getTanaPhases()]);
+    // Sequential — Tana MCP server doesn't support concurrent requests
+    const raw = await getTanaTasks();
+    const phases = await getTanaPhases();
 
     // Build phase lookup: taskId → phase info (including track for inheritance)
     const taskPhaseMap = new Map<string, { phaseId: string; phaseName: string; phaseTrack: string; phaseTrackId: string | null }>();
