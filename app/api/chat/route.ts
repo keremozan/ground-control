@@ -25,12 +25,13 @@ CREATING TASKS IN TANA — when asked to create/add a task:
 `.trim();
 
 export async function POST(req: Request) {
-  const { characterId, message, context, history, model: modelOverride } = await req.json() as {
+  const { characterId, message, context, history, model: modelOverride, images } = await req.json() as {
     characterId: string;
     message: string;
     context?: string;
     history?: Array<{ role: string; content: string }>;
     model?: string;
+    images?: Array<{ mediaType: string; data: string }>;
   };
 
   const characters = getCharacters();
@@ -62,6 +63,7 @@ export async function POST(req: Request) {
     label: `Chat: ${char.name}`,
     characterId,
     signal: req.signal,
+    ...(images && images.length > 0 ? { images } : {}),
   });
 
   return new Response(stream, {

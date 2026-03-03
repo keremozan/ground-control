@@ -8,7 +8,7 @@ import { parseToolName } from "@/lib/mcp-icons";
 import { resolveIcon } from "@/lib/icon-map";
 import {
   BookOpen, Bug, Copy, CornerUpRight, Loader2,
-  Send, Square, Trash2, Plus, X,
+  MessageSquare, Send, Square, Trash2, Plus, X,
 } from "lucide-react";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -25,6 +25,7 @@ type CharacterInfo = {
 type Message = {
   role: "user" | "assistant";
   content: string;
+  images?: string[]; // base64 data URLs, for user messages with pasted images
   charName?: string;
   duration?: number;
   tokens?: number;
@@ -515,6 +516,7 @@ function ChatPanel({
 }: ChatPanelProps) {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [input, setInput] = useState("");
+  const [pastedImages, setPastedImages] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [streamingText, setStreamingText] = useState("");
   const [activeTool, setActiveTool] = useState<string | null>(null);
@@ -612,7 +614,7 @@ function ChatPanel({
     return () => { if (abortRef.current) abortRef.current.abort(); };
   }, []);
 
-  const sendMessage = async (msg: string, targetCharId?: string, context?: string | null, history?: Message[], modelOverride?: string) => {
+  const sendMessage = async (msg: string, targetCharId?: string, context?: string | null, history?: Message[], modelOverride?: string, images?: Array<{mediaType: string; data: string}>) => {
     setIsLoading(true);
     setToolLog([]);
     let fullText = '';
@@ -640,6 +642,7 @@ function ChatPanel({
           ...(ctxToSend ? { context: ctxToSend } : {}),
           ...(historyToSend ? { history: historyToSend } : {}),
           ...(modelOverride ? { model: modelOverride } : {}),
+          ...(images && images.length > 0 ? { images } : {}),
         }),
         signal: controller.signal,
       });
@@ -725,17 +728,40 @@ function ChatPanel({
     }
   };
 
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of Array.from(items)) {
+      if (item.type.startsWith('image/')) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (!file) continue;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const dataUrl = ev.target?.result as string;
+          if (dataUrl) setPastedImages(prev => [...prev, dataUrl]);
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+  };
+
   const handleSend = () => {
-    if (!input.trim() || isLoading || !activeChar || !canSend) return;
+    if ((!input.trim() && pastedImages.length === 0) || isLoading || !activeChar || !canSend) return;
     const msg = input.trim();
     const currentMessages = [...messages];
     if (currentMessages.length === 0) {
       logAction({ widget: "chat", action: "chat-first-message", target: msg.slice(0, 80), character: activeChar.id, detail: msg });
     }
-    setMessages(prev => [...prev, { role: "user", content: msg }]);
+    const apiImages: Array<{mediaType: string; data: string}> = pastedImages.map(dataUrl => {
+      const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+      return match ? { mediaType: match[1], data: match[2] } : null;
+    }).filter(Boolean) as Array<{mediaType: string; data: string}>;
+    setMessages(prev => [...prev, { role: "user", content: msg, images: pastedImages.length > 0 ? [...pastedImages] : undefined }]);
     setInput("");
+    setPastedImages([]);
     const effectiveModel = modelOverride !== activeChar?.model ? modelOverride : undefined;
-    sendMessage(msg, undefined, null, currentMessages, effectiveModel);
+    sendMessage(msg || "(image)", undefined, null, currentMessages, effectiveModel, apiImages.length > 0 ? apiImages : undefined);
   };
 
   const handleChipClick = (suggestion: string) => {
@@ -862,7 +888,14 @@ function ChatPanel({
                       padding: "2px 0 2px 6px",
                       wordBreak: "break-word" as const,
                     }}>
-                      {processLinks(msg.content)}
+                      {msg.content !== "(image)" && processLinks(msg.content)}
+                      {msg.images && msg.images.length > 0 && (
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: msg.content && msg.content !== "(image)" ? 6 : 2 }}>
+                          {msg.images.map((img, idx) => (
+                            <img key={idx} src={img} style={{ maxWidth: 200, maxHeight: 150, borderRadius: 4, border: "1px solid var(--border)" }} />
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1024,11 +1057,31 @@ function ChatPanel({
           </span>
         </div>
       )}
+      {pastedImages.length > 0 && (
+        <div style={{ padding: "6px 12px 0", display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {pastedImages.map((img, idx) => (
+            <div key={idx} style={{ position: "relative" }}>
+              <img src={img} style={{ height: 56, maxWidth: 100, borderRadius: 4, border: "1px solid var(--border)", objectFit: "cover", display: "block" }} />
+              <button
+                onClick={() => setPastedImages(prev => prev.filter((_, i) => i !== idx))}
+                style={{
+                  position: "absolute", top: -4, right: -4, width: 14, height: 14, borderRadius: "50%",
+                  background: "var(--bg-2)", border: "1px solid var(--border)",
+                  cursor: "pointer", padding: 0, display: "flex", alignItems: "center", justifyContent: "center",
+                }}
+              >
+                <X size={8} strokeWidth={2} style={{ color: "var(--text-2)" }} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
       <div className="widget-footer" style={{ padding: "10px 12px", gap: 8, alignItems: "flex-end" }}>
         <textarea
           className="chat-input"
           value={input}
           onChange={e => setInput(e.target.value)}
+          onPaste={handlePaste}
           onKeyDown={e => {
             if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
           }}
@@ -1309,7 +1362,7 @@ export default function ChatWidget() {
     <div className="widget" style={{ position: "relative", height: "100%", overflow: "visible" }}>
       {/* Header */}
       <div className="widget-header">
-        <span className="widget-header-label">Chat</span>
+        <span className="widget-header-label"><MessageSquare size={13} strokeWidth={1.5} /> Chat</span>
         <div style={{ display: "flex", gap: 2 }}>
           <button className="widget-toolbar-btn" data-tip="Send to Tana today" onClick={sendAllToTana}>
             <TanaIcon size={12} strokeWidth={1.5} />

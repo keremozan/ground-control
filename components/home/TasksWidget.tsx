@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Play, CheckCircle, Archive, Trash2, RefreshCw, Loader2, ChevronRight, X, Send, SkipForward, ExternalLink, ChevronDown, CalendarClock, Plus } from "lucide-react";
+import { Play, CheckCircle, Archive, Trash2, RefreshCw, Loader2, ChevronRight, X, Send, SkipForward, ExternalLink, ChevronDown, CalendarClock, Plus, ListChecks } from "lucide-react";
 import { charIcon, charColor } from "@/lib/char-icons";
 import { useChatTrigger } from "@/lib/chat-store";
 import { logAction } from "@/lib/action-log";
@@ -38,7 +38,7 @@ function formatDueDate(dueDate: string): string {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-type PriorityFilter = "high" | "medium" | "low";
+type PriorityFilter = "today" | "week" | "high" | "medium" | "low";
 
 const statusStyle: Record<string, { color: string; bg: string; label: string }> = {
   "in-progress": { color: "#2563eb", bg: "#dbeafe", label: "ACTIVE"  },
@@ -69,7 +69,7 @@ const itemActions = [
 export default function TasksWidget() {
   const [grouped, setGrouped] = useState<Record<string, Task[]>>({});
   const [loading, setLoading] = useState(true);
-  const [priority, setPriority] = useState<PriorityFilter>("high");
+  const [priority, setPriority] = useState<PriorityFilter>("today");
   const [taskPriorities, setTaskPriorities] = useState<Record<string, string>>({});
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [showNewTask, setShowNewTask] = useState(false);
@@ -349,11 +349,31 @@ export default function TasksWidget() {
     }
   }
 
-  // Apply priority filter
+  // Apply filter
   const filtered: Record<string, Task[]> = {};
-  for (const [track, tasks] of Object.entries(grouped)) {
-    const match = tasks.filter(t => (taskPriorities[t.id] ?? t.priority) === priority);
-    if (match.length > 0) filtered[track] = match;
+  if (priority === "today") {
+    for (const [track, tasks] of Object.entries(grouped)) {
+      const match = tasks.filter(t => {
+        if (!t.dueDate) return false;
+        const badge = dueBadge(t.dueDate);
+        return badge?.label === "TODAY" || badge?.label === "OVERDUE";
+      });
+      if (match.length > 0) filtered[track] = match;
+    }
+  } else if (priority === "week") {
+    for (const [track, tasks] of Object.entries(grouped)) {
+      const match = tasks.filter(t => {
+        if (!t.dueDate) return false;
+        const badge = dueBadge(t.dueDate);
+        return badge !== null; // dueBadge returns non-null for overdue, today, and within 7 days
+      });
+      if (match.length > 0) filtered[track] = match;
+    }
+  } else {
+    for (const [track, tasks] of Object.entries(grouped)) {
+      const match = tasks.filter(t => (taskPriorities[t.id] ?? t.priority) === priority);
+      if (match.length > 0) filtered[track] = match;
+    }
   }
 
   const tracks = Object.keys(filtered);
@@ -364,9 +384,16 @@ export default function TasksWidget() {
   // Count per priority for filter chips
   const allTasks = Object.values(grouped).flat();
   const priorityCounts: Record<string, number> = { high: 0, medium: 0, low: 0 };
+  let todayCount = 0;
+  let weekCount = 0;
   for (const t of allTasks) {
     const p = taskPriorities[t.id] ?? t.priority;
     if (p in priorityCounts) priorityCounts[p]++;
+    if (t.dueDate) {
+      const badge = dueBadge(t.dueDate);
+      if (badge?.label === "TODAY" || badge?.label === "OVERDUE") todayCount++;
+      if (badge !== null) weekCount++;
+    }
   }
 
   const toggleTrack = (track: string) => {
@@ -385,7 +412,7 @@ export default function TasksWidget() {
   return (
     <div className="widget">
       <div className="widget-header">
-        <span className="widget-header-label">Tasks</span>
+        <span className="widget-header-label"><ListChecks size={13} strokeWidth={1.5} /> Tasks</span>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-3)" }}>
             {loading ? "..." : <><span style={{ color: "var(--blue)", fontWeight: 600 }}>{activeTasks}</span>/{totalFiltered}</>}
@@ -489,11 +516,60 @@ export default function TasksWidget() {
         );
       })()}
 
-      {/* Priority filter chips */}
+      {/* Filter chips */}
       <div style={{
         display: "flex", gap: 4, padding: "6px 16px 2px",
         borderBottom: "1px solid var(--border)",
       }}>
+        {/* Today chip */}
+        {(() => {
+          const active = priority === "today";
+          const dotColor = "#d97706";
+          return (
+            <button
+              onClick={() => setPriority("today")}
+              style={{
+                fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 500,
+                letterSpacing: "0.04em", textTransform: "uppercase",
+                padding: "3px 8px", borderRadius: 3,
+                border: "1px solid",
+                borderColor: active ? dotColor : "transparent",
+                background: active ? "var(--surface-2)" : "transparent",
+                color: active ? "var(--text)" : "var(--text-3)",
+                cursor: "pointer",
+                transition: "all 0.15s ease",
+                display: "flex", alignItems: "center", gap: 4,
+              }}
+            >
+              <span style={{ width: 5, height: 5, borderRadius: "50%", background: dotColor, flexShrink: 0 }} />
+              {`Today (${todayCount})`}
+            </button>
+          );
+        })()}
+        {(() => {
+          const active = priority === "week";
+          const dotColor = "#2563eb";
+          return (
+            <button
+              onClick={() => setPriority("week")}
+              style={{
+                fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 500,
+                letterSpacing: "0.04em", textTransform: "uppercase",
+                padding: "3px 8px", borderRadius: 3,
+                border: "1px solid",
+                borderColor: active ? dotColor : "transparent",
+                background: active ? "var(--surface-2)" : "transparent",
+                color: active ? "var(--text)" : "var(--text-3)",
+                cursor: "pointer",
+                transition: "all 0.15s ease",
+                display: "flex", alignItems: "center", gap: 4,
+              }}
+            >
+              <span style={{ width: 5, height: 5, borderRadius: "50%", background: dotColor, flexShrink: 0 }} />
+              {`Week (${weekCount})`}
+            </button>
+          );
+        })()}
         {(["high", "medium", "low"] as const).map(p => {
           const active = priority === p;
           const dotColor = p === "high" ? "#ef4444" : p === "medium" ? "#f59e0b" : "#9ca3af";
@@ -533,7 +609,7 @@ export default function TasksWidget() {
         {!loading && tracks.length === 0 && (
           <div style={{ padding: "16px", textAlign: "center" }}>
             <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-3)" }}>
-              No {priority}-priority tasks
+              {priority === "today" ? "Nothing due today" : priority === "week" ? "Nothing due this week" : `No ${priority}-priority tasks`}
             </span>
           </div>
         )}

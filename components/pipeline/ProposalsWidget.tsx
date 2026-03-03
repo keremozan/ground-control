@@ -11,7 +11,7 @@ type Proposal = {
   createdAt: string;
 };
 
-export default function ProposalsWidget() {
+export default function ProposalsWidget({ hideHeader }: { hideHeader?: boolean } = {}) {
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -43,26 +43,28 @@ export default function ProposalsWidget() {
 
   return (
     <div className="widget" style={{ height: "100%" }}>
-      <div className="widget-header">
-        <span className="widget-header-label" style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <Wrench size={12} strokeWidth={1.5} />
-          Proposals
-        </span>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          {proposals.length > 0 && (
-            <span style={{
-              fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 600,
-              color: "#d97706", background: "#d9770618",
-              padding: "1px 6px", borderRadius: 8,
-            }}>
-              {proposals.length}
-            </span>
-          )}
-          <button className="widget-toolbar-btn" data-tip="Refresh" onClick={fetch_}>
-            <RefreshCw size={12} strokeWidth={1.5} className={loading ? "spin" : ""} />
-          </button>
+      {!hideHeader && (
+        <div className="widget-header">
+          <span className="widget-header-label" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <Wrench size={12} strokeWidth={1.5} />
+            Proposals
+          </span>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            {proposals.length > 0 && (
+              <span style={{
+                fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 600,
+                color: "#d97706", background: "#d9770618",
+                padding: "1px 6px", borderRadius: 8,
+              }}>
+                {proposals.length}
+              </span>
+            )}
+            <button className="widget-toolbar-btn" data-tip="Refresh" onClick={fetch_}>
+              <RefreshCw size={12} strokeWidth={1.5} className={loading ? "spin" : ""} />
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="widget-body" style={{ padding: 0 }}>
         {proposals.length === 0 && (

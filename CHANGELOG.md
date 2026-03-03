@@ -1,5 +1,28 @@
 # Changelog
 
+## v1.0.11 — 2026-03-03
+
+### Dashboard
+- [new] character detail drawer — skills, keywords, knowledge, memory accessible from crew cards
+- [new] detail button on crew cards opens character detail drawer
+- [new] run full cycle button in crew widget footer
+- [new] logs and proposals tabs in crew widget (embedded, no double headers)
+- [new] today/week filter chips in tasks widget alongside priority filters
+- [new] image paste support in chat — paste images, preview thumbnails, send to characters
+- [new] icons on all widget headers (Tasks, Chat, Calendar, Inbox, Crew)
+- [new] scheduled tasks — one-time tasks with datetime, auto-run on mount + every 15min
+- [improved] crew widget header uses tab navigation only, no redundant title
+
+### Scheduled Tasks
+- [new] `POST /api/schedule/tasks` — create a one-time scheduled task
+- [new] `GET /api/schedule/tasks` — list pending tasks
+- [new] `DELETE /api/schedule/tasks?id=` — remove a task
+- [new] `POST /api/schedule/tasks/check` — find and run overdue tasks
+- [new] `lib/scheduled-tasks.ts` — type definitions and file I/O
+
+### Pipeline
+- [removed] pipeline page — all functionality moved to dashboard
+
 ## v1.0.10 — 2026-03-03
 
 ### Dashboard

@@ -124,8 +124,10 @@ export function spawnSSEStream(opts: {
   label: string;
   characterId?: string;
   signal?: AbortSignal;
+  images?: Array<{ mediaType: string; data: string }>;
 }): ReadableStream<Uint8Array> {
-  const { prompt, model, maxTurns, label, characterId, signal } = opts;
+  const { prompt, model, maxTurns, label, characterId, signal, images } = opts;
+  const hasImages = !!images && images.length > 0;
   const encoder = new TextEncoder();
 
   let proc: ReturnType<typeof spawn> | null = null;
@@ -142,7 +144,16 @@ export function spawnSSEStream(opts: {
       const env = { ...process.env };
       delete env.CLAUDECODE;
 
-      const args = [
+      const args = hasImages ? [
+        '-p',
+        '--input-format', 'stream-json',
+        '--output-format', 'stream-json',
+        '--verbose',
+        '--model', model,
+        '--max-turns', String(maxTurns),
+        '--dangerously-skip-permissions',
+        '--mcp-config', MCP_CONFIG,
+      ] : [
         '-p', prompt,
         '--output-format', 'stream-json',
         '--verbose',
@@ -152,7 +163,20 @@ export function spawnSSEStream(opts: {
         '--mcp-config', MCP_CONFIG,
       ];
 
-      proc = spawn(CLAUDE_BIN, args, { cwd: HOME, env: env as NodeJS.ProcessEnv, stdio: ['ignore', 'pipe', 'pipe'] });
+      proc = spawn(CLAUDE_BIN, args, { cwd: HOME, env: env as NodeJS.ProcessEnv, stdio: [hasImages ? 'pipe' : 'ignore', 'pipe', 'pipe'] });
+
+      // When images present, write multimodal message to stdin and close
+      if (hasImages && proc.stdin) {
+        const content: Array<Record<string, unknown>> = images!.map(img => ({
+          type: 'image',
+          source: { type: 'base64', media_type: img.mediaType, data: img.data },
+        }));
+        content.push({ type: 'text', text: prompt });
+        const stdinMsg = JSON.stringify({ type: 'user', message: { role: 'user', content } }) + '\n';
+        proc.stdin.write(stdinMsg);
+        proc.stdin.end();
+      }
+
       let buffer = '';
 
       // Kill subprocess when client disconnects

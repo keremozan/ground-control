@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Reply, ListChecks, Calendar, Archive, Trash2, CornerUpRight, User, GraduationCap, RefreshCw, Loader2, ExternalLink, FileText, Send, X, Play } from "lucide-react";
+import { Reply, ListChecks, Calendar, Archive, Trash2, CornerUpRight, User, GraduationCap, RefreshCw, Loader2, ExternalLink, FileText, Send, X, Play, Mail } from "lucide-react";
 import { useChatTrigger } from "@/lib/chat-store";
 import { logAction } from "@/lib/action-log";
 import { charColor } from "@/lib/char-icons";
@@ -334,7 +334,7 @@ export default function InboxWidget() {
   return (
     <div className="widget">
       <div className="widget-header">
-        <span className="widget-header-label">Inbox</span>
+        <span className="widget-header-label"><Mail size={13} strokeWidth={1.5} /> Inbox</span>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           {(["personal", "school"] as const).map((key) => {
             const s = accountStyle[key];

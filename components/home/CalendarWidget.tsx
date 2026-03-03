@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { ListChecks, Trash2, MapPin, RefreshCw, Loader2, ExternalLink, Plus, X } from "lucide-react";
+import { ListChecks, Trash2, MapPin, RefreshCw, Loader2, ExternalLink, Plus, X, CalendarDays } from "lucide-react";
 
 
 type CalEvent = {
@@ -164,7 +164,7 @@ export default function CalendarWidget() {
   return (
     <div className="widget">
       <div className="widget-header">
-        <span className="widget-header-label">Calendar</span>
+        <span className="widget-header-label"><CalendarDays size={13} strokeWidth={1.5} /> Calendar</span>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-3)" }}>
             {loading ? "..." : `${todayEvents.length} today`}

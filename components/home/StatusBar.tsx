@@ -229,7 +229,6 @@ export default function StatusBar({ activePage = "home" }: { activePage?: "home"
       {/* Nav */}
       <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
         <Link href="/" style={navStyle("home")}>Home</Link>
-        <Link href="/pipeline" style={navStyle("pipeline")}>Pipeline</Link>
       </div>
 
       <div style={{ width: 1, height: 12, background: "var(--border)", margin: "0 14px" }} />

@@ -23,8 +23,10 @@ function formatTime(iso: string): string {
 
 export default function LogsWidget({
   onShowResult,
+  hideHeader,
 }: {
   onShowResult?: (result: JobResult) => void;
+  hideHeader?: boolean;
 }) {
   const [entries, setEntries] = useState<ActionLogEntry[]>([]);
 
@@ -55,20 +57,22 @@ export default function LogsWidget({
 
   return (
     <div className="widget" style={{ height: "100%" }}>
-      <div className="widget-header">
-        <span className="widget-header-label">Logs</span>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-3)" }}>
-            {entries.length} entries
-          </span>
-          <button className="widget-toolbar-btn" data-tip="Clear" onClick={handleClear}>
-            <Trash2 size={12} strokeWidth={1.5} />
-          </button>
-          <button className="widget-toolbar-btn" data-tip="Refresh" onClick={() => setEntries([...getLog()])}>
-            <RefreshCw size={12} strokeWidth={1.5} />
-          </button>
+      {!hideHeader && (
+        <div className="widget-header">
+          <span className="widget-header-label">Logs</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-3)" }}>
+              {entries.length} entries
+            </span>
+            <button className="widget-toolbar-btn" data-tip="Clear" onClick={handleClear}>
+              <Trash2 size={12} strokeWidth={1.5} />
+            </button>
+            <button className="widget-toolbar-btn" data-tip="Refresh" onClick={() => setEntries([...getLog()])}>
+              <RefreshCw size={12} strokeWidth={1.5} />
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="widget-body" style={{ padding: 0 }}>
         {entries.length === 0 && (
