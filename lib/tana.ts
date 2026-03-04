@@ -725,6 +725,254 @@ export async function archiveTask(nodeId: string, taskName: string, trackId: str
 
 const WORKSPACE_ID = TANA_WORKSPACE_ID;
 
+// ── Class prep ───────────────────────────────────────────────────────────────
+
+const CLASS_TAG_ID = TANA.classTags.class;
+
+export type ChecklistItem = {
+  id: string;
+  text: string;
+  checked: boolean;
+  group: 'prep' | 'post-lesson' | null;
+};
+
+export type ClassPrepNode = {
+  id: string;
+  name: string;
+  course: string;
+  courseId: string | null;
+  date: string | null;
+  number: number | null;
+  checklist: ChecklistItem[];
+  totalItems: number;
+  checkedItems: number;
+};
+
+function parseClassDate(raw: string): string | null {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Handle relative words from Tana: "Today", "Tomorrow", "Yesterday"
+  const lower = raw.toLowerCase().trim();
+  if (lower === 'today') return today.toISOString().split('T')[0];
+  if (lower === 'tomorrow') {
+    const d = new Date(today);
+    d.setDate(d.getDate() + 1);
+    return d.toISOString().split('T')[0];
+  }
+  if (lower === 'yesterday') {
+    const d = new Date(today);
+    d.setDate(d.getDate() - 1);
+    return d.toISOString().split('T')[0];
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+  const withYear = /,\s*\d{4}$/.test(raw) ? raw : `${raw}, ${today.getFullYear()}`;
+  const parsed = new Date(withYear);
+  if (!isNaN(parsed.getTime())) return parsed.toISOString().split('T')[0];
+  return null;
+}
+
+function parseClassFields(markdown: string): {
+  course: string; courseId: string | null; date: string | null; number: number | null;
+} {
+  let course = '';
+  let courseId: string | null = null;
+  let date: string | null = null;
+  let number: number | null = null;
+
+  const courseMatch = markdown.match(/\*\*course\*\*:\s*\[([^\]]+?)(?:\s*#[^\]]+)?\]\(tana:([\w-]+)\)/);
+  if (courseMatch) { course = courseMatch[1].trim(); courseId = courseMatch[2]; }
+
+  // Full date field content (everything after "Date**: " up to next newline or <!-- )
+  const dateLineMatch = markdown.match(/\*\*Date\*\*:\s*([^\n<]+)/i);
+  if (dateLineMatch) {
+    const dateLine = dateLineMatch[1].trim();
+    // Strip time portion: "Tomorrow, 14:40 → 16:30" -> "Tomorrow"
+    // "Mon, Mar 5, 14:40 → 16:30" -> "Mon, Mar 5"
+    // "Mar 5, 2026, 14:40" -> "Mar 5, 2026"
+    const withoutTime = dateLine.replace(/,?\s*\d{1,2}:\d{2}.*$/, '').trim();
+    // Strip leading weekday if followed by month name: "Mon, Mar 5" -> "Mar 5"
+    const stripped = withoutTime.replace(/^(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun),\s*/i, '').trim();
+    date = parseClassDate(stripped);
+  }
+
+  const numMatch = markdown.match(/\*\*number\*\*:\s*(\d+)/i);
+  if (numMatch) number = parseInt(numMatch[1], 10);
+
+  return { course, courseId, date, number };
+}
+
+function parseChecklist(markdown: string): ChecklistItem[] {
+  // Each <!-- node-id: X --> comment appears inline at the end of its own line.
+  // Parse line-by-line and associate the ID with the todo on that same line.
+  const lines = markdown.split('\n');
+  const allItems: { id: string; text: string; checked: boolean; indentLevel: number }[] = [];
+
+  for (const line of lines) {
+    const nodeIdMatch = line.match(/<!-- node-id: ([\w-]+) -->/);
+    if (!nodeIdMatch) continue;
+    const nodeId = nodeIdMatch[1];
+    const cleanLine = line.replace(/\s*<!-- node-id: [\w-]+ -->/, '').trimEnd();
+    const m = cleanLine.match(/^(\s*)- \[( |x)\] (.+)$/);
+    if (m) allItems.push({ id: nodeId, text: m[3].trim(), checked: m[2] === 'x', indentLevel: m[1].length });
+  }
+
+  if (allItems.length === 0) return [];
+
+  // Known group headers by text pattern — skip them and use as group transitions.
+  // Children (deeper indent) inherit the current group.
+  const GROUP_HEADERS: { pattern: RegExp; group: 'prep' | 'post-lesson' }[] = [
+    { pattern: /prep lesson/i, group: 'prep' },
+    { pattern: /post.?lesson/i, group: 'post-lesson' },
+  ];
+
+  // Find the indent level of group headers (the level below the class node itself)
+  const groupHeaderLevel = allItems
+    .filter(i => GROUP_HEADERS.some(g => g.pattern.test(i.text)))
+    .reduce((min, i) => Math.min(min, i.indentLevel), Infinity);
+
+  let currentGroup: 'prep' | 'post-lesson' | null = null;
+  const result: ChecklistItem[] = [];
+
+  for (const item of allItems) {
+    const headerMatch = GROUP_HEADERS.find(g => g.pattern.test(item.text));
+    if (headerMatch && item.indentLevel === groupHeaderLevel) {
+      currentGroup = headerMatch.group;
+      continue; // skip group headers themselves
+    }
+    // Skip the class node itself (typically "VA 204 — ...")
+    if (item.indentLevel < groupHeaderLevel) continue;
+    result.push({ id: item.id, text: item.text, checked: item.checked, group: currentGroup });
+  }
+
+  return result;
+}
+
+const STANDARD_CLASS_CHECKLIST = `- [ ] prep lesson
+  - [ ] send readings + SUCourse announcement
+  - [ ] prep content
+  - [ ] prep slides
+  - [ ] prep activities
+  - [ ] create SUCourse hidden folder + pending tasks
+  - [ ] rehearse
+- [ ] post-lesson review
+  - [ ] upload slides
+  - [ ] update activity report
+  - [ ] review workshop node
+  - [ ] check submissions`;
+
+async function attachChecklistToClass(nodeId: string): Promise<string> {
+  await mcpCall('tools/call', {
+    name: 'import_tana_paste',
+    arguments: { parentNodeId: nodeId, content: STANDARD_CLASS_CHECKLIST },
+  });
+  const md = await mcpCall('tools/call', {
+    name: 'read_node',
+    arguments: { nodeId, maxDepth: 3 },
+  });
+  return typeof md === 'string' ? md : '';
+}
+
+export async function getClassNodes(): Promise<ClassPrepNode[]> {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const cutoff = new Date(today);
+  cutoff.setDate(cutoff.getDate() + 90); // show up to ~3 months ahead
+
+  const nodes = await mcpCall('tools/call', {
+    name: 'search_nodes',
+    arguments: { query: { hasType: CLASS_TAG_ID }, limit: 100 },
+  });
+
+  if (!Array.isArray(nodes)) return [];
+
+  const classes: ClassPrepNode[] = [];
+
+  for (const node of nodes) {
+    if (node.docType === 'tagDef') continue;
+    try {
+      const md = await mcpCall('tools/call', {
+        name: 'read_node',
+        arguments: { nodeId: node.id, maxDepth: 3 },
+      });
+      if (typeof md !== 'string') continue;
+
+      const fields = parseClassFields(md);
+
+      // Filter: only upcoming classes within 90 days
+      if (!fields.date) continue;
+      const classDate = new Date(fields.date + 'T00:00:00');
+      if (classDate < today || classDate > cutoff) continue;
+
+      const rawNodeName = (node.name as string);
+      // Extract lesson number from name pattern if not in number field
+      const lessonNumFromName = rawNodeName.match(/(\d+)\.lesson/i);
+      const lessonNumber = fields.number ?? (lessonNumFromName ? parseInt(lessonNumFromName[1]) : null);
+
+      const cleanName = rawNodeName
+        .replace(/<span[^>]*>[^<]*<\/span>/g, '')
+        // Strip ALL lesson suffix patterns (handles duplicates like "4.lesson 4.lesson",
+        // unresolved templates like "number.lesson", "__number__.lesson")
+        .replace(/(\s+(?:\d+|number|__number__)\.lesson)+$/gi, '')
+        // Strip leading course-code prefix like "VA 315/515 — " or "VAVCD — "
+        .replace(/^[A-Z][A-Z0-9/\s]*\s*—\s*/, '')
+        .replace(/\s*—\s*$/, '')
+        .trim() || rawNodeName.trim();
+
+      let checklist = parseChecklist(md);
+
+      // Auto-attach standard checklist if missing (handles calendar-synced nodes)
+      if (checklist.length === 0) {
+        const freshMd = await attachChecklistToClass(node.id);
+        if (freshMd) checklist = parseChecklist(freshMd);
+      }
+
+      classes.push({
+        id: node.id,
+        name: cleanName,
+        ...fields,
+        number: lessonNumber,
+        checklist,
+        totalItems: checklist.length,
+        checkedItems: checklist.filter(i => i.checked).length,
+      });
+    } catch {
+      // Skip unreadable class nodes
+    }
+  }
+
+  // Sort by date ascending
+  classes.sort((a, b) => {
+    if (!a.date) return 1;
+    if (!b.date) return -1;
+    return a.date.localeCompare(b.date);
+  });
+
+  return classes;
+}
+
+/** Toggle a class checklist item (plain todo node, not #task) */
+export async function toggleClassItem(nodeId: string, checked: boolean): Promise<void> {
+  const tool = checked ? 'check_node' : 'uncheck_node';
+  await mcpCall('tools/call', { name: tool, arguments: { nodeId } });
+}
+
+/** Check all remaining unchecked prep items for a class node. Returns count checked. */
+export async function checkRemainingPrepItems(classNodeId: string): Promise<number> {
+  const md = await mcpCall('tools/call', {
+    name: 'read_node',
+    arguments: { nodeId: classNodeId, maxDepth: 3 },
+  });
+  if (typeof md !== 'string') return 0;
+  const checklist = parseChecklist(md);
+  const toCheck = checklist.filter(i => i.group === 'prep' && !i.checked);
+  for (const item of toCheck) {
+    await mcpCall('tools/call', { name: 'check_node', arguments: { nodeId: item.id } });
+  }
+  return toCheck.length;
+}
+
 /** Send text to today's day page in Tana */
 export async function sendToTanaToday(title: string, content: string): Promise<void> {
   // Get today's day node

@@ -64,6 +64,13 @@ export const TANA = {
     priority: 'OWYvzF6i6rS1',
     context: 'eW99-oKgUuNC',
   },
+  // Teaching
+  classTags: {
+    class: '9PaZ1ZDaJssP',
+  },
+  classFields: {
+    course: '7F0FVER5hNKv',
+  },
 } as const;
 
 // Reverse lookups

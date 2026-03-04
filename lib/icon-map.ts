@@ -10,7 +10,7 @@ import {
   Reply, ListChecks, Calendar, CornerUpRight,
   Zap, MailPlus, CalendarPlus, ClipboardList, ScanLine,
   Clock, Settings, Power, AlertTriangle, FolderCog, ArrowRight,
-  Play, CheckCircle, Archive, Lightbulb,
+  Play, CheckCircle, Archive, Lightbulb, Stethoscope,
   type LucideIcon,
 } from "lucide-react";
 import TanaIcon from "@/components/icons/TanaIcon";
@@ -27,7 +27,7 @@ export const iconMap: Record<string, LucideIcon> = {
   Reply, ListChecks, Calendar, CornerUpRight,
   Zap, MailPlus, CalendarPlus, ClipboardList, ScanLine,
   Clock, Settings, Power, AlertTriangle, FolderCog, ArrowRight,
-  Play, CheckCircle, Archive, Lightbulb,
+  Play, CheckCircle, Archive, Lightbulb, Stethoscope,
   Tana: TanaIcon as unknown as LucideIcon,
 };
 

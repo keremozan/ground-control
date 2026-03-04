@@ -6,7 +6,6 @@ import TasksWidget from "@/components/home/TasksWidget";
 import CrewWidget from "@/components/home/CrewWidget";
 import ChatWidget from "@/components/home/ChatWidget";
 import StatusBar from "@/components/home/StatusBar";
-
 export default function Home() {
   return (
     <ChatProvider>

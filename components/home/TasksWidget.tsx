@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Play, CheckCircle, Archive, Trash2, RefreshCw, Loader2, ChevronRight, X, Send, SkipForward, ExternalLink, ChevronDown, CalendarClock, Plus, ListChecks } from "lucide-react";
+import { Play, CheckCircle, Archive, Trash2, RefreshCw, Loader2, ChevronRight, X, Send, SkipForward, ExternalLink, ChevronDown, CalendarClock, Plus, ListChecks, BookOpen } from "lucide-react";
+import { ClassesTabContent } from "./ClassesWidget";
 import { charIcon, charColor } from "@/lib/char-icons";
 import { useChatTrigger } from "@/lib/chat-store";
 import { logAction } from "@/lib/action-log";
@@ -66,7 +67,26 @@ const itemActions = [
   { icon: Trash2,       label: "Delete",  colorClass: "item-action-btn-red"   },
 ];
 
+function TabBtn({ label, icon, active, onClick }: { label: string; icon?: React.ReactNode; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        display: "flex", alignItems: "center", gap: 4,
+        padding: "3px 8px", borderRadius: 3,
+        fontFamily: "var(--font-display)", fontSize: 13, fontWeight: active ? 600 : 400,
+        color: active ? "var(--text)" : "var(--text-3)",
+        background: "transparent", border: "none", cursor: "pointer",
+        transition: "all 0.12s",
+      }}
+    >
+      {icon}{label}
+    </button>
+  );
+}
+
 export default function TasksWidget() {
+  const [activeTab, setActiveTab] = useState<"tasks" | "classes">("tasks");
   const [grouped, setGrouped] = useState<Record<string, Task[]>>({});
   const [loading, setLoading] = useState(true);
   const [priority, setPriority] = useState<PriorityFilter>("today");
@@ -412,20 +432,26 @@ export default function TasksWidget() {
   return (
     <div className="widget">
       <div className="widget-header">
-        <span className="widget-header-label"><ListChecks size={13} strokeWidth={1.5} /> Tasks</span>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-3)" }}>
-            {loading ? "..." : <><span style={{ color: "var(--blue)", fontWeight: 600 }}>{activeTasks}</span>/{totalFiltered}</>}
-          </span>
-          <button className="widget-toolbar-btn" data-tip="Add task" onClick={() => { setShowNewTask(true); setTimeout(() => newTaskRef.current?.focus(), 50); }}>
-            <Plus size={12} strokeWidth={1.5} />
-          </button>
-          <button className="widget-toolbar-btn" data-tip="Refresh" onClick={fetchTasks}>
-            <RefreshCw size={12} strokeWidth={1.5} style={loading ? { animation: "spin 1s linear infinite" } : undefined} />
-          </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 0 }}>
+          <TabBtn label="Tasks" icon={<ListChecks size={13} strokeWidth={1.5} />} active={activeTab === "tasks"} onClick={() => setActiveTab("tasks")} />
+          <TabBtn label="Classes" icon={<BookOpen size={13} strokeWidth={1.5} />} active={activeTab === "classes"} onClick={() => setActiveTab("classes")} />
         </div>
+        {activeTab === "tasks" && (
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-3)" }}>
+              {loading ? "..." : <><span style={{ color: "var(--blue)", fontWeight: 600 }}>{activeTasks}</span>/{totalFiltered}</>}
+            </span>
+            <button className="widget-toolbar-btn" data-tip="Add task" onClick={() => { setShowNewTask(true); setTimeout(() => newTaskRef.current?.focus(), 50); }}>
+              <Plus size={12} strokeWidth={1.5} />
+            </button>
+            <button className="widget-toolbar-btn" data-tip="Refresh" onClick={fetchTasks}>
+              <RefreshCw size={12} strokeWidth={1.5} style={loading ? { animation: "spin 1s linear infinite" } : undefined} />
+            </button>
+          </div>
+        )}
       </div>
 
+      {activeTab === "tasks" && <>
       {/* Inline new task form */}
       {showNewTask && (() => {
         const tracks = Object.entries(grouped).map(([name, tasks]) => ({
@@ -919,6 +945,8 @@ export default function TasksWidget() {
           );
         })}
       </div>
+      </>}
+      {activeTab === "classes" && <ClassesTabContent />}
     </div>
   );
 }

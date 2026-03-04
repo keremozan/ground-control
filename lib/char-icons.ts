@@ -1,7 +1,7 @@
 import {
   Mail, BookOpen, Briefcase,
   Heart, Wrench, Telescope,
-  Users,
+  Users, Stethoscope,
   type LucideIcon,
 } from "lucide-react";
 
@@ -14,6 +14,7 @@ export const charColor: Record<string, string> = {
   coach:     '#059669',  // emerald
   architect: '#475569',  // slate
   oracle:    '#0891b2',  // cyan/teal
+  doctor:    '#0284c7',  // sky blue
   system:    '#64748b',  // gray
 };
 
@@ -24,5 +25,6 @@ export const charIcon: Record<string, LucideIcon> = {
   Coach:     Heart,
   Architect: Wrench,
   Oracle:    Telescope,
+  Doctor:    Stethoscope,
   Crew:      Users,
 };
