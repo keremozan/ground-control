@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.0.15 — 2026-03-04
+
+### Dashboard
+- [new] Character-switching quick-replies — clicking a quick-reply that mentions a character opens a new tab with that character and passes conversation context
+- [new] Renameable chat tabs — double-click a tab name to edit inline, persists in localStorage
+- [new] Version badge now reads from CHANGELOG.md dynamically (no more package.json mismatch)
+- [fix] Removed unused Home nav button from status bar
+- [fix] Status bar spacing after Home button removal
+
 ## v1.0.14 — 2026-03-04
 
 ### Dashboard

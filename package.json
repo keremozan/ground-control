@@ -1,6 +1,6 @@
 {
   "name": "ground-control",
-  "version": "1.0.8",
+  "version": "1.0.15",
   "private": true,
   "scripts": {
     "dev": "next dev",

@@ -1,10 +1,8 @@
 "use client";
 import { useState, useEffect, useRef, useCallback } from "react";
-import Link from "next/link";
 import { Bug, X, Mail, CalendarDays, Monitor, RefreshCw, RotateCw, LayoutDashboard, ListChecks } from "lucide-react";
 import { logAction } from "@/lib/action-log";
 import TanaIcon from "@/components/icons/TanaIcon";
-import pkg from "@/package.json";
 
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -99,7 +97,7 @@ function ServiceDot({ ok, label }: { ok: boolean | null; label: string }) {
 
 /* ── StatusBar ──────────────────────────────────────────────── */
 
-export default function StatusBar({ activePage = "home" }: { activePage?: "home" | "pipeline" }) {
+export default function StatusBar() {
   const [showChangelog, setShowChangelog] = useState(false);
   const [changelog, setChangelog] = useState<CLVersion[] | null>(null);
   const [showBug, setShowBug] = useState(false);
@@ -110,8 +108,17 @@ export default function StatusBar({ activePage = "home" }: { activePage?: "home"
   const [showHealth, setShowHealth] = useState(false);
   const [retrying, setRetrying] = useState(false);
   const [restarting, setRestarting] = useState(false);
+  const [version, setVersion] = useState("");
   const bugRef = useRef<HTMLTextAreaElement>(null);
   const healthRef = useRef<HTMLDivElement>(null);
+
+  // Fetch version from changelog (single source of truth)
+  useEffect(() => {
+    fetch("/api/changelog").then(r => r.json()).then(data => {
+      const match = (data.content || "").match(/^## v([\d.]+)/m);
+      if (match) setVersion(match[1]);
+    }).catch(() => {});
+  }, []);
 
   // Live clock
   useEffect(() => {
@@ -184,21 +191,6 @@ export default function StatusBar({ activePage = "home" }: { activePage?: "home"
   const gmailPartial = status ? (status.gmail.personal || status.gmail.school) && !gmailOk : false;
   const allOk = status ? (status.tana && gmailOk && status.calendar && status.playwright && status.miro && status.tasks) : null;
 
-  const navStyle = (page: string) => ({
-    fontFamily: "var(--font-body)" as const,
-    fontSize: 11,
-    fontWeight: activePage === page ? 600 : 400,
-    textDecoration: "none" as const,
-    color: activePage === page ? "var(--text)" : "var(--text-3)",
-    cursor: "pointer" as const,
-    whiteSpace: "nowrap" as const,
-    flexShrink: 0,
-    padding: "2px 8px",
-    borderRadius: 3,
-    background: activePage === page ? "var(--bg)" : "transparent",
-    transition: "all 0.12s",
-  });
-
   return (
     <div className="widget" style={{
       flexDirection: "row", alignItems: "center",
@@ -219,19 +211,14 @@ export default function StatusBar({ activePage = "home" }: { activePage?: "home"
         style={{
           fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 500,
           color: "var(--text-3)", background: "transparent", border: "1px solid var(--border)",
-          borderRadius: 3, padding: "1px 5px", cursor: "pointer", margin: "0 14px 0 8px",
+          borderRadius: 3, padding: "1px 5px", cursor: "pointer", margin: "0 0 0 8px",
           letterSpacing: "0.02em", whiteSpace: "nowrap", flexShrink: 0,
         }}
       >
-        v{pkg.version}
+        {version ? `v${version}` : "..."}
       </button>
 
-      {/* Nav */}
-      <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
-        <Link href="/" style={navStyle("home")}>Home</Link>
-      </div>
-
-      <div style={{ width: 1, height: 12, background: "var(--border)", margin: "0 14px" }} />
+      <div style={{ width: 1, height: 12, background: "var(--border)", margin: "0 10px" }} />
 
       {/* Date + time */}
       <span style={{
