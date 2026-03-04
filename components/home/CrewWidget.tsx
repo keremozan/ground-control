@@ -16,6 +16,8 @@ type ActionInfo = {
   icon: string;
   description: string;
   autonomous?: boolean;
+  autonomousInput?: boolean;
+  inputPlaceholder?: string;
   endpoint?: string;
 };
 
@@ -38,7 +40,7 @@ export default function CrewWidget() {
   const [characters, setCharacters] = useState<CharacterInfo[]>([]);
   const [runningActions, setRunningActions] = useState<Set<string>>(new Set());
   const runningRef = useRef(new Set<string>());
-  const [promptAction, setPromptAction] = useState<{ charName: string; label: string; seed: string } | null>(null);
+  const [promptAction, setPromptAction] = useState<{ charName: string; label: string; seed: string; type: "chat" | "autonomous"; placeholder?: string } | null>(null);
   const [promptInput, setPromptInput] = useState("");
   const promptRef = useRef<HTMLInputElement>(null);
   const [contextOn, setContextOn] = useState<Set<string>>(() => {
@@ -325,8 +327,12 @@ export default function CrewWidget() {
 
   const fireAction = (charName: string, action: ActionInfo, seedPrompt: string) => {
     const key = `${charName}:${action.label}`;
-    if (contextOn.has(key)) {
-      setPromptAction({ charName, label: action.label, seed: seedPrompt });
+    if (action.autonomousInput || contextOn.has(key)) {
+      setPromptAction({
+        charName, label: action.label, seed: seedPrompt,
+        type: action.autonomousInput ? "autonomous" : "chat",
+        placeholder: action.inputPlaceholder,
+      });
       setPromptInput("");
       setTimeout(() => promptRef.current?.focus(), 50);
     } else {
@@ -340,9 +346,13 @@ export default function CrewWidget() {
     const seed = ctx
       ? `${promptAction.seed}\n\nContext: ${ctx}`
       : promptAction.seed;
-    setTrigger({ charName: promptAction.charName, seedPrompt: seed, action: promptAction.label });
     setPromptAction(null);
     setPromptInput("");
+    if (promptAction.type === "autonomous") {
+      runAutonomous(promptAction.charName, promptAction.label, seed);
+    } else {
+      setTrigger({ charName: promptAction.charName, seedPrompt: seed, action: promptAction.label });
+    }
   };
 
   return (
@@ -435,10 +445,11 @@ export default function CrewWidget() {
                       const seedPrompt = seeds[action.label];
                       const AIcon = resolveIcon(action.icon);
                       const isAuto = action.autonomous === true;
+                      const isAutoInput = action.autonomousInput === true;
                       const isDirect = !!action.endpoint;
                       const isRunning = runningActions.has(`${char.name}:${action.label}`);
                       const ctxKey = `${char.name}:${action.label}`;
-                      const isCtxOn = !isAuto && !isDirect && contextOn.has(ctxKey);
+                      const isCtxOn = !isAuto && !isDirect && !isAutoInput && contextOn.has(ctxKey);
                       return (
                         <span key={action.label} style={{ display: "inline-flex", alignItems: "center", gap: 0 }}>
                           <button
@@ -466,7 +477,7 @@ export default function CrewWidget() {
                             }
                             <span style={{ fontFamily: "var(--font-mono)", fontSize: 9 }}>{action.label}</span>
                           </button>
-                          {!isAuto && !isDirect && (
+                          {!isAuto && !isDirect && !isAutoInput && (
                             <span
                               data-tip={isCtxOn ? "Context on" : "Context off"}
                               onClick={() => toggleContext(char.name, action.label)}
@@ -506,7 +517,7 @@ export default function CrewWidget() {
                           if (e.key === "Enter") submitPrompt();
                           if (e.key === "Escape") { setPromptAction(null); setPromptInput(""); }
                         }}
-                        placeholder="context"
+                        placeholder={promptAction?.placeholder || "context"}
                         style={{
                           flex: 1, fontFamily: "var(--font-mono)", fontSize: 10,
                           background: "var(--surface)", border: "1px solid var(--border)",

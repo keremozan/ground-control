@@ -165,12 +165,6 @@ function parseFields(markdown: string): { status: string; priority: string; trac
 const DUE_DATE_FIELD_ID = TANA.fields.dueDate;
 
 export async function getTanaTasks(): Promise<TanaTask[]> {
-  // 30-day lookahead from today
-  const now = new Date();
-  const cutoffDate = new Date(now);
-  cutoffDate.setDate(cutoffDate.getDate() + 30);
-  const cutoff = cutoffDate.toISOString().split('T')[0];
-
   const nodes = await mcpCall('tools/call', {
     name: 'search_nodes',
     arguments: {
@@ -179,7 +173,6 @@ export async function getTanaTasks(): Promise<TanaTask[]> {
           { hasType: TASK_TAG_ID },
           { not: { is: 'done' } },
           { not: { field: { fieldId: STATUS_FIELD_ID, nodeId: STATUS_OPTION_IDS.done } } },
-          { not: { compare: { fieldId: DUE_DATE_FIELD_ID, operator: 'gt', value: cutoff, type: 'date' } } },
         ],
       },
       limit: 100,

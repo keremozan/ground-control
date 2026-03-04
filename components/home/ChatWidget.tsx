@@ -249,7 +249,7 @@ function FormBlock({
 
 function ChatMarkdown({ text, accent, onQuickReply }: { text: string; accent?: string; onQuickReply?: (text: string) => void }) {
   const processInline = (s: string): React.ReactNode[] => {
-    const parts = s.split(/(==[^=]+=+=|==\S[^=]*\S==|\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\((?:tana|gmail):[^)]+\))/g);
+    const parts = s.split(/(==[^=]+=+=|==\S[^=]*\S==|\*\*[^*]+\*\*|~~[^~\n]+~~|`[^`]+`|_[^_\n]+_|\[[^\]]+\]\((?:tana|gmail):[^)]+\))/g);
     const nodes: React.ReactNode[] = [];
     parts.forEach((p, j) => {
       const tanaMatch = p.match(TANA_LINK_RE);
@@ -291,6 +291,14 @@ function ChatMarkdown({ text, accent, onQuickReply }: { text: string; accent?: s
           background: 'var(--bg-2)', padding: '1px 4px', borderRadius: 3,
           color: accent || 'var(--text)',
         }}>{p.slice(1, -1)}</code>);
+        return;
+      }
+      if (p.startsWith('~~') && p.endsWith('~~')) {
+        nodes.push(<s key={j} style={{ color: 'var(--text-3)', textDecoration: 'line-through' }}>{p.slice(2, -2)}</s>);
+        return;
+      }
+      if (p.startsWith('_') && p.endsWith('_')) {
+        nodes.push(<em key={j} style={{ fontStyle: 'italic', color: 'var(--text-2)' }}>{p.slice(1, -1)}</em>);
         return;
       }
       // Plain text — expand emoji to styled labels
@@ -400,6 +408,16 @@ function ChatMarkdown({ text, accent, onQuickReply }: { text: string; accent?: s
           return <div key={bi} style={{ fontWeight: 600, fontSize: 11.5, marginTop: 6, color: accent }}>{processInline(t.slice(4))}</div>;
         if (t.startsWith('## '))
           return <div key={bi} style={{ fontWeight: 600, fontSize: 12, marginTop: 8, color: accent }}>{processInline(t.slice(3))}</div>;
+        if (t.startsWith('> '))
+          return (
+            <div key={bi} style={{
+              borderLeft: `2px solid ${accent || 'var(--border)'}`,
+              paddingLeft: 8, margin: '2px 0',
+              color: 'var(--text-2)', fontStyle: 'italic',
+            }}>
+              {processInline(t.slice(2))}
+            </div>
+          );
         if (t.startsWith('- '))
           return (
             <div key={bi} style={{ paddingLeft: 10, position: 'relative' }}>
