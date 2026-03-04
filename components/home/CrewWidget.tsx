@@ -62,7 +62,7 @@ export default function CrewWidget() {
   const [deletingTask, setDeletingTask] = useState<string | null>(null);
   const [runningTask, setRunningTask] = useState<string | null>(null);
 
-  const CREW_ORDER = ["postman", "clerk", "scholar", "curator", "proctor", "architect", "coach", "oracle"];
+  const CREW_ORDER = ["postman", "clerk", "scholar", "curator", "proctor", "architect", "coach", "doctor", "oracle"];
 
   useEffect(() => {
     fetch("/api/characters")
@@ -346,7 +346,7 @@ export default function CrewWidget() {
   };
 
   return (
-    <div className="widget">
+    <div className="widget" style={{ position: "relative" }}>
       <div className="widget-header">
         <div style={{ display: "flex", alignItems: "center", gap: 0 }}>
           <CrewTabBtn label="Crew" icon={<Bot size={13} strokeWidth={1.5} />} active={activeTab === "crew"} onClick={() => setActiveTab("crew")} />
@@ -750,6 +750,7 @@ export default function CrewWidget() {
         character={drawerChar || { id: "", name: "", color: "#000" }}
         open={!!drawerChar}
         onClose={() => setDrawerChar(null)}
+        contained
       />
 
       {selectedResult && (

@@ -1,5 +1,40 @@
 # Changelog
 
+## v1.0.14 — 2026-03-04
+
+### Dashboard
+- [new] Knowledge files in character drawer are now clickable — fetches content and opens in editor modal
+- [new] Skills tab in character drawer — each skill is clickable, opens editor with Save button
+- [fix] Knowledge/skill file editor now delays mounting until content is fetched (was showing empty on click)
+- [new] Character drawer opens inside widget area (contained mode) instead of full-page overlay
+- [fix] Chat messages with `##` or `---` markers no longer misclassified as "thinking" if content is real prose
+
+## v1.0.13 — 2026-03-04
+
+### Dashboard
+- [new] "Lesson done →" button appears on today's class card in Classes tab
+- [new] Clicking it checks all remaining prep items in Tana, then opens Proctor in chat with "lesson done, [class name]" pre-filled
+- [new] `/api/class-prep/lesson-done` POST endpoint — reads class node, checks unchecked prep items
+- [new] `checkRemainingPrepItems()` in lib/tana.ts — bulk-checks prep group todos
+
+## v1.0.12 — 2026-03-04
+
+### Dashboard
+- [new] Classes widget — shows upcoming #class nodes (next 14 days) with interactive prep checklists
+- [new] Interactive checkboxes toggle Tana todo nodes via check_node/uncheck_node
+- [new] Progress bar per class session, course pill (VA 204 / VA 315), day-until badge
+- [new] Prep and post-lesson groups collapsible independently
+- [new] Layout: Chat moved from span-2 to single column to make room for Classes
+
+### API
+- [new] `GET /api/class-prep` — fetch upcoming #class nodes with checklists from Tana
+- [new] `POST /api/class-prep/toggle` — toggle a class checklist todo node
+
+### Tana lib
+- [new] `getClassNodes()` — search #class nodes, parse markdown, extract checklist items
+- [new] `toggleClassItem()` — wrap check_node / uncheck_node for class prep todos
+- [new] `classTags` and `classFields` added to tana-schema.ts
+
 ## v1.0.11 — 2026-03-03
 
 ### Dashboard

@@ -36,6 +36,7 @@ type TabMeta = {
   charId: string;
   messages: Message[];
   modelOverride?: string;
+  label?: string;
 };
 
 /** Extract a short label from tool input JSON for display */
@@ -91,6 +92,8 @@ function processLinks(s: string, accent?: string): React.ReactNode[] {
   });
 }
 
+const NARRATION_RE = /^(let me|i('ll| will)|now i|first,?\s+i|reading|searching|checking|fetching|looking|scanning|found|processing|done\.|done!)/i;
+
 function splitMessage(text: string): { thinking: string; output: string } {
   const lines = text.split('\n');
   let splitIdx = -1;
@@ -107,6 +110,13 @@ function splitMessage(text: string): { thinking: string; output: string } {
     }
   }
   if (splitIdx === -1) return { thinking: '', output: text };
+
+  // Only treat pre-split content as thinking if it looks like step-narration.
+  // If it's real content (paragraphs, sentences without narration markers), keep it in output.
+  const preLines = lines.slice(0, splitIdx).filter(l => l.trim());
+  const hasNarration = preLines.some(l => NARRATION_RE.test(l.trim()));
+  if (!hasNarration) return { thinking: '', output: text };
+
   // If a quick-reply block appears before the split, move the split there so it renders as buttons
   for (let j = 0; j < splitIdx; j++) {
     if (/^\[quick-reply:/i.test(lines[j].trim())) {
@@ -514,6 +524,7 @@ function ChatPanel({
   onMessagesChange, onLoadingChange, canSend,
   trigger, onTriggerConsumed,
 }: ChatPanelProps) {
+  const { setTrigger: setCharTrigger } = useChatTrigger();
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [input, setInput] = useState("");
   const [pastedImages, setPastedImages] = useState<string[]>([]);
@@ -820,6 +831,10 @@ function ChatPanel({
     } catch {}
   };
 
+  const deleteMessage = (index: number) => {
+    setMessages(prev => prev.filter((_, i) => i !== index));
+  };
+
   if (!activeChar) return null;
 
   return (
@@ -906,6 +921,9 @@ function ChatPanel({
                   <button className="item-action-btn" data-tip="Send to Tana today" onClick={() => sendMsgToTana(msg.content)}>
                     <TanaIcon size={10} strokeWidth={1.5} />
                   </button>
+                  <button className="item-action-btn" data-tip="Delete message" onClick={() => deleteMessage(i)} style={{ color: "var(--text-3)" }}>
+                    <Trash2 size={10} strokeWidth={1.5} />
+                  </button>
                 </div>
               </div>
             );
@@ -936,10 +954,21 @@ function ChatPanel({
                   <div className="chat-bubble chat-bubble-assistant" style={{ borderLeftColor: msgChar.color + "40" }}>
                     <ChatMarkdown text={output} accent={msgChar.color} onQuickReply={(text) => {
                       if (!isLoading && canSend) {
-                        const current = [...messages];
-                        setMessages(prev => [...prev, { role: "user", content: text }]);
-                        const effectiveModel = modelOverride !== activeChar?.model ? modelOverride : undefined;
-                        sendMessage(text, undefined, null, current, effectiveModel);
+                        // Check if quick-reply mentions a different character → open new tab with context
+                        const targetSwitch = characters.find(c =>
+                          c.id !== charId && text.toLowerCase().includes(c.name.toLowerCase())
+                        );
+                        if (targetSwitch) {
+                          const ctx = messages.map(m =>
+                            `${m.role === 'user' ? 'User' : m.charName || 'Assistant'}: ${m.content}`
+                          ).join('\n\n');
+                          setCharTrigger({ charName: targetSwitch.name, seedPrompt: text, action: 'char-switch', context: ctx });
+                        } else {
+                          const current = [...messages];
+                          setMessages(prev => [...prev, { role: "user", content: text }]);
+                          const effectiveModel = modelOverride !== activeChar?.model ? modelOverride : undefined;
+                          sendMessage(text, undefined, null, current, effectiveModel);
+                        }
                       }
                     }} />
                   </div>
@@ -959,14 +988,8 @@ function ChatPanel({
                 <button className="item-action-btn" data-tip="Copy" onClick={() => copyToClipboard(output)}>
                   <Copy size={10} strokeWidth={1.5} />
                 </button>
-                <button className="item-action-btn" data-tip="Send to Tana today" onClick={() => sendMsgToTana(output, msg.charName)}>
-                  <TanaIcon size={10} strokeWidth={1.5} />
-                </button>
-                <button className="item-action-btn" data-tip="Send to Postman" onClick={() => sendToPostman(output)} style={{
-                  fontFamily: "var(--font-mono)", fontSize: 9, width: "auto",
-                  padding: "0 5px", display: "flex", alignItems: "center", gap: 3,
-                }}>
-                  <CornerUpRight size={9} strokeWidth={1.5} /> Postman
+                <button className="item-action-btn" data-tip="Delete message" onClick={() => deleteMessage(i)} style={{ color: "var(--text-3)" }}>
+                  <Trash2 size={10} strokeWidth={1.5} />
                 </button>
               </div>
             </div>
@@ -1160,6 +1183,8 @@ export default function ChatWidget() {
   const [tabs, setTabs] = useState<TabMeta[]>([]);
   const [activeTabId, setActiveTabId] = useState("");
   const [loadingTabIds, setLoadingTabIds] = useState<string[]>([]);
+  const [renamingTabId, setRenamingTabId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
   const [hydrated, setHydrated] = useState(false);
   const [showNewTabPicker, setShowNewTabPicker] = useState(false);
   const [pendingTrigger, setPendingTrigger] = useState<{ tabId: string; trigger: NonNullable<ChatTrigger> } | null>(null);
@@ -1350,6 +1375,19 @@ export default function ChatWidget() {
     });
   }, []);
 
+  const startRename = useCallback((tabId: string, currentLabel: string) => {
+    setRenamingTabId(tabId);
+    setRenameValue(currentLabel);
+  }, []);
+
+  const commitRename = useCallback(() => {
+    if (!renamingTabId) return;
+    const val = renameValue.trim();
+    setTabs(prev => prev.map(t => t.id === renamingTabId ? { ...t, label: val || undefined } : t));
+    setRenamingTabId(null);
+    setRenameValue("");
+  }, [renamingTabId, renameValue]);
+
   // ── Render ────────────────────────────────────────────────────────────
 
   const canSend = loadingTabIds.length < 2;
@@ -1408,7 +1446,29 @@ export default function ChatWidget() {
               }}
             >
               <TIcon size={10} strokeWidth={1.5} style={{ color: isActive ? char.color : "var(--text-3)" }} />
-              <span>{char.name}</span>
+              {renamingTabId === tab.id ? (
+                <input
+                  autoFocus
+                  value={renameValue}
+                  onChange={e => setRenameValue(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') commitRename();
+                    if (e.key === 'Escape') { setRenamingTabId(null); setRenameValue(""); }
+                  }}
+                  onBlur={commitRename}
+                  onClick={e => e.stopPropagation()}
+                  style={{
+                    fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 600,
+                    color: char.color, background: "transparent", border: "none",
+                    outline: "none", width: Math.max(40, renameValue.length * 6),
+                    padding: 0, margin: 0,
+                  }}
+                />
+              ) : (
+                <span onDoubleClick={e => { e.stopPropagation(); startRename(tab.id, tab.label || char.name); }}>
+                  {tab.label || char.name}
+                </span>
+              )}
               {tabIsLoading && (
                 <Loader2 size={7} strokeWidth={2} style={{
                   color: char.color, flexShrink: 0,
