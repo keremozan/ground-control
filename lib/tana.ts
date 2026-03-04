@@ -194,7 +194,8 @@ export async function getTanaTasks(): Promise<TanaTask[]> {
   // Deduplicate by node ID — Tana can return the same node multiple times
   // when a task is tagged with both #task and a child supertag (both match hasType)
   const seen = new Set<string>();
-  const uniqueNodes = nodes.filter((n: { id: string }) => {
+  const uniqueNodes = nodes.filter((n: { id: string; inTrash?: boolean }) => {
+    if (n.inTrash) return false;
     if (excluded.has(n.id)) return false;
     if (seen.has(n.id)) return false;
     seen.add(n.id);
@@ -275,10 +276,12 @@ export async function getTanaPhases(): Promise<TanaPhase[]> {
   const nodes: { id: string; name: string }[] = [];
   for (const n of (Array.isArray(wsNodes) ? wsNodes : [])) {
     if (n.docType === 'tagDef') continue; // skip schema tag definitions
+    if (n.inTrash) continue;
     if (!seen.has(n.id)) { seen.add(n.id); nodes.push(n); }
   }
   for (const n of (Array.isArray(legacyNodes) ? legacyNodes : [])) {
     if (n.docType === 'tagDef') continue;
+    if (n.inTrash) continue;
     if (!seen.has(n.id)) { seen.add(n.id); nodes.push(n); }
   }
 

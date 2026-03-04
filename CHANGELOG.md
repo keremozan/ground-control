@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.0.16 — 2026-03-04
+
+### Tasks
+- [fix] Trashed Tana nodes no longer appear in task list — `getTanaTasks()` and `getTanaPhases()` now filter `inTrash: true` nodes
+
+### Postman
+- [fix] WhatsApp scan dedup now ignores trashed nodes — a task in trash no longer blocks creation of a new task for the same item
+
 ## v1.0.15 — 2026-03-04
 
 ### Dashboard
