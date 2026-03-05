@@ -1,5 +1,31 @@
 # Changelog
 
+## v1.1.6 — 2026-03-05
+
+### Scholar
+- [new] "Add Publication" pill — type a title, Scholar web-searches, formats APA citation, auto-detects book vs article, fills all fields (author, year, concept, track, status) and creates node in Tana Library
+
+### Chat
+- [new] Italic (`_text_`), strikethrough (`~~text~~`), blockquote callout (`> text`) rendering
+- [fix] Font loading via `next/font` only — removed duplicate Google Fonts import that broke Bricolage Grotesque
+- [fix] Architect "send to" button uses Wrench icon (not Bug)
+- [new] Resizable textarea in chat input — drag corner to expand, works in all context inputs
+
+### Tasks
+- [fix] Task dates updated in Tana now reflect immediately — removed stale search-index date filter
+
+### Logs
+- [new] Scheduled job runs (cron) now appear in the Logs tab — injected from job results file
+
+### Knowledge
+- [new] `scholar-context.md` — Scholar loads active research tracks and library schema without re-searching each session
+- [new] `proctor-context.md` — Proctor loads course/TA info on startup
+- [new] `curator-context.md` — Curator loads active exhibition and gallery contact context
+- [new] `ground-control.md` — Architect loads dashboard architecture without re-exploring
+
+### Watcher
+- [fix] Log truncation now explicit — watcher clears tiny-log.jsonl after each run so entries aren't re-processed
+
 ## v1.1.5 — 2026-03-04
 
 ### Scheduler
