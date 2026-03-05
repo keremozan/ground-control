@@ -7,8 +7,8 @@ import TanaIcon from "@/components/icons/TanaIcon";
 import { parseToolName } from "@/lib/mcp-icons";
 import { resolveIcon } from "@/lib/icon-map";
 import {
-  BookOpen, Bug, Copy, CornerUpRight, Loader2,
-  MessageSquare, Send, Square, Trash2, Plus, X,
+  BookOpen, Copy, CornerUpRight, Loader2,
+  MessageSquare, Send, Square, Trash2, Plus, Wrench, X,
 } from "lucide-react";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -1424,7 +1424,7 @@ export default function ChatWidget() {
             <TanaIcon size={12} strokeWidth={1.5} />
           </button>
           <button className="widget-toolbar-btn" data-tip="Send to Architect" onClick={sendToArchitect}>
-            <Bug size={12} strokeWidth={1.5} />
+            <Wrench size={12} strokeWidth={1.5} />
           </button>
           <button className="widget-toolbar-btn" data-tip="Copy all" onClick={copyAllChat}>
             <Copy size={12} strokeWidth={1.5} />
