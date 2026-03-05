@@ -32,7 +32,43 @@ export default function LogsWidget({
 
   useEffect(() => {
     setEntries(getLog());
-    return subscribeLog(() => setEntries([...getLog()]));
+    const unsub = subscribeLog(() => setEntries([...getLog()]));
+
+    // Inject scheduled job results that haven't been logged yet
+    const INJECTED_KEY = "gc-injected-jobs";
+    let injected: Set<string>;
+    try {
+      injected = new Set(JSON.parse(localStorage.getItem(INJECTED_KEY) || "[]"));
+    } catch {
+      injected = new Set();
+    }
+
+    fetch("/api/schedule/results")
+      .then(r => r.json())
+      .then((data: { results?: import("@/lib/scheduler").JobResult[] }) => {
+        const results = data.results || [];
+        let changed = false;
+        for (const r of results) {
+          if (injected.has(r.jobId)) continue;
+          logAction({
+            widget: "scheduler",
+            action: "run",
+            target: r.displayName + (r.durationMs ? ` (${Math.round(r.durationMs / 1000)}s)` : ""),
+            character: r.charName === "system" ? undefined : r.charName,
+            detail: new Date(r.timestamp).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
+            jobId: r.jobId,
+            timestamp: r.timestamp,
+          });
+          injected.add(r.jobId);
+          changed = true;
+        }
+        if (changed) {
+          try { localStorage.setItem(INJECTED_KEY, JSON.stringify([...injected])); } catch {}
+        }
+      })
+      .catch(() => {});
+
+    return unsub;
   }, []);
 
   const handleEntryClick = async (entry: ActionLogEntry) => {

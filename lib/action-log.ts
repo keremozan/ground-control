@@ -30,8 +30,8 @@ function persist() {
   } catch {}
 }
 
-export function logAction(entry: Omit<ActionLogEntry, "timestamp">) {
-  const full: ActionLogEntry = { ...entry, timestamp: new Date().toISOString() };
+export function logAction(entry: Omit<ActionLogEntry, "timestamp"> & { timestamp?: string }) {
+  const full: ActionLogEntry = { ...entry, timestamp: entry.timestamp ?? new Date().toISOString() };
   logBuffer = [full, ...logBuffer].slice(0, MAX_ENTRIES);
 
   // Persist to localStorage
