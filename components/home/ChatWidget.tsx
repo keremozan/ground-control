@@ -177,14 +177,14 @@ function FormBlock({
   accent,
   onSubmit,
 }: {
-  questions: { label: string; options: string[] }[];
+  questions: { label: string; options: string[]; freeText: boolean }[];
   submitLabel: string;
   accent?: string;
   onSubmit?: (text: string) => void;
 }) {
   const [selected, setSelected] = useState<Record<number, string>>({});
   const [submitted, setSubmitted] = useState(false);
-  const allAnswered = questions.every((_, i) => selected[i] !== undefined);
+  const allAnswered = questions.every((q, i) => q.freeText ? !!selected[i]?.trim() : selected[i] !== undefined);
   const c = accent || 'var(--text)';
   return (
     <div style={{ margin: '6px 0' }}>
@@ -196,30 +196,48 @@ function FormBlock({
           }}>
             {qi + 1}. {q.label}
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
-            {q.options.map((opt, oi) => (
-              <button
-                key={oi}
-                disabled={submitted}
-                onClick={() => !submitted && setSelected(s => ({ ...s, [qi]: opt }))}
-                style={{
-                  fontFamily: 'var(--font-mono)', fontSize: 10,
-                  padding: '4px 8px', borderRadius: 4, minWidth: 28, textAlign: 'center' as const,
-                  border: `1px solid ${selected[qi] === opt ? c : c + '40'}`,
-                  background: selected[qi] === opt ? c + '18' : 'transparent',
-                  color: selected[qi] === opt ? c : c + 'aa',
-                  cursor: submitted ? 'default' : 'pointer',
-                  transition: 'background 0.12s, border-color 0.12s',
-                  fontWeight: selected[qi] === opt ? 600 : 400,
-                  opacity: submitted && selected[qi] !== opt ? 0.3 : 1,
-                }}
-                onMouseEnter={e => { if (!submitted && selected[qi] !== opt) e.currentTarget.style.background = c + '0a'; }}
-                onMouseLeave={e => { if (selected[qi] !== opt) e.currentTarget.style.background = 'transparent'; }}
-              >
-                {opt}
-              </button>
-            ))}
-          </div>
+          {q.freeText ? (
+            <textarea
+              disabled={submitted}
+              value={selected[qi] || ''}
+              onChange={e => setSelected(s => ({ ...s, [qi]: e.target.value }))}
+              placeholder="type your answer..."
+              rows={2}
+              style={{
+                width: '100%', fontFamily: 'var(--font-mono)', fontSize: 10,
+                background: 'var(--surface)', border: `1px solid ${c}40`,
+                borderRadius: 4, padding: '4px 8px', color: c,
+                outline: 'none', resize: 'vertical', lineHeight: 1.5,
+                boxSizing: 'border-box' as const,
+                opacity: submitted ? 0.5 : 1,
+              }}
+            />
+          ) : (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+              {q.options.map((opt, oi) => (
+                <button
+                  key={oi}
+                  disabled={submitted}
+                  onClick={() => !submitted && setSelected(s => ({ ...s, [qi]: opt }))}
+                  style={{
+                    fontFamily: 'var(--font-mono)', fontSize: 10,
+                    padding: '4px 8px', borderRadius: 4, minWidth: 28, textAlign: 'center' as const,
+                    border: `1px solid ${selected[qi] === opt ? c : c + '40'}`,
+                    background: selected[qi] === opt ? c + '18' : 'transparent',
+                    color: selected[qi] === opt ? c : c + 'aa',
+                    cursor: submitted ? 'default' : 'pointer',
+                    transition: 'background 0.12s, border-color 0.12s',
+                    fontWeight: selected[qi] === opt ? 600 : 400,
+                    opacity: submitted && selected[qi] !== opt ? 0.3 : 1,
+                  }}
+                  onMouseEnter={e => { if (!submitted && selected[qi] !== opt) e.currentTarget.style.background = c + '0a'; }}
+                  onMouseLeave={e => { if (selected[qi] !== opt) e.currentTarget.style.background = 'transparent'; }}
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       ))}
       <button
@@ -348,8 +366,8 @@ function ChatMarkdown({ text, accent, onQuickReply }: { text: string; accent?: s
             const parts = line.split('::');
             const label = parts[0].trim();
             const options = (parts[1] || '').split('|').map(o => o.trim()).filter(Boolean);
-            return { label, options };
-          }).filter(q => q.label && q.options.length > 0);
+            return { label, options, freeText: options.length === 0 };
+          }).filter(q => q.label);
           if (questions.length === 0) return null;
           return (
             <FormBlock
@@ -557,6 +575,7 @@ function ChatPanel({
   const charDefault = characters.find(c => c.id === charId);
   const [modelOverride, setModelOverride] = useState<string>(initialModel || charDefault?.model || "sonnet");
   const bodyRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   const activeChar = characters.find(c => c.id === charId) || characters[0];

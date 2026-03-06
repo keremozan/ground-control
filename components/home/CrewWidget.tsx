@@ -42,7 +42,7 @@ export default function CrewWidget() {
   const runningRef = useRef(new Set<string>());
   const [promptAction, setPromptAction] = useState<{ charName: string; label: string; seed: string; type: "chat" | "autonomous"; placeholder?: string } | null>(null);
   const [promptInput, setPromptInput] = useState("");
-  const promptRef = useRef<HTMLInputElement>(null);
+  const promptRef = useRef<HTMLTextAreaElement>(null);
   const [contextOn, setContextOn] = useState<Set<string>>(() => {
     try {
       const saved = localStorage.getItem("crew-context-on");
@@ -508,21 +508,22 @@ export default function CrewWidget() {
                     marginTop: 4, marginLeft: -6, marginRight: -6, marginBottom: -5,
                   }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                      <input
+                      <textarea
                         ref={promptRef}
-                        type="text"
                         value={promptInput}
                         onChange={e => setPromptInput(e.target.value)}
                         onKeyDown={e => {
-                          if (e.key === "Enter") submitPrompt();
+                          if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submitPrompt(); }
                           if (e.key === "Escape") { setPromptAction(null); setPromptInput(""); }
                         }}
                         placeholder={promptAction?.placeholder || "context"}
+                        rows={1}
                         style={{
                           flex: 1, fontFamily: "var(--font-mono)", fontSize: 10,
                           background: "var(--surface)", border: "1px solid var(--border)",
                           borderRadius: 4, padding: "4px 8px", color: "var(--text)",
-                          outline: "none",
+                          outline: "none", resize: "vertical", minHeight: 24, maxHeight: 120,
+                          lineHeight: 1.5,
                         }}
                       />
                       <button

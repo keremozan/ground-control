@@ -106,7 +106,7 @@ export default function TasksWidget() {
   const [promptModel, setPromptModel] = useState("");
   const [characters, setCharacters] = useState<CharInfo[]>([]);
   const [trackColor, setTrackColor] = useState<(t: string) => string>(() => () => "#9c9b95");
-  const promptRef = useRef<HTMLInputElement>(null);
+  const promptRef = useRef<HTMLTextAreaElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -861,21 +861,23 @@ export default function TasksWidget() {
                           borderTop: "1px solid var(--border)", background: "var(--surface-2)",
                           padding: "8px 10px", display: "flex", flexDirection: "column" as const, gap: 6,
                         }}>
-                          <input
+                          <textarea
                             ref={promptRef}
-                            type="text"
                             value={promptInput}
                             onChange={e => setPromptInput(e.target.value)}
                             onKeyDown={e => {
-                              if (e.key === "Enter") doStartAction(task, promptInput.trim() || undefined, promptChar, promptModel);
+                              if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); doStartAction(task, promptInput.trim() || undefined, promptChar, promptModel); }
                               if (e.key === "Escape") { setPromptTask(null); setPromptInput(""); }
                             }}
                             placeholder="Add context... (or skip)"
+                            rows={1}
                             style={{
                               fontFamily: "var(--font-mono)", fontSize: 10,
                               background: "var(--surface)", border: "1px solid var(--border)",
                               borderRadius: 4, padding: "4px 8px", color: "var(--text)",
-                              outline: "none", width: "100%",
+                              outline: "none", width: "100%", resize: "vertical",
+                              minHeight: 24, maxHeight: 120, lineHeight: 1.5,
+                              boxSizing: "border-box",
                             }}
                           />
                           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>

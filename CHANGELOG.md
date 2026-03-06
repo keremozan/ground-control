@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.1.7 — 2026-03-06
+
+### Chat
+- [fix] Form blocks now render free-text textarea for questions without `:: options` syntax, instead of silently dropping them and showing only Submit
+
 ## v1.1.6 — 2026-03-05
 
 ### Scholar
