@@ -1152,7 +1152,7 @@ function ChatPanel({
                 : toolLog.length > 0
                   ? `${activeChar.name}: working (${toolLog.length} steps, ${elapsed}s)...`
                   : `${activeChar.name} is thinking...`
-            : !canSend ? "2 chats running — wait or stop one"
+            : !canSend ? "4 chats running — wait or stop one"
             : `Ask ${activeChar.name}...`
           }
           rows={1}
@@ -1195,7 +1195,7 @@ function ChatPanel({
           <button
             onClick={handleSend}
             disabled={!canSend}
-            data-tip={!canSend ? "2 chats already running" : undefined}
+            data-tip={!canSend ? "4 chats already running" : undefined}
             style={{
               width: 30, height: 30, borderRadius: 5, flexShrink: 0,
               cursor: canSend ? "pointer" : "default",
@@ -1224,6 +1224,9 @@ export default function ChatWidget() {
   const [renameValue, setRenameValue] = useState("");
   const [hydrated, setHydrated] = useState(false);
   const [showNewTabPicker, setShowNewTabPicker] = useState(false);
+  const [showArchitectInput, setShowArchitectInput] = useState(false);
+  const [architectInputValue, setArchitectInputValue] = useState("");
+  const architectInputRef = useRef<HTMLTextAreaElement>(null);
   const [pendingTrigger, setPendingTrigger] = useState<{ tabId: string; trigger: NonNullable<ChatTrigger> } | null>(null);
   const newTabRef = useRef<HTMLDivElement>(null);
   const { trigger, setTrigger } = useChatTrigger();
@@ -1372,20 +1375,24 @@ export default function ChatWidget() {
     } catch {}
   }, [tabs, activeTabId, characters, formatChat]);
 
-  const sendToArchitect = useCallback(() => {
+  const sendToArchitect = useCallback((extraContext?: string) => {
     const tab = tabs.find(t => t.id === activeTabId);
     if (!tab || tab.messages.length === 0) return;
     const architect = characters.find(c => c.name === "Architect");
     if (!architect) return;
     const chatContent = formatChat(tab.messages);
+    const baseSeed = "Review this conversation for system-level issues — broken skills, wrong routing, missing tools, character misbehavior, or prompt failures. Diagnose what went wrong at the meta/system level, not the conversation's topic itself.";
+    const seed = extraContext ? `${baseSeed}\n\nContext: ${extraContext}` : baseSeed;
     const newTab: TabMeta = { id: genTabId(), charId: architect.id, messages: [] };
     setTabs(prev => [...prev, newTab]);
     setActiveTabId(newTab.id);
+    setShowArchitectInput(false);
+    setArchitectInputValue("");
     setPendingTrigger({
       tabId: newTab.id,
       trigger: {
         charName: "Architect",
-        seedPrompt: "Review this conversation for system-level issues — broken skills, wrong routing, missing tools, character misbehavior, or prompt failures. Diagnose what went wrong at the meta/system level, not the conversation's topic itself.",
+        seedPrompt: seed,
         context: chatContent,
         action: "forward-to-architect",
       },
@@ -1427,7 +1434,7 @@ export default function ChatWidget() {
 
   // ── Render ────────────────────────────────────────────────────────────
 
-  const canSend = loadingTabIds.length < 2;
+  const canSend = loadingTabIds.length < 4;
 
   if (characters.length === 0 || tabs.length === 0) {
     return <div className="widget" style={{ height: "100%" }} />;
@@ -1442,7 +1449,12 @@ export default function ChatWidget() {
           <button className="widget-toolbar-btn" data-tip="Send to Tana today" onClick={sendAllToTana}>
             <TanaIcon size={12} strokeWidth={1.5} />
           </button>
-          <button className="widget-toolbar-btn" data-tip="Send to Architect" onClick={sendToArchitect}>
+          <button
+            className="widget-toolbar-btn"
+            data-tip="Send to Architect"
+            onClick={() => setShowArchitectInput(v => !v)}
+            style={showArchitectInput ? { color: "var(--blue)", opacity: 1 } : undefined}
+          >
             <Wrench size={12} strokeWidth={1.5} />
           </button>
           <button className="widget-toolbar-btn" data-tip="Copy all" onClick={copyAllChat}>
@@ -1453,6 +1465,42 @@ export default function ChatWidget() {
           </button>
         </div>
       </div>
+
+      {/* Architect context input */}
+      {showArchitectInput && (
+        <div style={{
+          borderBottom: "1px solid var(--border)", background: "var(--surface-2)",
+          padding: "6px 10px", flexShrink: 0, display: "flex", alignItems: "center", gap: 6,
+        }}>
+          <textarea
+            ref={architectInputRef}
+            autoFocus
+            value={architectInputValue}
+            onChange={e => setArchitectInputValue(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendToArchitect(architectInputValue.trim() || undefined); }
+              if (e.key === "Escape") { setShowArchitectInput(false); setArchitectInputValue(""); }
+            }}
+            placeholder="context for architect (optional)"
+            rows={1}
+            style={{
+              flex: 1, fontFamily: "var(--font-mono)", fontSize: 10,
+              color: "var(--text)", background: "transparent",
+              border: "none", outline: "none", resize: "none",
+              padding: 0, lineHeight: 1.5,
+            }}
+          />
+          <button
+            onClick={() => sendToArchitect(architectInputValue.trim() || undefined)}
+            style={{
+              background: "transparent", border: "none", cursor: "pointer",
+              color: "var(--blue)", padding: 2, display: "flex", alignItems: "center",
+            }}
+          >
+            <CornerUpRight size={11} strokeWidth={2} />
+          </button>
+        </div>
+      )}
 
       {/* Tab bar */}
       <div style={{
@@ -1538,7 +1586,8 @@ export default function ChatWidget() {
               width: 18, height: 18, borderRadius: 3,
               display: "flex", alignItems: "center", justifyContent: "center",
               border: "1px solid var(--border)", background: "transparent",
-              cursor: "pointer", color: "var(--text-3)",
+              cursor: "pointer",
+              color: "var(--text-3)",
             }}
           >
             <Plus size={9} strokeWidth={2} />

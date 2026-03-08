@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.1.14 — 2026-03-08
+
+### Chat
+- [fix] Concurrent chat limit raised from 2 to 4, tooltips updated
+- [fix] Tab count limit removed from Plus button. Open as many tabs as you want, only concurrent runs are capped at 4.
+- [new] Architect send-to button now opens a context input. Add optional notes before forwarding a conversation.
+
 ## v1.1.13 — 2026-03-08
 
 ### Chat
