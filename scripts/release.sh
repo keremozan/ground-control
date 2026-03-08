@@ -52,6 +52,19 @@ tmp=$(mktemp)
 } > "$tmp"
 mv "$tmp" "$CHANGELOG"
 
+# Prepend next version header to private changelog (if it exists)
+PRIVATE_CHANGELOG="CHANGELOG.private.md"
+if [[ -f "$PRIVATE_CHANGELOG" ]]; then
+  tmp2=$(mktemp)
+  {
+    head -2 "$PRIVATE_CHANGELOG"
+    echo "## v$next — $today"
+    echo ""
+    tail -n +3 "$PRIVATE_CHANGELOG"
+  } > "$tmp2"
+  mv "$tmp2" "$PRIVATE_CHANGELOG"
+fi
+
 # Sync package.json to next version
 sed -i '' "s/\"version\": \"[^\"]*\"/\"version\": \"$next\"/" package.json
 

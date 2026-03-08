@@ -20,7 +20,7 @@ type Status = {
 /* ── Structured changelog types + parser ────────────────────── */
 
 type CLItem = {
-  type: "new" | "improved" | "fixed" | "other";
+  type: "new" | "improved" | "fixed" | "sys" | "other";
   text: string;
 };
 
@@ -35,7 +35,7 @@ type CLVersion = {
 };
 
 const TYPE_MAP: Record<string, CLItem["type"]> = {
-  new: "new", fix: "fixed", fixed: "fixed", improved: "improved",
+  new: "new", fix: "fixed", fixed: "fixed", improved: "improved", sys: "sys",
 };
 
 function parseChangelog(raw: string): CLVersion[] {
@@ -58,7 +58,7 @@ function parseChangelog(raw: string): CLVersion[] {
     }
     if (line.startsWith("- ") && section) {
       const text = line.slice(2).trim();
-      const tag = text.match(/^\[(new|fix|fixed|improved)\]\s*/i);
+      const tag = text.match(/^\[(new|fix|fixed|improved|sys)\]\s*/i);
       if (tag) {
         section.items.push({ type: TYPE_MAP[tag[1].toLowerCase()] || "other", text: text.slice(tag[0].length) });
       } else {
@@ -75,6 +75,7 @@ const TYPE_DOT: Record<string, string> = {
   new: "#22c55e",
   improved: "#3b82f6",
   fixed: "#f59e0b",
+  sys: "#8b5cf6",
   other: "#94a3b8",
 };
 

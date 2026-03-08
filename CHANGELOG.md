@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.1.13 — 2026-03-08
+
+### Chat
+- [fix] Typing in one chat tab and switching to another no longer clears unsubmitted input — tabs stay mounted, input state preserved
+
+### Changelog
+- [new] `CHANGELOG.private.md` (git-ignored) for personal system entries (skills, characters, Tana schema) — use `[sys]` label
+- [new] Dashboard changelog merges public + private entries; `[sys]` items shown with purple dot
+- [new] `release.sh` also prepends next version header to private changelog
+
 ## v1.1.12 — 2026-03-08
 
 ### Scholar

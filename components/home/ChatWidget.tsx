@@ -1583,12 +1583,9 @@ export default function ChatWidget() {
         </div>
       </div>
 
-      {/* Chat panels — active visible, loading hidden, idle unmounted */}
+      {/* Chat panels — active visible, others hidden (kept mounted to preserve input state) */}
       {tabs.map(tab => {
         const isActive = tab.id === activeTabId;
-        const tabIsLoading = loadingTabIds.includes(tab.id);
-        const shouldMount = isActive || tabIsLoading;
-        if (!shouldMount) return null;
         return (
           <div
             key={tab.id}
