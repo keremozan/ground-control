@@ -21,7 +21,7 @@ export function buildPrompt(skillName: string | null, extra?: string): string {
   return prompt;
 }
 
-export function buildCharacterPrompt(characterId: string, taskContext?: string): string {
+export function buildCharacterPrompt(characterId: string, taskContext?: string, opts?: { activeSkill?: string }): string {
   const characters = getCharacters();
   const sharedKnowledge = getSharedKnowledge();
   const char = characters[characterId];
@@ -48,7 +48,10 @@ export function buildCharacterPrompt(characterId: string, taskContext?: string):
   }
 
   if (char.skills?.length) {
-    for (const skillName of char.skills) {
+    const skillsToLoad = opts?.activeSkill
+      ? char.skills.filter(s => s === opts.activeSkill)
+      : char.skills;
+    for (const skillName of skillsToLoad) {
       const skill = readSkill(skillName);
       if (skill) {
         prompt += `\n\n---\n\n${skill}`;
@@ -100,5 +103,18 @@ Use ==highlights== when presenting key data, summaries, or things the user shoul
     prompt += `\n\n---\n\n## Task\n${taskContext}`;
   }
 
+  return prompt;
+}
+
+/** Minimal prompt for revision passes: system prompt + modifiers only, no skills or shared knowledge. */
+export function buildRevisionBasePrompt(characterId: string): string {
+  const characters = getCharacters();
+  const char = characters[characterId];
+  if (!char) return '';
+  let prompt = char.systemPrompt || '';
+  for (const mod of (char.modifiers || [])) {
+    const skill = readSkill(mod);
+    if (skill) prompt += `\n\n---\n\n${skill}`;
+  }
   return prompt;
 }

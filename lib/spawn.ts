@@ -117,6 +117,72 @@ export function spawnAndCollect(opts: {
   });
 }
 
+/** Single-turn spawn: no MCP, one generation pass. Fast for critique/review tasks. */
+export function spawnOnce(opts: {
+  prompt: string;
+  model: string;
+}): Promise<string> {
+  const { prompt, model } = opts;
+
+  return new Promise((resolve, reject) => {
+    const env = { ...process.env };
+    delete env.CLAUDECODE;
+
+    const args = [
+      '-p', prompt,
+      '--output-format', 'stream-json',
+      '--verbose',
+      '--model', model,
+      '--max-turns', '1',
+      '--dangerously-skip-permissions',
+    ];
+
+    const proc = spawn(CLAUDE_BIN, args, {
+      cwd: HOME,
+      env: env as NodeJS.ProcessEnv,
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+
+    let buffer = '';
+    const textParts: string[] = [];
+
+    const processLine = (line: string) => {
+      if (!line.trim()) return;
+      try {
+        const msg = JSON.parse(line);
+        if (msg.type === 'assistant') {
+          const content = msg.message?.content;
+          if (Array.isArray(content)) {
+            for (const block of content) {
+              if (block.type === 'text') textParts.push(block.text);
+            }
+          }
+        }
+      } catch {}
+    };
+
+    proc.stdout?.on('data', (chunk: Buffer) => {
+      buffer += chunk.toString();
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+      for (const line of lines) processLine(line);
+    });
+
+    proc.on('close', () => {
+      if (buffer.trim()) processLine(buffer);
+      resolve(textParts.join('\n'));
+    });
+
+    proc.on('error', (err) => reject(err));
+
+    // 3 minute timeout
+    setTimeout(() => {
+      proc.kill();
+      resolve(textParts.join('\n') || '[Review timed out]');
+    }, 180_000);
+  });
+}
+
 export function spawnSSEStream(opts: {
   prompt: string;
   model: string;

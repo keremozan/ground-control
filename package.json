@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "setup": "npx tsx scripts/setup.ts",
-    "changelog": "zsh scripts/changelog.sh"
+    "changelog": "zsh scripts/changelog.sh",
+    "release": "zsh scripts/release.sh"
   },
   "dependencies": {
     "@dagrejs/dagre": "^2.0.4",

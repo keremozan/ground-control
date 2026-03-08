@@ -1,5 +1,41 @@
 # Changelog
 
+## v1.1.12 — 2026-03-08
+
+### Scholar
+- [fix] PROSE GATE changed from declaration ("Gate cleared") to enumeration — model must quote each found instance per pattern before outputting
+- [new] Intent-based skill routing for Scholar — first message detected via keyword map, only matching skill loaded (drops ~80% of prompt on focused sessions)
+- [new] Multi-shot revision loop — Scholar drafts silently revised up to ×3 before reaching the user; only final version shown with "(auto-revised ×N)" note
+- [new] `buildRevisionBasePrompt()` in `lib/prompt.ts` — minimal Scholar context (system prompt + modifiers) for revision passes without MCP or full skill set
+
+## v1.1.11 — 2026-03-07
+
+### Scholar
+- [new] Auto-critic: Scholar's chat stream is now wrapped with auto-review — detects `[DRAFT-COMPLETE: type]` marker, fires a second `spawnOnce` call against binary criteria in `scholar-text-types.md`, injects verdict before the `done` event
+- [new] `spawnOnce` in `lib/spawn.ts` — minimal single-turn spawn without MCP, used for critic calls (fast, no tool access)
+- [new] Three verdict paths: PASS (0–1 failures, output as-is), REVISE (2–3 failures, targeted fixes), REWRITE (4+ or Criterion 1 fail, suppress draft, new angle, re-evaluate)
+
+## v1.1.10 — 2026-03-07
+
+### Architect
+- [new] `scripts/release.sh` — tags current CHANGELOG version, syncs package.json, commits, prepares next version header
+- [new] `npm run release [patch|minor]` script added to package.json
+- [new] Architect "Release" action button — autonomous, runs release script from Crew widget
+- [new] "release patch" suggestion chip added to Architect
+
+## v1.1.9 — 2026-03-07
+
+### Schedules
+- [new] Pencil button on each recurring job row — click to view and edit the job's seed prompt
+- [new] Edits persist in `data/job-overrides.json` and are used on next run
+- [new] `GET/PATCH /api/schedule/jobs` endpoint for reading and saving job command overrides
+- [new] Edited job button shown with character color tint to indicate an active override
+
+## v1.1.8 — 2026-03-07
+
+### Scholar
+- [new] "Concept Scan" autonomous action — links recent day-page notes to matching concept nodes in knowledge base
+
 ## v1.1.7 — 2026-03-06
 
 ### Chat
@@ -21,12 +57,6 @@
 
 ### Logs
 - [new] Scheduled job runs (cron) now appear in the Logs tab — injected from job results file
-
-### Knowledge
-- [new] `scholar-context.md` — Scholar loads active research tracks and library schema without re-searching each session
-- [new] `proctor-context.md` — Proctor loads course/TA info on startup
-- [new] `curator-context.md` — Curator loads active exhibition and gallery contact context
-- [new] `ground-control.md` — Architect loads dashboard architecture without re-exploring
 
 ### Watcher
 - [fix] Log truncation now explicit — watcher clears tiny-log.jsonl after each run so entries aren't re-processed
@@ -125,9 +155,6 @@
 
 ### Characters
 - [new] suggestions field added to all 8 character configs (clerk, proctor, scholar, curator, coach, postman, architect, oracle)
-
-### System
-- [new] watcher skill: suggestion mining section — auto-proposes chips from repeated first messages
 
 ## v1.0.8 — 2026-03-02
 

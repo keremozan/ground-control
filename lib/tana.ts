@@ -139,22 +139,28 @@ function parseFields(markdown: string): { status: string; priority: string; trac
   const dueDateMatch = markdown.match(/\*\*due date\*\*:\s*(?:\w+, )?(\w+ \d+(?:, \d+)?|\d{4}-\d{2}-\d{2}|Today|Tomorrow|Yesterday)/i);
   if (dueDateMatch) {
     const raw = dueDateMatch[1];
+    const localDate = (d: Date) => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    };
     if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
       dueDate = raw;
     } else if (/^today$/i.test(raw)) {
-      dueDate = new Date().toISOString().split('T')[0];
+      dueDate = localDate(new Date());
     } else if (/^tomorrow$/i.test(raw)) {
       const d = new Date(); d.setDate(d.getDate() + 1);
-      dueDate = d.toISOString().split('T')[0];
+      dueDate = localDate(d);
     } else if (/^yesterday$/i.test(raw)) {
       const d = new Date(); d.setDate(d.getDate() - 1);
-      dueDate = d.toISOString().split('T')[0];
+      dueDate = localDate(d);
     } else {
       // "Mar 1" or "Mar 1, 2026" — if no year, append current year
       const withYear = /,\s*\d{4}$/.test(raw) ? raw : `${raw}, ${new Date().getFullYear()}`;
       const parsed = new Date(withYear);
       if (!isNaN(parsed.getTime())) {
-        dueDate = parsed.toISOString().split('T')[0];
+        dueDate = localDate(parsed);
       }
     }
   }

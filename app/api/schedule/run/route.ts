@@ -76,7 +76,12 @@ export async function POST(req: Request) {
     }
     charName = job.charName;
     displayName = job.displayName;
-    seedPrompt = job.seedPrompt;
+    // Check for user-edited seedPrompt override
+    let overrides: Record<string, string> = {};
+    try {
+      overrides = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'data', 'job-overrides.json'), 'utf-8'));
+    } catch { /* no overrides file yet */ }
+    seedPrompt = overrides[job.id] ?? job.seedPrompt;
     jobId = job.id;
     label = job.label;
     mode = job.mode;

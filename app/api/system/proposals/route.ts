@@ -14,11 +14,36 @@ type Proposal = {
   createdAt: string;
 };
 
+// Raw shape written by watcher
+type RawProposal = {
+  id: string;
+  skill: string;
+  date?: string;
+  createdAt?: string;
+  reason?: string;
+  description?: string;
+  proposed_change?: string;
+  old_section?: string;
+  new_section?: string;
+  diff?: { old: string; new: string };
+};
+
+function normalize(p: RawProposal): Proposal {
+  return {
+    id: p.id,
+    skill: p.skill,
+    createdAt: p.createdAt ?? p.date ?? '',
+    description: p.description ?? p.proposed_change ?? '',
+    reason: p.reason ?? '',
+    diff: p.diff ?? { old: p.old_section ?? '', new: p.new_section ?? '' },
+  };
+}
+
 export async function GET() {
   try {
     const raw = await readFile(PROPOSALS_PATH, 'utf-8');
-    const proposals: Proposal[] = JSON.parse(raw);
-    return Response.json({ proposals });
+    const proposals: RawProposal[] = JSON.parse(raw);
+    return Response.json({ proposals: proposals.map(normalize) });
   } catch {
     return Response.json({ proposals: [] });
   }

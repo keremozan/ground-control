@@ -87,7 +87,7 @@ export default function ProposalsWidget({ hideHeader }: { hideHeader?: boolean }
           const isBusy = busy.has(p.id);
 
           return (
-            <div key={p.id} style={{
+            <div key={p.id ?? p.skill} style={{
               borderBottom: "1px solid var(--border)",
               opacity: isBusy ? 0.5 : 1,
             }}>
