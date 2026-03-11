@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.1.20 — 2026-03-12
+
+### Dashboard
+- [new] Gmail-style right-aligned dates across all widgets (Inbox, Calendar, Tasks, Classes). Dates moved from left temporal column to right of item name.
+- [new] Time-of-day icons in Calendar (Sun, Moon, Sunrise, Sunset) with colored indicators based on event start hour.
+- [fix] Priority dropdown moved from task row to action bar (alongside Archive, Delete, etc.). Removed BACKLOG/ACTIVE status labels from task rows.
+- [fix] Task filter chip borders softened (uses subtle gray border instead of bold dot color).
+- [fix] Chat input bar vertical alignment fixed (model label and send button centered with textarea).
+- [fix] Priority dropdown overflow fixed (was clipped by action bar's overflow:hidden).
+
 ## v1.1.19 — 2026-03-12
 
 ### Dashboard

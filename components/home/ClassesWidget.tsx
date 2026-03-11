@@ -358,18 +358,6 @@ export function ClassesTabContent() {
                   background: isToday ? "rgba(37,99,235,0.04)" : "transparent",
                 }}
               >
-                {/* Left temporal column */}
-                <div style={{ width: 48, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 4, paddingRight: 6 }}>
-                  {cls.date && dateUrgency && (
-                    <>
-                      <span style={{ width: 4, height: 4, borderRadius: "50%", background: dateUrgency.dot ? dateUrgency.color : "transparent", flexShrink: 0 }} />
-                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 600, color: dateUrgency.color, whiteSpace: "nowrap" }}>
-                        {formatWhen(cls.date, false)}
-                      </span>
-                    </>
-                  )}
-                </div>
-
                 <ChevronRight
                   size={10} strokeWidth={2}
                   style={{
@@ -407,16 +395,26 @@ export function ClassesTabContent() {
                 }}>
                   {cls.name}
                 </span>
+
+                {/* Date on right */}
+                {cls.date && dateUrgency && (
+                  <span style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0, marginLeft: 8 }}>
+                    <span style={{ width: 4, height: 4, borderRadius: "50%", background: dateUrgency.dot ? dateUrgency.color : "transparent", flexShrink: 0 }} />
+                    <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: dateUrgency.color, whiteSpace: "nowrap" }}>
+                      {formatWhen(cls.date, false)}
+                    </span>
+                  </span>
+                )}
               </div>
 
               {/* Progress bar (always visible) */}
-              <div style={{ padding: "0 16px 6px 36px" }}>
+              <div style={{ padding: "0 16px 6px 34px" }}>
                 <ProgressBar checked={cls.checkedItems} total={cls.totalItems} />
               </div>
 
               {/* Expanded checklist */}
               {isExpanded && cls.checklist.length > 0 && (
-                <div style={{ padding: "0 16px 10px 36px" }}>
+                <div style={{ padding: "0 16px 10px 34px" }}>
                   <ChecklistGroup
                     label="Prep"
                     items={prepItems}
@@ -441,7 +439,7 @@ export function ClassesTabContent() {
               )}
 
               {isExpanded && cls.checklist.length === 0 && (
-                <div style={{ padding: "0 16px 10px 36px" }}>
+                <div style={{ padding: "0 16px 10px 34px" }}>
                   <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-3)" }}>
                     No checklist.
                   </span>
@@ -450,7 +448,7 @@ export function ClassesTabContent() {
 
               {/* Action buttons — visible on all expanded classes */}
               {isExpanded && (
-                <div style={{ padding: "4px 16px 10px 36px", display: "flex", gap: 6, flexWrap: "wrap" }}>
+                <div style={{ padding: "4px 16px 10px 34px", display: "flex", gap: 6, flexWrap: "wrap" }}>
                   <button
                     disabled={!!lessonDoneLoading}
                     onClick={() => handlePrepDone(cls)}

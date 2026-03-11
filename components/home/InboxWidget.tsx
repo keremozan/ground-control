@@ -355,17 +355,6 @@ export default function InboxWidget() {
               }}
             >
               <div style={{ display: "flex", padding: "9px 10px 6px 16px", gap: 6, cursor: "pointer", alignItems: "first baseline" }}>
-                {(() => {
-                  const urgency = getDateUrgency(email.date, "past");
-                  return (
-                    <div style={{ width: 66, flexShrink: 0, display: "flex", alignItems: "baseline", justifyContent: "flex-end", gap: 4 }}>
-                      <span style={{ width: 4, height: 4, borderRadius: "50%", background: urgency.dot ? urgency.color : "transparent", flexShrink: 0, position: "relative", top: -1 }} />
-                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: urgency.color, whiteSpace: "nowrap" }}>
-                        {formatWhen(email.date, true)}
-                      </span>
-                    </div>
-                  );
-                })()}
                 {/* Crew icon (from pattern color) or account icon fallback */}
                 {(() => {
                   const patternColor = emailColor(email.from, email.subject);
@@ -373,7 +362,7 @@ export default function InboxWidget() {
                   if (crew) {
                     return (
                       <span style={{ display: "flex", flexShrink: 0, position: "relative", top: 1 }}>
-                        <crew.Icon size={10} strokeWidth={1.5} style={{ color: crew.color }} />
+                        <crew.Icon size={12} strokeWidth={1.5} style={{ color: crew.color }} />
                       </span>
                     );
                   }
@@ -383,7 +372,7 @@ export default function InboxWidget() {
                   const AccIcon = s.icon;
                   return (
                     <span style={{ display: "flex", flexShrink: 0, position: "relative", top: 1 }}>
-                      <AccIcon size={11} strokeWidth={1.5} style={{ color: s.color }} />
+                      <AccIcon size={12} strokeWidth={1.5} style={{ color: s.color }} />
                     </span>
                   );
                 })()}
@@ -411,6 +400,18 @@ export default function InboxWidget() {
                       const AccIcon = s.icon;
                       return <AccIcon key={acc} size={11} strokeWidth={1.5} style={{ color: s.color, flexShrink: 0 }} />;
                     })}
+                    {/* Date on the right */}
+                    {(() => {
+                      const urgency = getDateUrgency(email.date, "past");
+                      return (
+                        <span style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+                          <span style={{ width: 4, height: 4, borderRadius: "50%", background: urgency.dot ? urgency.color : "transparent", flexShrink: 0 }} />
+                          <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: urgency.color, whiteSpace: "nowrap" }}>
+                            {formatWhen(email.date, true)}
+                          </span>
+                        </span>
+                      );
+                    })()}
                   </div>
 
                   <div style={{
@@ -603,7 +604,7 @@ export default function InboxWidget() {
                 </div>
               )}
 
-              <div className="item-actions" style={{ padding: "0 10px 6px 88px" }}>
+              <div className="item-actions" style={{ padding: "0 10px 6px 34px" }}>
                 {itemActions.map(({ icon: ActionIcon, label, colorClass }) => (
                   <button
                     key={label}

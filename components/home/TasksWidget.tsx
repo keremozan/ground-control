@@ -30,11 +30,6 @@ function dueBadge(dueDate: string | null): { color: string; dot: boolean } | nul
 
 type PriorityFilter = "today" | "week" | "high" | "medium" | "low";
 
-const statusStyle: Record<string, { color: string; bg: string; label: string }> = {
-  "in-progress": { color: "#2563eb", bg: "#dbeafe", label: "ACTIVE"  },
-  backlog:       { color: "#9ca3af", bg: "#f3f4f6", label: "BACKLOG" },
-};
-
 function buildTrackColor(patterns: Record<string, string>): (track: string) => string {
   const compiled = Object.entries(patterns).map(([color, pattern]) => ({
     regex: new RegExp(pattern, 'i'),
@@ -552,7 +547,7 @@ export default function TasksWidget() {
                 letterSpacing: "0.04em", textTransform: "uppercase",
                 padding: "3px 8px", borderRadius: 3,
                 border: "1px solid",
-                borderColor: active ? dotColor : "transparent",
+                borderColor: active ? "var(--border)" : "transparent",
                 background: active ? "var(--surface-2)" : "transparent",
                 color: active ? "var(--text)" : "var(--text-3)",
                 cursor: "pointer",
@@ -576,7 +571,7 @@ export default function TasksWidget() {
                 letterSpacing: "0.04em", textTransform: "uppercase",
                 padding: "3px 8px", borderRadius: 3,
                 border: "1px solid",
-                borderColor: active ? dotColor : "transparent",
+                borderColor: active ? "var(--border)" : "transparent",
                 background: active ? "var(--surface-2)" : "transparent",
                 color: active ? "var(--text)" : "var(--text-3)",
                 cursor: "pointer",
@@ -602,7 +597,7 @@ export default function TasksWidget() {
                 letterSpacing: "0.04em", textTransform: "uppercase",
                 padding: "3px 8px", borderRadius: 3,
                 border: "1px solid",
-                borderColor: active ? dotColor : "transparent",
+                borderColor: active ? "var(--border)" : "transparent",
                 background: active ? "var(--surface-2)" : "transparent",
                 color: active ? "var(--text)" : "var(--text-3)",
                 cursor: "pointer",
@@ -704,7 +699,6 @@ export default function TasksWidget() {
                         </div>
                       )}
                       {group.tasks.map(task => {
-                  const st = statusStyle[task.status] || statusStyle.backlog;
                   const isBusy = busy.has(task.id);
 
                   const taskPriority = taskPriorities[task.id] ?? task.priority;
@@ -718,21 +712,7 @@ export default function TasksWidget() {
                           opacity: isBusy ? 0.6 : 1,
                         }}
                       >
-                        <div style={{ display: "flex", alignItems: "center", padding: "4px 16px 4px 0", gap: 0, cursor: "pointer" }}>
-                          {/* Left temporal column */}
-                          <div style={{ width: 48, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 4, paddingRight: 6 }}>
-                            {task.dueDate && (() => {
-                              const urgency = dueBadge(task.dueDate);
-                              return (
-                                <>
-                                  <span style={{ width: 4, height: 4, borderRadius: "50%", background: urgency?.dot ? urgency.color : "transparent", flexShrink: 0 }} />
-                                  <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: urgency?.color || "var(--text-3)", whiteSpace: "nowrap" }}>
-                                    {formatWhen(task.dueDate, false)}
-                                  </span>
-                                </>
-                              );
-                            })()}
-                          </div>
+                        <div style={{ display: "flex", alignItems: "center", padding: "4px 16px 4px 16px", gap: 0, cursor: "pointer" }}>
                           {/* Character icon */}
                           {(() => {
                             const key = task.assigned ? task.assigned.charAt(0).toUpperCase() + task.assigned.slice(1) : "";
@@ -740,7 +720,7 @@ export default function TasksWidget() {
                             const color = task.assigned ? charColor[task.assigned] || "var(--text-3)" : "var(--text-3)";
                             return Icon ? (
                               <span data-tip={key} style={{ display: "flex", flexShrink: 0, marginRight: 6 }}>
-                                <Icon size={10} strokeWidth={1.5} style={{ color }} />
+                                <Icon size={12} strokeWidth={1.5} style={{ color }} />
                               </span>
                             ) : null;
                           })()}
@@ -750,68 +730,23 @@ export default function TasksWidget() {
                           }}>
                             {task.name}
                           </span>
+                          {task.dueDate && (() => {
+                            const urgency = dueBadge(task.dueDate);
+                            return (
+                              <span style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0, marginLeft: 8 }}>
+                                <span style={{ width: 4, height: 4, borderRadius: "50%", background: urgency?.dot ? urgency.color : "transparent", flexShrink: 0 }} />
+                                <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: urgency?.color || "var(--text-3)", whiteSpace: "nowrap" }}>
+                                  {formatWhen(task.dueDate, false)}
+                                </span>
+                              </span>
+                            );
+                          })()}
                           {isBusy && (
                             <Loader2 size={10} strokeWidth={1.5} style={{ color: "var(--text-3)", animation: "spin 1s linear infinite", flexShrink: 0 }} />
                           )}
-                          {/* Priority dropdown — visible on row hover */}
-                          <div ref={openDropdown === task.id ? dropdownRef : undefined} className="task-priority-btn" style={{ position: "relative", flexShrink: 0 }}>
-                            <button
-                              data-tip="Change priority"
-                              disabled={isBusy}
-                              onClick={e => { e.stopPropagation(); setOpenDropdown(openDropdown === task.id ? null : task.id); }}
-                              style={{
-                                display: "flex", alignItems: "center", gap: 3,
-                                height: 18, padding: "0 4px", borderRadius: 3,
-                                border: "1px solid var(--border)",
-                                background: "transparent",
-                                cursor: isBusy ? "not-allowed" : "pointer",
-                                color: "var(--text-3)",
-                              }}
-                            >
-                              <span style={{ width: 6, height: 6, borderRadius: "50%", background: priorityDot, flexShrink: 0 }} />
-                              <ChevronDown size={8} strokeWidth={2} />
-                            </button>
-                            {openDropdown === task.id && (
-                              <div style={{
-                                position: "absolute", right: 0, top: "calc(100% + 2px)", zIndex: 50,
-                                background: "var(--surface)", border: "1px solid var(--border)",
-                                borderRadius: 6, boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-                                padding: "3px 0", minWidth: 110,
-                              }}>
-                                {([
-                                  { p: "high",   color: "#ef4444", label: "High"   },
-                                  { p: "medium", color: "#f59e0b", label: "Medium" },
-                                  { p: "low",    color: "#9ca3af", label: "Low"    },
-                                ] as const).map(({ p, color, label }) => (
-                                  <button
-                                    key={p}
-                                    onClick={e => { e.stopPropagation(); setPriorityDirect(task, p); setOpenDropdown(null); }}
-                                    style={{
-                                      display: "flex", alignItems: "center", gap: 7,
-                                      width: "100%", padding: "5px 10px",
-                                      border: "none", background: taskPriority === p ? "var(--surface-2)" : "transparent",
-                                      cursor: "pointer", textAlign: "left",
-                                      color: taskPriority === p ? "var(--text)" : "var(--text-2)",
-                                    }}
-                                  >
-                                    <span style={{ width: 7, height: 7, borderRadius: "50%", background: color, flexShrink: 0 }} />
-                                    <span style={{ fontFamily: "var(--font-mono)", fontSize: 10 }}>{label}</span>
-                                  </button>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                          <span style={{
-                            fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 600,
-                            color: st.color, background: st.bg,
-                            padding: "1px 5px", borderRadius: 3, flexShrink: 0,
-                            letterSpacing: "0.03em",
-                          }}>
-                            {st.label}
-                          </span>
                         </div>
 
-                        <div className="item-actions" style={{ padding: "0 16px 4px 54px" }}>
+                        <div className="item-actions" style={{ padding: "0 16px 4px 34px" }}>
                           {itemActions.flatMap(({ icon: ActionIcon, label, colorClass }) => {
                             const btn = (
                               <button
@@ -841,6 +776,47 @@ export default function TasksWidget() {
                             }
                             return [btn];
                           })}
+                          {/* Priority dropdown in action bar */}
+                          <div ref={openDropdown === task.id ? dropdownRef : undefined} style={{ position: "relative", display: "inline-flex" }}>
+                            <button
+                              className="item-action-btn"
+                              data-tip="Priority"
+                              disabled={isBusy}
+                              onClick={e => { e.stopPropagation(); setOpenDropdown(openDropdown === task.id ? null : task.id); }}
+                              style={{ cursor: isBusy ? "not-allowed" : "pointer" }}
+                            >
+                              <span style={{ width: 7, height: 7, borderRadius: "50%", background: priorityDot, flexShrink: 0 }} />
+                            </button>
+                            {openDropdown === task.id && (
+                              <div style={{
+                                position: "absolute", left: 0, top: "calc(100% + 2px)", zIndex: 50,
+                                background: "var(--surface)", border: "1px solid var(--border)",
+                                borderRadius: 6, boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                                padding: "3px 0", minWidth: 110,
+                              }}>
+                                {([
+                                  { p: "high",   color: "#ef4444", label: "High"   },
+                                  { p: "medium", color: "#f59e0b", label: "Medium" },
+                                  { p: "low",    color: "#9ca3af", label: "Low"    },
+                                ] as const).map(({ p, color, label }) => (
+                                  <button
+                                    key={p}
+                                    onClick={e => { e.stopPropagation(); setPriorityDirect(task, p); setOpenDropdown(null); }}
+                                    style={{
+                                      display: "flex", alignItems: "center", gap: 7,
+                                      width: "100%", padding: "5px 10px",
+                                      border: "none", background: taskPriority === p ? "var(--surface-2)" : "transparent",
+                                      cursor: "pointer", textAlign: "left",
+                                      color: taskPriority === p ? "var(--text)" : "var(--text-2)",
+                                    }}
+                                  >
+                                    <span style={{ width: 7, height: 7, borderRadius: "50%", background: color, flexShrink: 0 }} />
+                                    <span style={{ fontFamily: "var(--font-mono)", fontSize: 10 }}>{label}</span>
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
 

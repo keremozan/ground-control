@@ -1224,7 +1224,7 @@ function ChatPanel({
           ))}
         </div>
       )}
-      <div className="widget-footer" style={{ padding: "10px 12px", gap: 8, alignItems: "flex-end" }}>
+      <div className="widget-footer" style={{ padding: "10px 12px", gap: 8, alignItems: "center" }}>
         <div style={{ flex: 1, position: "relative", display: "flex", flexDirection: "column" }}>
           <div
             onMouseDown={e => {

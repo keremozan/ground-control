@@ -1,9 +1,19 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { ListChecks, Trash2, MapPin, RefreshCw, Loader2, ExternalLink, Plus, X, CalendarDays } from "lucide-react";
+import { ListChecks, Trash2, MapPin, RefreshCw, Loader2, ExternalLink, Plus, X, CalendarDays, Sun, Moon, Sunrise, Sunset, Cloud } from "lucide-react";
 import { iconForColor } from "@/lib/char-icons";
 import { formatDisplayDateWithDay, formatTime as fmtTime, formatCalendarWhen } from "@/lib/date-format";
 
+
+function timeOfDayIcon(iso: string, allDay: boolean) {
+  if (allDay) return { Icon: Sun, color: "#f59e0b" };
+  const h = new Date(iso).getHours();
+  if (h < 7) return { Icon: Moon, color: "#6366f1" };
+  if (h < 10) return { Icon: Sunrise, color: "#f97316" };
+  if (h < 17) return { Icon: Sun, color: "#eab308" };
+  if (h < 20) return { Icon: Sunset, color: "#f97316" };
+  return { Icon: Moon, color: "#6366f1" };
+}
 
 type CalEvent = {
   id: string;
@@ -262,24 +272,28 @@ export default function CalendarWidget() {
             <div key={event.id} className="item-row" style={{
               borderTop: isFirst ? undefined : "1px solid var(--border)",
               background: isNowSection ? "var(--blue-bg, rgba(59,130,246,0.06))" : undefined,
-              display: "flex", alignItems: "flex-start", gap: 6,
               padding: "0 10px 0 16px",
             }}>
-              <span style={{
-                fontFamily: "var(--font-mono)", fontSize: 10,
-                color: isNowSection ? "var(--blue)" : "var(--text-3)",
-                width: 80, flexShrink: 0, paddingTop: 9, whiteSpace: "nowrap",
-              }}>
-                {formatCalendarWhen(event.start, event.allDay)}
-              </span>
-              {(() => { const c = iconForColor(eventColor(event.summary)); return c ? <c.Icon size={10} strokeWidth={1.5} style={{ color: c.color, flexShrink: 0, marginTop: 12 }} /> : null; })()}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ padding: "9px 0 6px 0", cursor: "pointer" }}>
-                  <div style={{
-                    fontFamily: "var(--font-body)", fontSize: 12, fontWeight: 500, color: "var(--text)",
-                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 2,
-                  }}>
-                    {event.summary}
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
+                {(() => { const c = iconForColor(eventColor(event.summary)); return c ? <c.Icon size={12} strokeWidth={1.5} style={{ color: c.color, flexShrink: 0, marginTop: 12 }} /> : null; })()}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ padding: "9px 0 2px 0", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{
+                      fontFamily: "var(--font-body)", fontSize: 12, fontWeight: 500, color: "var(--text)",
+                      flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                    }}>
+                      {event.summary}
+                    </span>
+                    <span style={{ display: "flex", alignItems: "center", gap: 3, flexShrink: 0 }}>
+                      {(() => { const td = timeOfDayIcon(event.start, event.allDay); return <td.Icon size={10} strokeWidth={1.5} style={{ color: td.color }} />; })()}
+                      <span style={{
+                        fontFamily: "var(--font-mono)", fontSize: 10,
+                        color: isNowSection ? "var(--blue)" : "var(--text-3)",
+                        whiteSpace: "nowrap",
+                      }}>
+                        {formatCalendarWhen(event.start, event.allDay)}
+                      </span>
+                    </span>
                   </div>
                   {event.location && (
                     <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
@@ -290,24 +304,24 @@ export default function CalendarWidget() {
                     </div>
                   )}
                 </div>
-                <div className="item-actions" style={{ padding: "0 0 6px 0" }}>
-                  {itemActions.map(({ icon: ActionIcon, label, colorClass }) => (
-                    <button
-                      key={label}
-                      className={`item-action-btn ${colorClass}`}
-                      data-tip={label}
-                      onClick={() => {
-                        if (label === "Open" && event.htmlLink) {
-                          window.open(event.htmlLink, "_blank");
-                        } else if (label !== "Open") {
-                          runCalAction(label.toLowerCase(), event);
-                        }
-                      }}
-                    >
-                      <ActionIcon size={12} strokeWidth={1.5} />
-                    </button>
-                  ))}
-                </div>
+              </div>
+              <div className="item-actions" style={{ padding: "2px 0 6px 18px" }}>
+                {itemActions.map(({ icon: ActionIcon, label, colorClass }) => (
+                  <button
+                    key={label}
+                    className={`item-action-btn ${colorClass}`}
+                    data-tip={label}
+                    onClick={() => {
+                      if (label === "Open" && event.htmlLink) {
+                        window.open(event.htmlLink, "_blank");
+                      } else if (label !== "Open") {
+                        runCalAction(label.toLowerCase(), event);
+                      }
+                    }}
+                  >
+                    <ActionIcon size={12} strokeWidth={1.5} />
+                  </button>
+                ))}
               </div>
             </div>
           );
@@ -324,15 +338,18 @@ export default function CalendarWidget() {
                       borderTop: i > 0 ? "1px solid var(--border)" : undefined,
                       opacity: 0.45,
                     }}>
-                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-3)", width: 80, flexShrink: 0, whiteSpace: "nowrap" }}>
-                        {formatCalendarWhen(event.start, event.allDay)}
-                      </span>
-                      {(() => { const c = iconForColor(eventColor(event.summary)); return c ? <c.Icon size={10} strokeWidth={1.5} style={{ color: c.color, flexShrink: 0 }} /> : null; })()}
+                      {(() => { const c = iconForColor(eventColor(event.summary)); return c ? <c.Icon size={12} strokeWidth={1.5} style={{ color: c.color, flexShrink: 0 }} /> : null; })()}
                       <span style={{
-                        fontFamily: "var(--font-body)", fontSize: 11, fontWeight: 500, color: "var(--text)",
+                        fontFamily: "var(--font-body)", fontSize: 12, fontWeight: 500, color: "var(--text)",
                         flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                       }}>
                         {event.summary}
+                      </span>
+                      <span style={{ display: "flex", alignItems: "center", gap: 3, flexShrink: 0 }}>
+                        {(() => { const td = timeOfDayIcon(event.start, event.allDay); return <td.Icon size={10} strokeWidth={1.5} style={{ color: td.color }} />; })()}
+                        <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-3)", whiteSpace: "nowrap" }}>
+                          {formatCalendarWhen(event.start, event.allDay)}
+                        </span>
                       </span>
                     </div>
                   ))}
@@ -364,15 +381,18 @@ export default function CalendarWidget() {
                       display: "flex", alignItems: "center", gap: 6, padding: "5px 10px 5px 16px",
                       borderTop: i > 0 ? "1px solid var(--border)" : undefined,
                     }}>
-                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-3)", width: 80, flexShrink: 0, whiteSpace: "nowrap" }}>
-                        {formatCalendarWhen(event.start, event.allDay)}
-                      </span>
-                      {(() => { const c = iconForColor(eventColor(event.summary)); return c ? <c.Icon size={10} strokeWidth={1.5} style={{ color: c.color, flexShrink: 0 }} /> : null; })()}
+                      {(() => { const c = iconForColor(eventColor(event.summary)); return c ? <c.Icon size={12} strokeWidth={1.5} style={{ color: c.color, flexShrink: 0 }} /> : null; })()}
                       <span style={{
-                        fontFamily: "var(--font-body)", fontSize: 11, fontWeight: 500, color: "var(--text)",
+                        fontFamily: "var(--font-body)", fontSize: 12, fontWeight: 500, color: "var(--text)",
                         flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                       }}>
                         {event.summary}
+                      </span>
+                      <span style={{ display: "flex", alignItems: "center", gap: 3, flexShrink: 0 }}>
+                        {(() => { const td = timeOfDayIcon(event.start, event.allDay); return <td.Icon size={10} strokeWidth={1.5} style={{ color: td.color }} />; })()}
+                        <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-3)", whiteSpace: "nowrap" }}>
+                          {formatCalendarWhen(event.start, event.allDay)}
+                        </span>
                       </span>
                     </div>
                   ))}

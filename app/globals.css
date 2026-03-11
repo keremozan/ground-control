@@ -249,6 +249,7 @@ body {
   max-height: 56px;
   opacity: 1;
   padding-top: 2px;
+  overflow: visible;
 }
 
 .item-action-btn {
