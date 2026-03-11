@@ -369,7 +369,7 @@ export default function TasksWidget() {
       const match = tasks.filter(t => {
         if (!t.dueDate) return false;
         const u = dueBadge(t.dueDate);
-        return u?.dot === true && (u.color === "#2563eb" || u.color === "#dc2626");
+        return u?.dot === true && (u.color === "#d97706" || u.color === "#dc2626");
       });
       if (match.length > 0) filtered[track] = match;
     }
@@ -404,7 +404,7 @@ export default function TasksWidget() {
     if (p in priorityCounts) priorityCounts[p]++;
     if (t.dueDate) {
       const u = dueBadge(t.dueDate);
-      if (u?.dot && (u.color === "#2563eb" || u.color === "#dc2626")) todayCount++;
+      if (u?.dot && (u.color === "#d97706" || u.color === "#dc2626")) todayCount++;
       if (u?.dot) weekCount++;
     }
   }
@@ -567,7 +567,7 @@ export default function TasksWidget() {
         })()}
         {(() => {
           const active = priority === "week";
-          const dotColor = "#2563eb";
+          const dotColor = "#0d9488";
           return (
             <button
               onClick={() => setPriority("week")}
@@ -725,7 +725,7 @@ export default function TasksWidget() {
                               const urgency = dueBadge(task.dueDate);
                               return (
                                 <>
-                                  {urgency?.dot && <span style={{ width: 4, height: 4, borderRadius: "50%", background: urgency.color, flexShrink: 0 }} />}
+                                  <span style={{ width: 4, height: 4, borderRadius: "50%", background: urgency?.dot ? urgency.color : "transparent", flexShrink: 0 }} />
                                   <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: urgency?.color || "var(--text-3)", whiteSpace: "nowrap" }}>
                                     {formatWhen(task.dueDate, false)}
                                   </span>

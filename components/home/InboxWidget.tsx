@@ -366,7 +366,7 @@ export default function InboxWidget() {
                   const urgency = getDateUrgency(email.date, "past");
                   return (
                     <div style={{ width: 66, flexShrink: 0, display: "flex", alignItems: "baseline", justifyContent: "flex-end", gap: 4 }}>
-                      {urgency.dot && <span style={{ width: 4, height: 4, borderRadius: "50%", background: urgency.color, flexShrink: 0, position: "relative", top: -1 }} />}
+                      <span style={{ width: 4, height: 4, borderRadius: "50%", background: urgency.dot ? urgency.color : "transparent", flexShrink: 0, position: "relative", top: -1 }} />
                       <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: urgency.color, whiteSpace: "nowrap" }}>
                         {formatWhen(email.date, true)}
                       </span>

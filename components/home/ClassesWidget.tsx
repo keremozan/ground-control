@@ -326,8 +326,8 @@ export function ClassesTabContent() {
           const isExpanded = expanded.has(cls.id);
           const pill = coursePill(cls.course);
           const dateUrgency = cls.date ? getDateUrgency(cls.date, "future") : null;
-          const isToday = dateUrgency?.color === "#2563eb" && dateUrgency?.dot;
-          const isSoon = dateUrgency?.color === "#d97706" && dateUrgency?.dot;
+          const isToday = dateUrgency?.color === "#d97706" && dateUrgency?.dot;
+          const isSoon = dateUrgency?.color === "#0d9488" && dateUrgency?.dot;
 
           const prepItems = cls.checklist.map(item => ({
             ...item,
@@ -362,9 +362,7 @@ export function ClassesTabContent() {
                 <div style={{ width: 48, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 4, paddingRight: 6 }}>
                   {cls.date && dateUrgency && (
                     <>
-                      {dateUrgency.dot && (
-                        <span style={{ width: 4, height: 4, borderRadius: "50%", background: dateUrgency.color, flexShrink: 0 }} />
-                      )}
+                      <span style={{ width: 4, height: 4, borderRadius: "50%", background: dateUrgency.dot ? dateUrgency.color : "transparent", flexShrink: 0 }} />
                       <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 600, color: dateUrgency.color, whiteSpace: "nowrap" }}>
                         {formatWhen(cls.date, false)}
                       </span>

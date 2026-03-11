@@ -267,7 +267,7 @@ export default function CalendarWidget() {
               <span style={{
                 fontFamily: "var(--font-mono)", fontSize: 10,
                 color: isNowSection ? "var(--blue)" : "var(--text-3)",
-                width: 66, flexShrink: 0, paddingTop: 9, paddingLeft: 10,
+                width: 80, flexShrink: 0, paddingTop: 9, paddingLeft: 10, whiteSpace: "nowrap",
               }}>
                 {formatCalendarWhen(event.start, event.allDay)}
               </span>
@@ -323,7 +323,7 @@ export default function CalendarWidget() {
                       borderLeft: `3px solid ${eventColor(event.summary)}`,
                       opacity: 0.45,
                     }}>
-                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-3)", width: 66, flexShrink: 0 }}>
+                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-3)", width: 80, flexShrink: 0, whiteSpace: "nowrap" }}>
                         {formatCalendarWhen(event.start, event.allDay)}
                       </span>
                       <span style={{
@@ -363,7 +363,7 @@ export default function CalendarWidget() {
                       borderTop: i > 0 ? "1px solid var(--border)" : undefined,
                       borderLeft: `3px solid ${eventColor(event.summary)}`,
                     }}>
-                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-3)", width: 66, flexShrink: 0 }}>
+                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-3)", width: 80, flexShrink: 0, whiteSpace: "nowrap" }}>
                         {formatCalendarWhen(event.start, event.allDay)}
                       </span>
                       <span style={{

@@ -61,8 +61,8 @@ export type DateUrgency = {
 };
 
 const URGENCY_OVERDUE = { color: "#dc2626", dot: true };
-const URGENCY_TODAY = { color: "#2563eb", dot: true };
-const URGENCY_SOON = { color: "#d97706", dot: true };
+const URGENCY_TODAY = { color: "#d97706", dot: true };
+const URGENCY_SOON = { color: "#0d9488", dot: true };
 const URGENCY_NONE: DateUrgency = { color: "var(--text-3)", dot: false };
 
 /**
