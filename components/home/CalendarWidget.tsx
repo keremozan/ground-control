@@ -263,7 +263,7 @@ export default function CalendarWidget() {
               borderTop: isFirst ? undefined : "1px solid var(--border)",
               background: isNowSection ? "var(--blue-bg, rgba(59,130,246,0.06))" : undefined,
               display: "flex", alignItems: "flex-start", gap: 6,
-              padding: "0 10px",
+              padding: "0 10px 0 16px",
             }}>
               <span style={{
                 fontFamily: "var(--font-mono)", fontSize: 10,
@@ -320,7 +320,7 @@ export default function CalendarWidget() {
                   {sectionLabel("Earlier")}
                   {past.map((event, i) => (
                     <div key={event.id} style={{
-                      display: "flex", alignItems: "center", gap: 6, padding: "5px 10px",
+                      display: "flex", alignItems: "center", gap: 6, padding: "5px 10px 5px 16px",
                       borderTop: i > 0 ? "1px solid var(--border)" : undefined,
                       opacity: 0.45,
                     }}>
@@ -361,7 +361,7 @@ export default function CalendarWidget() {
                   {sectionLabel("Upcoming")}
                   {weekEvents.map((event, i) => (
                     <div key={event.id} style={{
-                      display: "flex", alignItems: "center", gap: 6, padding: "5px 10px",
+                      display: "flex", alignItems: "center", gap: 6, padding: "5px 10px 5px 16px",
                       borderTop: i > 0 ? "1px solid var(--border)" : undefined,
                     }}>
                       <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-3)", width: 80, flexShrink: 0, whiteSpace: "nowrap" }}>

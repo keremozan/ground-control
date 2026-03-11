@@ -354,7 +354,7 @@ export default function InboxWidget() {
                 opacity: isBusy ? 0.6 : 1,
               }}
             >
-              <div style={{ display: "flex", padding: "9px 10px 6px", gap: 6, cursor: "pointer" }}>
+              <div style={{ display: "flex", padding: "9px 10px 6px 16px", gap: 6, cursor: "pointer" }}>
                 {(() => {
                   const urgency = getDateUrgency(email.date, "past");
                   return (
@@ -603,7 +603,7 @@ export default function InboxWidget() {
                 </div>
               )}
 
-              <div className="item-actions" style={{ padding: "0 10px 6px 82px" }}>
+              <div className="item-actions" style={{ padding: "0 10px 6px 88px" }}>
                 {itemActions.map(({ icon: ActionIcon, label, colorClass }) => (
                   <button
                     key={label}
