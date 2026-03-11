@@ -27,10 +27,23 @@ function mergeChangelogs(pub: string, priv: string): string {
     }
   }
 
-  // Prepend orphaned private versions (not yet in public changelog)
-  for (const [version, lines] of Object.entries(privSections)) {
-    if (lines.some(l => l.trim())) {
-      result.unshift('', ...lines, `## ${version}`);
+  // Insert orphaned private versions (not in public changelog) in correct position
+  const orphaned = Object.entries(privSections)
+    .filter(([, lines]) => lines.some(l => l.trim()))
+    .map(([version, lines]) => ({ version, lines }));
+
+  for (const { version, lines } of orphaned) {
+    // Find the right position: after any higher version heading
+    let inserted = false;
+    for (let i = 0; i < result.length; i++) {
+      if (result[i].startsWith('## ') && result[i].localeCompare(`## ${version}`) < 0) {
+        result.splice(i, 0, `## ${version}`, ...lines, '');
+        inserted = true;
+        break;
+      }
+    }
+    if (!inserted) {
+      result.push('', `## ${version}`, ...lines);
     }
   }
 
