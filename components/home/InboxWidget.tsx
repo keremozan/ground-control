@@ -603,7 +603,7 @@ export default function InboxWidget() {
                 </div>
               )}
 
-              <div className="item-actions" style={{ padding: "0 10px 6px" }}>
+              <div className="item-actions" style={{ padding: "0 10px 6px 82px" }}>
                 {itemActions.map(({ icon: ActionIcon, label, colorClass }) => (
                   <button
                     key={label}
