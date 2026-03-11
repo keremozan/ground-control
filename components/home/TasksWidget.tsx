@@ -753,18 +753,6 @@ export default function TasksWidget() {
                           {isBusy && (
                             <Loader2 size={10} strokeWidth={1.5} style={{ color: "var(--text-3)", animation: "spin 1s linear infinite", flexShrink: 0 }} />
                           )}
-                          {/* Reschedule button — overdue only */}
-                          {task.dueDate && dueBadge(task.dueDate)?.color === '#dc2626' && (
-                            <button
-                              className="item-action-btn item-action-btn-amber"
-                              data-tip="Reschedule"
-                              disabled={isBusy}
-                              onClick={e => { e.stopPropagation(); doReschedule(task); }}
-                              style={{ cursor: isBusy ? "not-allowed" : "pointer", flexShrink: 0 }}
-                            >
-                              <CalendarClock size={10} strokeWidth={1.5} />
-                            </button>
-                          )}
                           {/* Priority dropdown — visible on row hover */}
                           <div ref={openDropdown === task.id ? dropdownRef : undefined} className="task-priority-btn" style={{ position: "relative", flexShrink: 0 }}>
                             <button
@@ -824,18 +812,35 @@ export default function TasksWidget() {
                         </div>
 
                         <div className="item-actions" style={{ padding: "0 16px 4px 54px" }}>
-                          {itemActions.map(({ icon: ActionIcon, label, colorClass }) => (
-                            <button
-                              key={label}
-                              className={`item-action-btn ${colorClass}`}
-                              data-tip={label}
-                              disabled={isBusy}
-                              onClick={() => handleAction(task, label)}
-                              style={{ cursor: isBusy ? "not-allowed" : "pointer" }}
-                            >
-                              <ActionIcon size={12} strokeWidth={1.5} />
-                            </button>
-                          ))}
+                          {itemActions.flatMap(({ icon: ActionIcon, label, colorClass }) => {
+                            const btn = (
+                              <button
+                                key={label}
+                                className={`item-action-btn ${colorClass}`}
+                                data-tip={label}
+                                disabled={isBusy}
+                                onClick={() => handleAction(task, label)}
+                                style={{ cursor: isBusy ? "not-allowed" : "pointer" }}
+                              >
+                                <ActionIcon size={12} strokeWidth={1.5} />
+                              </button>
+                            );
+                            if (label === "Archive" && task.dueDate && dueBadge(task.dueDate)?.color === '#dc2626') {
+                              return [btn, (
+                                <button
+                                  key="Reschedule"
+                                  className="item-action-btn item-action-btn-amber"
+                                  data-tip="Reschedule"
+                                  disabled={isBusy}
+                                  onClick={e => { e.stopPropagation(); doReschedule(task); }}
+                                  style={{ cursor: isBusy ? "not-allowed" : "pointer" }}
+                                >
+                                  <CalendarClock size={12} strokeWidth={1.5} />
+                                </button>
+                              )];
+                            }
+                            return [btn];
+                          })}
                         </div>
                       </div>
 

@@ -1,5 +1,26 @@
 # Changelog
 
+## v1.1.19 — 2026-03-12
+
+### Dashboard
+- [new] Relative dates in temporal column. Today/Tomw/Yest labels, day names within 6 days, "Mar 15" beyond.
+- [new] Character Keywords tab is now interactive. Add/remove keywords directly from the drawer, persisted to config and routing cache cleared on save.
+- [fix] Reschedule button moved from task row inline to action bar (next to Archive), overdue tasks only.
+- [fix] Crew icon routing fixes. Corrected color pattern mappings for Curator (rose), Proctor (fuchsia), Coach (emerald). Added missing patterns: WALC, VFS, visa, airport, z-lib, supercluster.
+
+## v1.1.17 — 2026-03-11
+
+### Dashboard
+- [new] Fixed-width left temporal column across all panels (Inbox, Tasks, Calendar, Classes). Unified `formatWhen`/`formatCalendarWhen` date formatting. "When" info always in the same place.
+- [new] Priority dropdown hidden by default, appears on task row hover.
+- [new] 30-day cutoff filter for tasks. Far-future due dates no longer clutter the list.
+- [fix] Chat tab sizing increased (9→11px font, taller tabs). Message text bumped to 13px.
+- [fix] Curator color changed from red (#dc2626) to rose (#be185d) to avoid clash with priority/urgency reds.
+- [fix] Added curator (Palette) and proctor (GraduationCap) to char-icons registry.
+
+### Infrastructure
+- [refactor] Removed Google Tasks integration. Tana is the single source of truth for tasks. Deleted `lib/google-tasks.ts`, `lib/task-sync.ts`, sync API route, and setup script.
+
 ## v1.1.16 — 2026-03-11
 
 ### Dashboard

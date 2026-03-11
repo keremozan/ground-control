@@ -25,18 +25,40 @@ function isToday(iso: string): boolean {
   return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
 }
 
+/** Day diff from today (negative = past, positive = future) */
+function dayDiff(iso: string): number {
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const d = new Date(iso.length === 10 ? iso + "T00:00:00" : iso);
+  d.setHours(0, 0, 0, 0);
+  return Math.round((d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+/** Relative date label: Today, Tmrw, day name within 6 days, or "Mar 15" */
+function relativeDate(iso: string): string {
+  const diff = dayDiff(iso);
+  if (diff === 0) return "Today";
+  if (diff === 1) return "Tomw";
+  if (diff === -1) return "Yest";
+  const d = new Date(iso.length === 10 ? iso + "T00:00:00" : iso);
+  if (diff >= -6 && diff <= 6) return DAYS[d.getDay()];
+  return formatDisplayDate(iso);
+}
+
 /**
  * Unified temporal label for the left "when" column.
  * Today + time: "21:56"
  * Today + no time: "Today"
+ * Tomorrow + time: "Tmrw 07:15"
+ * Within 6 days + time: "Thu 07:15"
  * Other + time: "Mar 15 07:15"
- * Other + no time: "Mar 10"
+ * Other + no time: "Mar 10" / "Thu" / "Tmrw"
  */
 export function formatWhen(iso: string, hasTime = true): string {
   if (isToday(iso)) {
     return hasTime ? formatTime(iso) : "Today";
   }
-  const base = formatDisplayDate(iso);
+  const base = relativeDate(iso);
   if (hasTime && iso.length > 10) {
     return `${base} ${formatTime(iso)}`;
   }
@@ -44,14 +66,14 @@ export function formatWhen(iso: string, hasTime = true): string {
 }
 
 /**
- * Calendar-specific: always shows "Today HH:MM" for today, "Mar 15 07:15" otherwise.
- * For all-day events: "Today" or "Mar 15".
+ * Calendar-specific: always shows "Today HH:MM" for today, relative date otherwise.
+ * For all-day events: "Today" or relative day label.
  */
 export function formatCalendarWhen(iso: string, allDay: boolean): string {
   if (isToday(iso)) {
     return allDay ? "Today" : `Today ${formatTime(iso)}`;
   }
-  const base = formatDisplayDate(iso);
+  const base = relativeDate(iso);
   return allDay ? base : `${base} ${formatTime(iso)}`;
 }
 

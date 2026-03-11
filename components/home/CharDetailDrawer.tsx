@@ -1,6 +1,6 @@
 "use client";
-import { useState, useEffect } from "react";
-import { X, Brain, Route, BookOpen, FileText } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { X, Brain, Route, BookOpen, FileText, Plus } from "lucide-react";
 import FileEditorModal from "@/components/pipeline/FileEditorModal";
 
 type CharacterInfo = {
@@ -44,6 +44,10 @@ export default function CharDetailDrawer({
   const [skillContent, setSkillContent] = useState<string | null>(null);
   const [skillLoading, setSkillLoading] = useState(false);
 
+  const [keywords, setKeywords] = useState<string[]>([]);
+  const [newKeyword, setNewKeyword] = useState("");
+  const newKeywordRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     if (!open) return;
     setTab("skills");
@@ -53,6 +57,8 @@ export default function CharDetailDrawer({
     setKnowledgeContent(null);
     setSelectedSkill(null);
     setSkillContent(null);
+    setKeywords(character.routingKeywords || []);
+    setNewKeyword("");
   }, [open, character.id]);
 
   useEffect(() => {
@@ -67,7 +73,6 @@ export default function CharDetailDrawer({
   if (!open) return null;
 
   const skills = character.skills || [];
-  const keywords = character.routingKeywords || [];
   const knowledge = character.sharedKnowledge || [];
 
   const pos = contained ? "absolute" : "fixed";
@@ -123,6 +128,27 @@ export default function CharDetailDrawer({
     });
     setKnowledgeContent(content);
     setSelectedKnowledge(null);
+  };
+
+  const saveKeywords = async (next: string[]) => {
+    setKeywords(next);
+    await fetch(`/api/system/character?name=${character.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ routingKeywords: next }),
+    });
+  };
+
+  const addKeyword = () => {
+    const kw = newKeyword.trim().toLowerCase();
+    if (!kw || keywords.includes(kw)) { setNewKeyword(""); return; }
+    saveKeywords([...keywords, kw]);
+    setNewKeyword("");
+    setTimeout(() => newKeywordRef.current?.focus(), 50);
+  };
+
+  const removeKeyword = (kw: string) => {
+    saveKeywords(keywords.filter(k => k !== kw));
   };
 
   const handleMemSave = async (content: string) => {
@@ -246,19 +272,65 @@ export default function CharDetailDrawer({
           )}
 
           {tab === "keywords" && (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-              {keywords.length === 0 && <Empty text="No routing keywords" />}
-              {keywords.map(k => (
-                <span key={k} style={{
-                  padding: "3px 8px", borderRadius: 3,
-                  background: character.color + "12",
-                  border: `1px solid ${character.color}24`,
-                  fontFamily: "var(--font-mono)", fontSize: 10,
-                  color: character.color,
-                }}>
-                  {k}
-                </span>
-              ))}
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                {keywords.length === 0 && <Empty text="No routing keywords" />}
+                {keywords.map(k => (
+                  <span key={k} style={{
+                    padding: "3px 8px", borderRadius: 3,
+                    background: character.color + "12",
+                    border: `1px solid ${character.color}24`,
+                    fontFamily: "var(--font-mono)", fontSize: 10,
+                    color: character.color,
+                    display: "flex", alignItems: "center", gap: 4,
+                  }}>
+                    {k}
+                    <button
+                      onClick={() => removeKeyword(k)}
+                      style={{
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        width: 12, height: 12, borderRadius: 2,
+                        background: "transparent", border: "none",
+                        cursor: "pointer", color: character.color, opacity: 0.5,
+                        padding: 0,
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.opacity = "1")}
+                      onMouseLeave={e => (e.currentTarget.style.opacity = "0.5")}
+                    >
+                      <X size={8} strokeWidth={2} />
+                    </button>
+                  </span>
+                ))}
+              </div>
+              <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                <input
+                  ref={newKeywordRef}
+                  value={newKeyword}
+                  onChange={e => setNewKeyword(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter") addKeyword(); }}
+                  placeholder="Add keyword..."
+                  style={{
+                    flex: 1, fontFamily: "var(--font-mono)", fontSize: 10,
+                    padding: "4px 8px", borderRadius: 4,
+                    background: "var(--surface-2)", border: "1px solid var(--border)",
+                    color: "var(--text)", outline: "none",
+                  }}
+                />
+                <button
+                  onClick={addKeyword}
+                  disabled={!newKeyword.trim()}
+                  style={{
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    width: 24, height: 24, borderRadius: 4,
+                    background: newKeyword.trim() ? character.color + "18" : "transparent",
+                    border: `1px solid ${newKeyword.trim() ? character.color + "40" : "var(--border)"}`,
+                    cursor: newKeyword.trim() ? "pointer" : "default",
+                    color: newKeyword.trim() ? character.color : "var(--text-3)",
+                  }}
+                >
+                  <Plus size={12} strokeWidth={1.5} />
+                </button>
+              </div>
             </div>
           )}
 
