@@ -1,5 +1,5 @@
 import fs from 'fs';
-import { OAUTH_KEYS_PATH, CAL_TOKENS_PATH, GMAIL_CREDENTIAL_PATHS, GOOGLE_TASKS_TOKENS_PATH } from './config';
+import { OAUTH_KEYS_PATH, CAL_TOKENS_PATH, GMAIL_CREDENTIAL_PATHS } from './config';
 
 type Credentials = {
   access_token: string;
@@ -57,20 +57,6 @@ export async function getGmailToken(account: string): Promise<string> {
   if (Date.now() > creds.expiry_date - 60_000) {
     const updated = await refreshToken(creds);
     fs.writeFileSync(credPath, JSON.stringify(updated, null, 2));
-    return updated.access_token;
-  }
-
-  return creds.access_token;
-}
-
-// --- Google Tasks tokens ---
-
-export async function getTasksToken(): Promise<string> {
-  const creds: Credentials = JSON.parse(fs.readFileSync(GOOGLE_TASKS_TOKENS_PATH, 'utf-8'));
-
-  if (Date.now() > creds.expiry_date - 60_000) {
-    const updated = await refreshToken(creds);
-    fs.writeFileSync(GOOGLE_TASKS_TOKENS_PATH, JSON.stringify(updated, null, 2));
     return updated.access_token;
   }
 

@@ -13,7 +13,6 @@ type Status = {
   calendar: boolean;
   playwright: boolean;
   miro: boolean;
-  tasks: boolean;
   lastCycle: string | null;
 };
 
@@ -190,7 +189,7 @@ export default function StatusBar() {
   // Derived health states
   const gmailOk = status ? (status.gmail.personal && status.gmail.school) : null;
   const gmailPartial = status ? (status.gmail.personal || status.gmail.school) && !gmailOk : false;
-  const allOk = status ? (status.tana && gmailOk && status.calendar && status.playwright && status.miro && status.tasks) : null;
+  const allOk = status ? (status.tana && gmailOk && status.calendar && status.playwright && status.miro) : null;
 
   return (
     <div className="widget" style={{
@@ -293,7 +292,6 @@ export default function StatusBar() {
           {/* Google Tasks */}
           <div style={{ display: "flex", alignItems: "center", gap: 4 }} data-tip="Google Tasks">
             <ListChecks size={10} strokeWidth={1.5} style={{ color: "var(--text-3)" }} />
-            <ServiceDot ok={status?.tasks ?? null} label="Google Tasks" />
           </div>
         </button>
 
@@ -319,7 +317,6 @@ export default function StatusBar() {
               { name: "Google Calendar", ok: status?.calendar ?? null },
               { name: "Playwright", ok: status?.playwright ?? null },
               { name: "Miro", ok: status?.miro ?? null },
-              { name: "Google Tasks", ok: status?.tasks ?? null },
             ].map(svc => (
               <div key={svc.name} style={{
                 display: "flex", alignItems: "center", justifyContent: "space-between",
