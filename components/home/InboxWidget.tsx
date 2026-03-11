@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Reply, ListChecks, Calendar, Archive, Trash2, CornerUpRight, User, GraduationCap, RefreshCw, Loader2, ExternalLink, FileText, Send, X, Play, Mail } from "lucide-react";
 import { useChatTrigger } from "@/lib/chat-store";
 import { logAction } from "@/lib/action-log";
-import { charColor } from "@/lib/char-icons";
+import { charColor, iconForColor } from "@/lib/char-icons";
 import { formatWhen, getDateUrgency } from "@/lib/date-format";
 
 type Email = {
@@ -38,11 +38,6 @@ function buildEmailColor(patterns: Record<string, string>): (from: string, subje
     return "";
   };
 }
-
-const ACCOUNT_BORDER: Record<string, string> = {
-  personal: "#4f46e5",  // indigo
-  school:   "#db2777",  // pink
-};
 
 // Standard labels — user-specific labels added from config
 const DEFAULT_LABEL_COLORS: Record<string, { color: string; bg: string }> = {
@@ -350,14 +345,12 @@ export default function InboxWidget() {
         {emails.map((email, i) => {
           const accts = email.accounts || [email.account];
           const isBusy = busy.has(email.id);
-          const borderColor = emailColor(email.from, email.subject) || ACCOUNT_BORDER[email.account] || "#94a3b8";
           return (
             <div
               className="item-row"
               key={email.threadId}
               style={{
                 borderBottom: i < emails.length - 1 ? "1px solid var(--border)" : "none",
-                borderLeft: `3px solid ${borderColor}`,
                 opacity: isBusy ? 0.6 : 1,
               }}
             >
@@ -371,6 +364,27 @@ export default function InboxWidget() {
                         {formatWhen(email.date, true)}
                       </span>
                     </div>
+                  );
+                })()}
+                {/* Crew icon (from pattern color) or account icon fallback */}
+                {(() => {
+                  const patternColor = emailColor(email.from, email.subject);
+                  const crew = patternColor ? iconForColor(patternColor) : null;
+                  if (crew) {
+                    return (
+                      <span style={{ display: "flex", flexShrink: 0, alignSelf: "center" }}>
+                        <crew.Icon size={10} strokeWidth={1.5} style={{ color: crew.color }} />
+                      </span>
+                    );
+                  }
+                  const acc = accts[0] || email.account;
+                  const s = accountStyle[acc];
+                  if (!s) return null;
+                  const AccIcon = s.icon;
+                  return (
+                    <span style={{ display: "flex", flexShrink: 0, alignSelf: "center" }}>
+                      <AccIcon size={11} strokeWidth={1.5} style={{ color: s.color }} />
+                    </span>
                   );
                 })()}
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -391,7 +405,7 @@ export default function InboxWidget() {
                         {email.threadCount}
                       </span>
                     )}
-                    {accts.map((acc) => {
+                    {accts.length > 1 && accts.slice(1).map((acc) => {
                       const s = accountStyle[acc];
                       if (!s) return null;
                       const AccIcon = s.icon;

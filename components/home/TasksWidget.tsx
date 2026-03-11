@@ -823,7 +823,7 @@ export default function TasksWidget() {
                           </span>
                         </div>
 
-                        <div className="item-actions" style={{ padding: "0 16px 4px 0" }}>
+                        <div className="item-actions" style={{ padding: "0 16px 4px 54px" }}>
                           {itemActions.map(({ icon: ActionIcon, label, colorClass }) => (
                             <button
                               key={label}

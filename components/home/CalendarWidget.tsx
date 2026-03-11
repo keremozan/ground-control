@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { ListChecks, Trash2, MapPin, RefreshCw, Loader2, ExternalLink, Plus, X, CalendarDays } from "lucide-react";
+import { iconForColor } from "@/lib/char-icons";
 import { formatDisplayDateWithDay, formatTime as fmtTime, formatCalendarWhen } from "@/lib/date-format";
 
 
@@ -260,19 +261,20 @@ export default function CalendarWidget() {
           const renderEvent = (event: CalEvent, isNowSection: boolean, isFirst: boolean) => (
             <div key={event.id} className="item-row" style={{
               borderTop: isFirst ? undefined : "1px solid var(--border)",
-              borderLeft: `3px solid ${eventColor(event.summary)}`,
               background: isNowSection ? "var(--blue-bg, rgba(59,130,246,0.06))" : undefined,
               display: "flex", alignItems: "flex-start", gap: 6,
+              padding: "0 10px",
             }}>
               <span style={{
                 fontFamily: "var(--font-mono)", fontSize: 10,
                 color: isNowSection ? "var(--blue)" : "var(--text-3)",
-                width: 80, flexShrink: 0, paddingTop: 9, paddingLeft: 10, whiteSpace: "nowrap",
+                width: 80, flexShrink: 0, paddingTop: 9, whiteSpace: "nowrap",
               }}>
                 {formatCalendarWhen(event.start, event.allDay)}
               </span>
+              {(() => { const c = iconForColor(eventColor(event.summary)); return c ? <c.Icon size={10} strokeWidth={1.5} style={{ color: c.color, flexShrink: 0, marginTop: 12 }} /> : null; })()}
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ padding: "9px 16px 6px 0", cursor: "pointer" }}>
+                <div style={{ padding: "9px 0 6px 0", cursor: "pointer" }}>
                   <div style={{
                     fontFamily: "var(--font-body)", fontSize: 12, fontWeight: 500, color: "var(--text)",
                     overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 2,
@@ -288,7 +290,7 @@ export default function CalendarWidget() {
                     </div>
                   )}
                 </div>
-                <div className="item-actions" style={{ padding: "0 16px 6px 0" }}>
+                <div className="item-actions" style={{ padding: "0 0 6px 0" }}>
                   {itemActions.map(({ icon: ActionIcon, label, colorClass }) => (
                     <button
                       key={label}
@@ -320,12 +322,12 @@ export default function CalendarWidget() {
                     <div key={event.id} style={{
                       display: "flex", alignItems: "center", gap: 6, padding: "5px 10px",
                       borderTop: i > 0 ? "1px solid var(--border)" : undefined,
-                      borderLeft: `3px solid ${eventColor(event.summary)}`,
                       opacity: 0.45,
                     }}>
                       <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-3)", width: 80, flexShrink: 0, whiteSpace: "nowrap" }}>
                         {formatCalendarWhen(event.start, event.allDay)}
                       </span>
+                      {(() => { const c = iconForColor(eventColor(event.summary)); return c ? <c.Icon size={10} strokeWidth={1.5} style={{ color: c.color, flexShrink: 0 }} /> : null; })()}
                       <span style={{
                         fontFamily: "var(--font-body)", fontSize: 11, fontWeight: 500, color: "var(--text)",
                         flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
@@ -361,11 +363,11 @@ export default function CalendarWidget() {
                     <div key={event.id} style={{
                       display: "flex", alignItems: "center", gap: 6, padding: "5px 10px",
                       borderTop: i > 0 ? "1px solid var(--border)" : undefined,
-                      borderLeft: `3px solid ${eventColor(event.summary)}`,
                     }}>
                       <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-3)", width: 80, flexShrink: 0, whiteSpace: "nowrap" }}>
                         {formatCalendarWhen(event.start, event.allDay)}
                       </span>
+                      {(() => { const c = iconForColor(eventColor(event.summary)); return c ? <c.Icon size={10} strokeWidth={1.5} style={{ color: c.color, flexShrink: 0 }} /> : null; })()}
                       <span style={{
                         fontFamily: "var(--font-body)", fontSize: 11, fontWeight: 500, color: "var(--text)",
                         flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",

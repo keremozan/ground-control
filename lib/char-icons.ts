@@ -32,3 +32,18 @@ export const charIcon: Record<string, LucideIcon> = {
   Doctor:    Stethoscope,
   Crew:      Users,
 };
+
+// Reverse lookup: hex color → { Icon, color }
+// Used by Calendar and Inbox to map pattern colors to crew icons
+const colorToChar: Record<string, string> = Object.fromEntries(
+  Object.entries(charColor).map(([name, hex]) => [hex.toLowerCase(), name])
+);
+
+export function iconForColor(hex: string): { Icon: LucideIcon; color: string } | null {
+  const name = colorToChar[hex.toLowerCase()];
+  if (!name) return null;
+  const key = name.charAt(0).toUpperCase() + name.slice(1);
+  const Icon = charIcon[key] as LucideIcon | undefined;
+  if (!Icon) return null;
+  return { Icon, color: hex };
+}
