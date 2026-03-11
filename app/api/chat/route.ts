@@ -249,13 +249,14 @@ CREATING TASKS IN TANA — when asked to create/add a task:
 `.trim();
 
 export async function POST(req: Request) {
-  const { characterId, message, context, history, model: modelOverride, images } = await req.json() as {
+  const { characterId, message, context, history, model: modelOverride, images, skill } = await req.json() as {
     characterId: string;
     message: string;
     context?: string;
     history?: Array<{ role: string; content: string }>;
     model?: string;
     images?: Array<{ mediaType: string; data: string }>;
+    skill?: string;
   };
 
   const characters = getCharacters();
@@ -285,7 +286,7 @@ export async function POST(req: Request) {
     activeSkill = detectScholarIntent(message);
   }
 
-  const prompt = buildCharacterPrompt(characterId, taskContent, { activeSkill });
+  const prompt = buildCharacterPrompt(characterId, taskContent, { activeSkill, injectSkill: skill });
   const effectiveModel = modelOverride || char.defaultModel || 'sonnet';
   const rawStream = spawnSSEStream({
     prompt,

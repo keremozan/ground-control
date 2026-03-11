@@ -566,7 +566,7 @@ body {
   border: 1px solid var(--border);
   border-radius: 5px;
   padding: 7px 10px;
-  resize: vertical;
+  resize: none;
   min-height: 34px;
   max-height: 240px;
   font-family: var(--font-body);

@@ -1,11 +1,30 @@
 # Changelog
 
+## v1.1.15 — 2026-03-11
+
+### Chat
+- [new] Slash command skill picker. Type `/` in chat input to search and select from all 53 skills. Skills load dynamically from skill files.
+- [new] Injected skills work with any character. Select `/scholar-write` in Architect and it loads the full skill into the prompt context.
+- [fix] Textarea drag resize now works. Custom upward drag handle above the input area (34px to 240px range).
+
+### Proposals
+- [fix] Approve now applies the diff to the skill file (was only removing from list).
+- [new] Auto-apply. Proposals without `needsReview: true` are applied automatically on load. Only flagged proposals surface in the widget.
+- [new] Toast notifications for auto-applied and manually approved proposals.
+
+### Classes
+- [fix] Class date display uses dot indicator + formatted date instead of "TODAY"/"3d" badges
+- [fix] Date parsing uses local timezone instead of UTC (no more off-by-one day shifts)
+- [fix] Checklist parser skips template container nodes (e.g. "prep tasks" wrapper)
+- [fix] Auto-attach checklist guards against supertag-created containers
+
 ## v1.1.14 — 2026-03-08
 
 ### Chat
 - [fix] Concurrent chat limit raised from 2 to 4, tooltips updated
 - [fix] Tab count limit removed from Plus button. Open as many tabs as you want, only concurrent runs are capped at 4.
 - [new] Architect send-to button now opens a context input. Add optional notes before forwarding a conversation.
+- [new] Message queue. Type while AI works, messages auto-fire in order. Dismissible pills show queued messages. Stop button clears the queue.
 
 ## v1.1.13 — 2026-03-08
 

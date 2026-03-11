@@ -17,11 +17,23 @@ export default function ProposalsWidget({ hideHeader }: { hideHeader?: boolean }
   const [expanded, setExpanded] = useState<string | null>(null);
   const [busy, setBusy] = useState<Set<string>>(new Set());
 
+  const [toast, setToast] = useState<string | null>(null);
+
   const fetch_ = useCallback(() => {
     setLoading(true);
     fetch("/api/system/proposals")
       .then(r => r.json())
-      .then(d => setProposals(d.proposals || []))
+      .then(d => {
+        setProposals(d.proposals || []);
+        const auto = d.autoApplied as { id: string; skill: string; ok: boolean }[] | undefined;
+        if (auto && auto.length > 0) {
+          const applied = auto.filter(a => a.ok);
+          if (applied.length > 0) {
+            setToast(`Auto-applied ${applied.length} proposal${applied.length > 1 ? "s" : ""}`);
+            setTimeout(() => setToast(null), 4000);
+          }
+        }
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
@@ -31,11 +43,19 @@ export default function ProposalsWidget({ hideHeader }: { hideHeader?: boolean }
   const handleAction = async (id: string, action: "approve" | "dismiss") => {
     setBusy(prev => new Set(prev).add(id));
     try {
-      await fetch("/api/system/proposals", {
+      const res = await fetch("/api/system/proposals", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action, id }),
       });
+      const data = await res.json();
+      if (action === "approve" && data.applied) {
+        setToast(`Applied to ${data.skill}`);
+        setTimeout(() => setToast(null), 3000);
+      } else if (action === "approve" && data.error) {
+        setToast(`Failed: ${data.error}`);
+        setTimeout(() => setToast(null), 4000);
+      }
       fetch_();
     } catch {}
     setBusy(prev => { const s = new Set(prev); s.delete(id); return s; });
@@ -66,7 +86,17 @@ export default function ProposalsWidget({ hideHeader }: { hideHeader?: boolean }
         </div>
       )}
 
-      <div className="widget-body" style={{ padding: 0 }}>
+      <div className="widget-body" style={{ padding: 0, position: "relative" }}>
+        {toast && (
+          <div style={{
+            position: "absolute", top: 6, left: 10, right: 10, zIndex: 10,
+            background: "#16a34a18", border: "1px solid #16a34a30", borderRadius: 4,
+            padding: "4px 10px", fontFamily: "var(--font-mono)", fontSize: 9,
+            color: "#16a34a", textAlign: "center",
+          }}>
+            {toast}
+          </div>
+        )}
         {proposals.length === 0 && (
           <div style={{
             display: "flex", flexDirection: "column", alignItems: "center",

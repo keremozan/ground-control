@@ -409,16 +409,24 @@ export function ClassesTabContent() {
                   {cls.name}
                 </span>
 
-                {/* Due badge */}
-                {days !== null && (
+                {/* Class date */}
+                {cls.date && (
                   <span style={{
-                    fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 700,
-                    color: isToday ? "#2563eb" : isSoon ? "#d97706" : "var(--text-3)",
-                    background: isToday ? "#2563eb12" : isSoon ? "#d9770612" : "transparent",
-                    padding: isToday || isSoon ? "1px 5px" : "0",
-                    borderRadius: 3, flexShrink: 0, letterSpacing: "0.03em",
+                    display: "flex", alignItems: "center", gap: 4, flexShrink: 0,
                   }}>
-                    {isToday ? "TODAY" : isSoon ? `${days}d` : cls.date ? formatDate(cls.date) : ""}
+                    {(isToday || isSoon) && (
+                      <span style={{
+                        width: 5, height: 5, borderRadius: "50%", flexShrink: 0,
+                        background: isToday ? "#2563eb" : "#d97706",
+                      }} />
+                    )}
+                    <span style={{
+                      fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 600,
+                      color: isToday ? "#2563eb" : isSoon ? "#d97706" : "var(--text-3)",
+                      letterSpacing: "0.03em",
+                    }}>
+                      {formatDate(cls.date)}
+                    </span>
                   </span>
                 )}
               </div>

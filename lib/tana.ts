@@ -750,28 +750,35 @@ export type ClassPrepNode = {
   checkedItems: number;
 };
 
+function localDateStr(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 function parseClassDate(raw: string): string | null {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
   // Handle relative words from Tana: "Today", "Tomorrow", "Yesterday"
   const lower = raw.toLowerCase().trim();
-  if (lower === 'today') return today.toISOString().split('T')[0];
+  if (lower === 'today') return localDateStr(today);
   if (lower === 'tomorrow') {
     const d = new Date(today);
     d.setDate(d.getDate() + 1);
-    return d.toISOString().split('T')[0];
+    return localDateStr(d);
   }
   if (lower === 'yesterday') {
     const d = new Date(today);
     d.setDate(d.getDate() - 1);
-    return d.toISOString().split('T')[0];
+    return localDateStr(d);
   }
 
   if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
   const withYear = /,\s*\d{4}$/.test(raw) ? raw : `${raw}, ${today.getFullYear()}`;
   const parsed = new Date(withYear);
-  if (!isNaN(parsed.getTime())) return parsed.toISOString().split('T')[0];
+  if (!isNaN(parsed.getTime())) return localDateStr(parsed);
   return null;
 }
 
@@ -835,16 +842,30 @@ function parseChecklist(markdown: string): ChecklistItem[] {
     .reduce((min, i) => Math.min(min, i.indentLevel), Infinity);
 
   let currentGroup: 'prep' | 'post-lesson' | null = null;
+  let inTemplateContainer = false; // true when inside a non-group-header node at groupHeaderLevel (e.g. "prep tasks")
   const result: ChecklistItem[] = [];
 
   for (const item of allItems) {
-    const headerMatch = GROUP_HEADERS.find(g => g.pattern.test(item.text));
-    if (headerMatch && item.indentLevel === groupHeaderLevel) {
-      currentGroup = headerMatch.group;
-      continue; // skip group headers themselves
-    }
-    // Skip the class node itself (typically "VA 204 — ...")
+    // Skip the class node itself
     if (item.indentLevel < groupHeaderLevel) continue;
+
+    const headerMatch = GROUP_HEADERS.find(g => g.pattern.test(item.text));
+
+    if (item.indentLevel === groupHeaderLevel) {
+      if (headerMatch) {
+        // Real group header — update group, exit any template container
+        currentGroup = headerMatch.group;
+        inTemplateContainer = false;
+      } else {
+        // Non-group-header at this level (e.g. "prep tasks") — treat as template container, skip it and its subtree
+        inTemplateContainer = true;
+      }
+      continue;
+    }
+
+    // Skip anything inside a template container
+    if (inTemplateContainer) continue;
+
     result.push({ id: item.id, text: item.text, checked: item.checked, group: currentGroup });
   }
 
@@ -924,10 +945,24 @@ export async function getClassNodes(): Promise<ClassPrepNode[]> {
 
       let checklist = parseChecklist(md);
 
-      // Auto-attach standard checklist if missing (handles calendar-synced nodes)
+      // Auto-attach standard checklist if missing (handles calendar-synced nodes).
+      // Guard: check actual direct children to see if prep/post-lesson nodes already exist.
+      // The supertag template may auto-create a "prep tasks" container with "prep lesson"
+      // inside it — that doesn't count. Only direct content children named "prep lesson"
+      // or "post-lesson review" mean the checklist is already attached.
       if (checklist.length === 0) {
-        const freshMd = await attachChecklistToClass(node.id);
-        if (freshMd) checklist = parseChecklist(freshMd);
+        const childrenResult = await mcpCall('tools/call', {
+          name: 'get_children',
+          arguments: { nodeId: node.id, limit: 50 },
+        });
+        const childList: { name: string; docType: string }[] = Array.isArray(childrenResult?.children) ? childrenResult.children : [];
+        const hasDirectChecklist = childList.some(
+          c => c.docType === 'content' && (/prep lesson/i.test(c.name) || /post[\s-]?lesson/i.test(c.name))
+        );
+        if (!hasDirectChecklist) {
+          const freshMd = await attachChecklistToClass(node.id);
+          if (freshMd) checklist = parseChecklist(freshMd);
+        }
       }
 
       classes.push({

@@ -21,7 +21,7 @@ export function buildPrompt(skillName: string | null, extra?: string): string {
   return prompt;
 }
 
-export function buildCharacterPrompt(characterId: string, taskContext?: string, opts?: { activeSkill?: string }): string {
+export function buildCharacterPrompt(characterId: string, taskContext?: string, opts?: { activeSkill?: string; injectSkill?: string }): string {
   const characters = getCharacters();
   const sharedKnowledge = getSharedKnowledge();
   const char = characters[characterId];
@@ -56,6 +56,18 @@ export function buildCharacterPrompt(characterId: string, taskContext?: string, 
       if (skill) {
         prompt += `\n\n---\n\n${skill}`;
         serverLog({ char: 'system', action: 'skill-invoked', detail: skillName, target: characterId }).catch(() => {});
+      }
+    }
+  }
+
+  // Inject a skill from slash command (any skill, regardless of character config)
+  if (opts?.injectSkill) {
+    const alreadyLoaded = char.skills?.includes(opts.injectSkill);
+    if (!alreadyLoaded) {
+      const skill = readSkill(opts.injectSkill);
+      if (skill) {
+        prompt += `\n\n---\n\n${skill}`;
+        serverLog({ char: 'system', action: 'skill-injected', detail: opts.injectSkill, target: characterId }).catch(() => {});
       }
     }
   }

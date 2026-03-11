@@ -7,7 +7,7 @@ import TanaIcon from "@/components/icons/TanaIcon";
 import { parseToolName } from "@/lib/mcp-icons";
 import { resolveIcon } from "@/lib/icon-map";
 import {
-  BookOpen, Copy, CornerUpRight, Loader2,
+  BookOpen, Copy, CornerUpRight, GripHorizontal, Loader2,
   MessageSquare, Send, Square, Trash2, Plus, Wrench, X,
 } from "lucide-react";
 
@@ -572,6 +572,12 @@ function ChatPanel({
   const [elapsed, setElapsed] = useState(0);
   const [pendingContext, setPendingContext] = useState<string | null>(null);
   const [compressing, setCompressing] = useState(false);
+  const [messageQueue, setMessageQueue] = useState<string[]>([]);
+  const [inputHeight, setInputHeight] = useState(34);
+  const [skillPicker, setSkillPicker] = useState(false);
+  const [skillList, setSkillList] = useState<{ name: string; description: string; character?: string }[]>([]);
+  const [skillFilter, setSkillFilter] = useState("");
+  const messagesRef = useRef<Message[]>(messages);
   const charDefault = characters.find(c => c.id === charId);
   const [modelOverride, setModelOverride] = useState<string>(initialModel || charDefault?.model || "sonnet");
   const bodyRef = useRef<HTMLDivElement>(null);
@@ -641,6 +647,28 @@ function ChatPanel({
     return () => clearInterval(t);
   }, [isLoading]);
 
+  // Drain message queue when AI finishes
+  useEffect(() => {
+    if (isLoading || !canSend) return;
+    setMessageQueue(prev => {
+      if (prev.length === 0) return prev;
+      const [next, ...rest] = prev;
+      const currentMessages = messagesRef.current;
+      setMessages(m => [...m, { role: "user", content: next }]);
+      const effectiveModel = modelOverride !== activeChar?.model ? modelOverride : undefined;
+      setTimeout(() => sendMessage(next, undefined, null, currentMessages, effectiveModel), 0);
+      return rest;
+    });
+  }, [isLoading, canSend]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Keep messagesRef in sync
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
+
+  // Pre-fetch skill list for slash command detection
+  useEffect(() => {
+    fetch("/api/system/skills").then(r => r.json()).then(d => setSkillList(d.skills || [])).catch(() => {});
+  }, []);
+
   // Auto-scroll
   useEffect(() => {
     if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
@@ -662,7 +690,7 @@ function ChatPanel({
     return () => { if (abortRef.current) abortRef.current.abort(); };
   }, []);
 
-  const sendMessage = async (msg: string, targetCharId?: string, context?: string | null, history?: Message[], modelOverride?: string, images?: Array<{mediaType: string; data: string}>) => {
+  const sendMessage = async (msg: string, targetCharId?: string, context?: string | null, history?: Message[], modelOverride?: string, images?: Array<{mediaType: string; data: string}>, skill?: string) => {
     setIsLoading(true);
     setToolLog([]);
     let fullText = '';
@@ -691,6 +719,7 @@ function ChatPanel({
           ...(historyToSend ? { history: historyToSend } : {}),
           ...(modelOverride ? { model: modelOverride } : {}),
           ...(images && images.length > 0 ? { images } : {}),
+          ...(skill ? { skill } : {}),
         }),
         signal: controller.signal,
       });
@@ -795,21 +824,50 @@ function ChatPanel({
   };
 
   const handleSend = () => {
-    if ((!input.trim() && pastedImages.length === 0) || isLoading || !activeChar || !canSend) return;
+    if ((!input.trim() && pastedImages.length === 0) || !activeChar || !canSend) return;
     const msg = input.trim();
+
+    // Queue if AI is already working
+    if (isLoading) {
+      if (msg) {
+        setMessageQueue(prev => [...prev, msg]);
+        setInput("");
+        setPastedImages([]);
+      }
+      return;
+    }
+
+    // Extract /skill prefix if present
+    let actualMsg = msg;
+    let slashSkill: string | undefined;
+    const slashMatch = msg.match(/^\/([a-z0-9-]+)\s*([\s\S]*)/);
+    if (slashMatch) {
+      const candidate = slashMatch[1];
+      // Only treat as skill if it matches a known skill (check against fetched list)
+      if (skillList.some(s => s.name === candidate)) {
+        slashSkill = candidate;
+        actualMsg = slashMatch[2].trim() || `Run /${candidate}`;
+      }
+    }
+
     const currentMessages = [...messages];
     if (currentMessages.length === 0) {
-      logAction({ widget: "chat", action: "chat-first-message", target: msg.slice(0, 80), character: activeChar.id, detail: msg });
+      logAction({ widget: "chat", action: "chat-first-message", target: actualMsg.slice(0, 80), character: activeChar.id, detail: actualMsg });
     }
     const apiImages: Array<{mediaType: string; data: string}> = pastedImages.map(dataUrl => {
       const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
       return match ? { mediaType: match[1], data: match[2] } : null;
     }).filter(Boolean) as Array<{mediaType: string; data: string}>;
-    setMessages(prev => [...prev, { role: "user", content: msg, images: pastedImages.length > 0 ? [...pastedImages] : undefined }]);
+    setMessages(prev => [...prev, {
+      role: "user",
+      content: slashSkill ? `/${slashSkill} ${actualMsg}` : actualMsg,
+      images: pastedImages.length > 0 ? [...pastedImages] : undefined,
+    }]);
     setInput("");
     setPastedImages([]);
+    setSkillPicker(false);
     const effectiveModel = modelOverride !== activeChar?.model ? modelOverride : undefined;
-    sendMessage(msg || "(image)", undefined, null, currentMessages, effectiveModel, apiImages.length > 0 ? apiImages : undefined);
+    sendMessage(actualMsg || "(image)", undefined, null, currentMessages, effectiveModel, apiImages.length > 0 ? apiImages : undefined, slashSkill);
   };
 
   const handleChipClick = (suggestion: string) => {
@@ -831,6 +889,7 @@ function ChatPanel({
     setStreamingText("");
     setActiveTool(null);
     setToolLog([]);
+    setMessageQueue([]);
     setIsLoading(false);
   };
 
@@ -1136,28 +1195,156 @@ function ChatPanel({
           ))}
         </div>
       )}
+      {messageQueue.length > 0 && (
+        <div style={{ padding: "4px 12px 0", display: "flex", gap: 4, flexWrap: "wrap" }}>
+          {messageQueue.map((qm, idx) => (
+            <div key={idx} style={{
+              display: "inline-flex", alignItems: "center", gap: 4,
+              background: "var(--bg-2)", borderRadius: 3, padding: "2px 6px",
+              fontFamily: "var(--font-mono)", fontSize: 9, color: "var(--text-2)",
+              maxWidth: 240,
+            }}>
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                queued: {qm.length > 40 ? qm.slice(0, 40) + "..." : qm}
+              </span>
+              <button
+                onClick={() => setMessageQueue(prev => prev.filter((_, i) => i !== idx))}
+                style={{
+                  background: "transparent", border: "none", cursor: "pointer",
+                  padding: 0, display: "flex", alignItems: "center", flexShrink: 0,
+                }}
+              >
+                <X size={8} strokeWidth={2} style={{ color: "var(--text-3)" }} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
       <div className="widget-footer" style={{ padding: "10px 12px", gap: 8, alignItems: "flex-end" }}>
-        <textarea
-          className="chat-input"
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          onPaste={handlePaste}
-          onKeyDown={e => {
-            if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
-          }}
-          placeholder={
-            isLoading
-              ? activeTool
-                ? `${activeChar.name}: ${parseToolName(activeTool).displayName}${activeToolInput ? ` ${toolInputLabel(activeTool, activeToolInput)}` : ""}...`
-                : toolLog.length > 0
-                  ? `${activeChar.name}: working (${toolLog.length} steps, ${elapsed}s)...`
-                  : `${activeChar.name} is thinking...`
-            : !canSend ? "4 chats running — wait or stop one"
-            : `Ask ${activeChar.name}...`
-          }
-          rows={1}
-          disabled={isLoading || !canSend}
-        />
+        <div style={{ flex: 1, position: "relative", display: "flex", flexDirection: "column" }}>
+          <div
+            onMouseDown={e => {
+              e.preventDefault();
+              const startY = e.clientY;
+              const startH = inputHeight;
+              const onMove = (ev: MouseEvent) => {
+                const delta = startY - ev.clientY;
+                setInputHeight(Math.max(34, Math.min(240, startH + delta)));
+              };
+              const onUp = () => {
+                document.removeEventListener("mousemove", onMove);
+                document.removeEventListener("mouseup", onUp);
+              };
+              document.addEventListener("mousemove", onMove);
+              document.addEventListener("mouseup", onUp);
+            }}
+            style={{
+              height: 6, cursor: "ns-resize",
+              display: "flex", alignItems: "center", justifyContent: "flex-end",
+              paddingRight: 4, flexShrink: 0,
+            }}
+          >
+            <GripHorizontal size={8} strokeWidth={1.5} style={{ color: "var(--text-3)", opacity: 0.4 }} />
+          </div>
+          {skillPicker && (() => {
+            const filtered = skillList.filter(s =>
+              !skillFilter || s.name.includes(skillFilter) || (s.description || "").toLowerCase().includes(skillFilter)
+            );
+            return (
+              <div style={{
+                position: "absolute", bottom: "100%", left: 0, right: 0,
+                maxHeight: 220, overflowY: "auto", zIndex: 20,
+                background: "var(--surface)", border: "1px solid var(--border)",
+                borderRadius: 6, boxShadow: "0 -4px 16px rgba(0,0,0,0.3)",
+                marginBottom: 2,
+              }}>
+                {filtered.length === 0 && (
+                  <div style={{ padding: "10px 12px", fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-3)" }}>
+                    {skillList.length === 0 ? "Loading skills..." : "No matching skills"}
+                  </div>
+                )}
+                {filtered.map(s => (
+                  <div
+                    key={s.name}
+                    onClick={() => {
+                      setInput(`/${s.name} `);
+                      setSkillPicker(false);
+                      textareaRef.current?.focus();
+                    }}
+                    style={{
+                      padding: "6px 12px", cursor: "pointer",
+                      borderBottom: "1px solid var(--border)",
+                      transition: "background 0.08s",
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.background = "var(--bg-2)")}
+                    onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 600, color: "var(--text)" }}>
+                        /{s.name}
+                      </span>
+                      {s.character && (
+                        <span style={{
+                          fontFamily: "var(--font-mono)", fontSize: 8, color: "var(--text-3)",
+                          background: "var(--bg-2)", padding: "1px 5px", borderRadius: 3,
+                        }}>
+                          {s.character}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{
+                      fontFamily: "var(--font-body)", fontSize: 10, color: "var(--text-3)",
+                      marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                    }}>
+                      {s.description}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+          <textarea
+            ref={textareaRef}
+            className="chat-input"
+            value={input}
+            onChange={e => {
+              const v = e.target.value;
+              setInput(v);
+              if (v === "/") {
+                setSkillPicker(true);
+                setSkillFilter("");
+                if (skillList.length === 0) {
+                  fetch("/api/system/skills").then(r => r.json()).then(d => setSkillList(d.skills || [])).catch(() => {});
+                }
+              } else if (v.startsWith("/") && skillPicker) {
+                setSkillFilter(v.slice(1).toLowerCase());
+              } else if (!v.startsWith("/")) {
+                setSkillPicker(false);
+              }
+            }}
+            onPaste={handlePaste}
+            onKeyDown={e => {
+              if (skillPicker) {
+                if (e.key === "Escape") { e.preventDefault(); setSkillPicker(false); setInput(""); return; }
+                if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); return; } // handled by picker
+              }
+              if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
+            }}
+            placeholder={
+              isLoading
+                ? activeTool
+                  ? `${activeChar.name}: ${parseToolName(activeTool).displayName}${activeToolInput ? ` ${toolInputLabel(activeTool, activeToolInput)}` : ""}...`
+                  : toolLog.length > 0
+                    ? `${activeChar.name}: working (${toolLog.length} steps, ${elapsed}s)...`
+                    : `${activeChar.name} is thinking...`
+              : !canSend ? "4 chats running — wait or stop one"
+              : `Ask ${activeChar.name}... (type / for skills)`
+            }
+            rows={1}
+            disabled={!canSend}
+            style={{ height: inputHeight, resize: "none", flex: "none" }}
+          />
+        </div>
         <button
           onClick={() => {
             const models = ["haiku", "sonnet", "opus"];
