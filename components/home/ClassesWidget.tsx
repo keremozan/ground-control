@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { BookOpen, RefreshCw, Loader2, ChevronRight, ChevronDown, CheckCheck, MessageSquare } from "lucide-react";
 import type { ClassPrepNode, ChecklistItem } from "@/lib/tana";
 import { useChatTrigger } from "@/lib/chat-store";
-import { formatDisplayDate, getDateUrgency } from "@/lib/date-format";
+import { formatWhen, getDateUrgency } from "@/lib/date-format";
 
 function coursePill(course: string): { label: string; color: string } {
   if (/203|204|drawing/i.test(course)) return { label: "VA 204", color: "#7c3aed" };
@@ -267,7 +267,7 @@ export function ClassesTabContent() {
       items.map(i => `${i.checked ? '✓' : '○'} ${i.text}`).join('\n');
 
     const checkedCount = allItems.filter(i => i.checked).length;
-    const dateStr = cls.date ? formatDisplayDate(cls.date) : '';
+    const dateStr = cls.date ? formatWhen(cls.date, false) : '';
     const daysCalc = cls.date ? Math.round((new Date(cls.date + "T00:00:00").getTime() - new Date(new Date().toDateString()).getTime()) / 86400000) : null;
     const daysStr = daysCalc === 0 ? 'today' : daysCalc === 1 ? 'tomorrow' : daysCalc !== null ? `in ${daysCalc} days` : '';
 
@@ -353,15 +353,29 @@ export function ClassesTabContent() {
               <div
                 onClick={() => toggleExpand(cls.id)}
                 style={{
-                  display: "flex", alignItems: "center", gap: 8,
+                  display: "flex", alignItems: "center", gap: 0,
                   padding: "8px 16px", cursor: "pointer",
                   background: isToday ? "rgba(37,99,235,0.04)" : "transparent",
                 }}
               >
+                {/* Left temporal column */}
+                <div style={{ width: 48, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 4, paddingRight: 6 }}>
+                  {cls.date && dateUrgency && (
+                    <>
+                      {dateUrgency.dot && (
+                        <span style={{ width: 4, height: 4, borderRadius: "50%", background: dateUrgency.color, flexShrink: 0 }} />
+                      )}
+                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 600, color: dateUrgency.color, whiteSpace: "nowrap" }}>
+                        {formatWhen(cls.date, false)}
+                      </span>
+                    </>
+                  )}
+                </div>
+
                 <ChevronRight
                   size={10} strokeWidth={2}
                   style={{
-                    color: "var(--text-3)", flexShrink: 0,
+                    color: "var(--text-3)", flexShrink: 0, marginRight: 8,
                     transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)",
                     transition: "transform 0.15s ease",
                   }}
@@ -372,7 +386,7 @@ export function ClassesTabContent() {
                   fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 600,
                   color: pill.color, background: pill.color + "18",
                   padding: "1px 5px", borderRadius: 3, flexShrink: 0,
-                  letterSpacing: "0.03em",
+                  letterSpacing: "0.03em", marginRight: 8,
                 }}>
                   {pill.label}
                 </span>
@@ -381,7 +395,7 @@ export function ClassesTabContent() {
                 {cls.number !== null && (
                   <span style={{
                     fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 600,
-                    color: "var(--text-3)", flexShrink: 0,
+                    color: "var(--text-3)", flexShrink: 0, marginRight: 8,
                   }}>
                     L{cls.number}
                   </span>
@@ -395,27 +409,6 @@ export function ClassesTabContent() {
                 }}>
                   {cls.name}
                 </span>
-
-                {/* Class date */}
-                {cls.date && dateUrgency && (
-                  <span style={{
-                    display: "flex", alignItems: "center", gap: 4, flexShrink: 0,
-                  }}>
-                    {dateUrgency.dot && (
-                      <span style={{
-                        width: 5, height: 5, borderRadius: "50%", flexShrink: 0,
-                        background: dateUrgency.color,
-                      }} />
-                    )}
-                    <span style={{
-                      fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 600,
-                      color: dateUrgency.color,
-                      letterSpacing: "0.03em",
-                    }}>
-                      {formatDisplayDate(cls.date)}
-                    </span>
-                  </span>
-                )}
               </div>
 
               {/* Progress bar (always visible) */}

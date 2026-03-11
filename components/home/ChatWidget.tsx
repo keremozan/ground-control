@@ -996,7 +996,7 @@ function ChatPanel({
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{
                       fontFamily: "var(--font-body)",
-                      fontSize: 12,
+                      fontSize: 13,
                       lineHeight: 1.55,
                       color: "var(--text)",
                       borderLeft: "2px solid var(--text-3)",
@@ -1699,7 +1699,7 @@ export default function ChatWidget() {
       {/* Tab bar */}
       <div style={{
         display: "flex", alignItems: "center", gap: 2,
-        padding: "0 10px", height: 28, minHeight: 28,
+        padding: "0 10px", height: 34, minHeight: 34,
         borderBottom: "1px solid var(--border)",
         flexShrink: 0,
       }}>
@@ -1715,16 +1715,16 @@ export default function ChatWidget() {
               onClick={() => setActiveTabId(tab.id)}
               style={{
                 display: "flex", alignItems: "center", gap: 4,
-                padding: "3px 6px", border: "none", borderRadius: 4,
+                padding: "4px 10px", border: "none", borderRadius: 4,
                 cursor: "pointer", flexShrink: 0,
                 background: isActive ? char.color + "15" : "transparent",
-                fontFamily: "var(--font-mono)", fontSize: 9,
+                fontFamily: "var(--font-mono)", fontSize: 11,
                 fontWeight: isActive ? 600 : 400,
                 color: isActive ? char.color : "var(--text-3)",
                 transition: "background 0.1s",
               }}
             >
-              <TIcon size={10} strokeWidth={1.5} style={{ color: isActive ? char.color : "var(--text-3)" }} />
+              <TIcon size={12} strokeWidth={1.5} style={{ color: isActive ? char.color : "var(--text-3)" }} />
               {renamingTabId === tab.id ? (
                 <input
                   autoFocus
@@ -1737,7 +1737,7 @@ export default function ChatWidget() {
                   onBlur={commitRename}
                   onClick={e => e.stopPropagation()}
                   style={{
-                    fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 600,
+                    fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 600,
                     color: char.color, background: "transparent", border: "none",
                     outline: "none", width: Math.max(40, renameValue.length * 6),
                     padding: 0, margin: 0,

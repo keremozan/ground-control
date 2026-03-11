@@ -4,7 +4,7 @@ import { Reply, ListChecks, Calendar, Archive, Trash2, CornerUpRight, User, Grad
 import { useChatTrigger } from "@/lib/chat-store";
 import { logAction } from "@/lib/action-log";
 import { charColor } from "@/lib/char-icons";
-import { formatDisplayDate, formatTime as fmtTime, getDateUrgency } from "@/lib/date-format";
+import { formatWhen, getDateUrgency } from "@/lib/date-format";
 
 type Email = {
   id: string;
@@ -97,16 +97,6 @@ const itemActions = [
   { icon: Trash2,        label: "Delete",    colorClass: "item-action-btn-red"   },
 ];
 
-function formatEmailDate(dateStr: string): { text: string; urgency: { color: string; dot: boolean } } {
-  try {
-    const urgency = getDateUrgency(dateStr, "past");
-    if (urgency.dot) {
-      // Today: show time instead of date
-      return { text: fmtTime(dateStr), urgency };
-    }
-    return { text: formatDisplayDate(dateStr), urgency };
-  } catch { return { text: "", urgency: { color: "var(--text-3)", dot: false } }; }
-}
 
 export default function InboxWidget() {
   const [emails, setEmails] = useState<Email[]>([]);
@@ -123,6 +113,7 @@ export default function InboxWidget() {
   const [summaryText, setSummaryText] = useState("");
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [labelStyle, setLabelStyle] = useState<(lbl: string) => { color: string; bg: string }>(() => buildLabelStyle({}));
+  const [emailColor, setEmailColor] = useState<(from: string, subject: string) => string>(() => () => "");
   const replyRef = useRef<HTMLTextAreaElement>(null);
   const taskRef = useRef<HTMLInputElement>(null);
   const { setTrigger } = useChatTrigger();
@@ -150,6 +141,7 @@ export default function InboxWidget() {
     fetch("/api/system/config").then(r => r.json())
       .then(d => {
         if (d.emailLabelColors) setLabelStyle(() => buildLabelStyle(d.emailLabelColors));
+        if (d.emailColorPatterns) setEmailColor(() => buildEmailColor(d.emailColorPatterns));
       })
       .catch(() => {});
   }, []);
@@ -358,7 +350,7 @@ export default function InboxWidget() {
         {emails.map((email, i) => {
           const accts = email.accounts || [email.account];
           const isBusy = busy.has(email.id);
-          const borderColor = ACCOUNT_BORDER[email.account] || "#94a3b8";
+          const borderColor = emailColor(email.from, email.subject) || ACCOUNT_BORDER[email.account] || "#94a3b8";
           return (
             <div
               className="item-row"
@@ -369,66 +361,70 @@ export default function InboxWidget() {
                 opacity: isBusy ? 0.6 : 1,
               }}
             >
-              <div style={{ padding: "9px 16px 6px", cursor: "pointer" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
-                  <span style={{
-                    fontFamily: "var(--font-body)", fontSize: 12, fontWeight: 500,
-                    color: "var(--text)", flex: 1, overflow: "hidden",
-                    textOverflow: "ellipsis", whiteSpace: "nowrap",
-                  }}>
-                    {email.from}
-                  </span>
-                  {(email.threadCount ?? 1) > 1 && (
-                    <span style={{
-                      fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 600,
-                      color: "var(--text-3)", background: "var(--bg-2)",
-                      padding: "0 4px", borderRadius: 3, lineHeight: "16px",
-                    }}>
-                      {email.threadCount}
-                    </span>
-                  )}
-                  {accts.map((acc) => {
-                    const s = accountStyle[acc];
-                    if (!s) return null;
-                    const AccIcon = s.icon;
-                    return <AccIcon key={acc} size={11} strokeWidth={1.5} style={{ color: s.color, flexShrink: 0 }} />;
-                  })}
-                  {(() => {
-                    const { text, urgency } = formatEmailDate(email.date);
-                    return (
-                      <span style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
-                        {urgency.dot && <span style={{ width: 4, height: 4, borderRadius: "50%", background: urgency.color, flexShrink: 0 }} />}
-                        <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: urgency.color }}>{text}</span>
+              <div style={{ display: "flex", padding: "9px 10px 6px", gap: 6, cursor: "pointer" }}>
+                {(() => {
+                  const urgency = getDateUrgency(email.date, "past");
+                  return (
+                    <div style={{ width: 66, flexShrink: 0, display: "flex", alignItems: "baseline", justifyContent: "flex-end", gap: 4 }}>
+                      {urgency.dot && <span style={{ width: 4, height: 4, borderRadius: "50%", background: urgency.color, flexShrink: 0, position: "relative", top: -1 }} />}
+                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: urgency.color, whiteSpace: "nowrap" }}>
+                        {formatWhen(email.date, true)}
                       </span>
-                    );
-                  })()}
-                </div>
-
-                <div style={{
-                  fontFamily: "var(--font-body)", fontSize: 11, color: "var(--text-2)",
-                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                  marginBottom: email.labels.length > 0 ? 5 : 0,
-                }}>
-                  {email.subject}
-                </div>
-
-                {email.labels.length > 0 && (
-                  <div style={{ display: "flex", gap: 4 }}>
-                    {email.labels.map((lbl) => {
-                      const lc = labelStyle(lbl);
-                      return (
-                        <span key={lbl} style={{
-                          fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 500,
-                          color: lc.color, background: lc.bg,
-                          padding: "1px 5px", borderRadius: 2,
-                          textTransform: "uppercase", letterSpacing: "0.04em",
-                        }}>
-                          {lbl}
-                        </span>
-                      );
+                    </div>
+                  );
+                })()}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                    <span style={{
+                      fontFamily: "var(--font-body)", fontSize: 12, fontWeight: 500,
+                      color: "var(--text)", flex: 1, overflow: "hidden",
+                      textOverflow: "ellipsis", whiteSpace: "nowrap",
+                    }}>
+                      {email.from}
+                    </span>
+                    {(email.threadCount ?? 1) > 1 && (
+                      <span style={{
+                        fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 600,
+                        color: "var(--text-3)", background: "var(--bg-2)",
+                        padding: "0 4px", borderRadius: 3, lineHeight: "16px",
+                      }}>
+                        {email.threadCount}
+                      </span>
+                    )}
+                    {accts.map((acc) => {
+                      const s = accountStyle[acc];
+                      if (!s) return null;
+                      const AccIcon = s.icon;
+                      return <AccIcon key={acc} size={11} strokeWidth={1.5} style={{ color: s.color, flexShrink: 0 }} />;
                     })}
                   </div>
-                )}
+
+                  <div style={{
+                    fontFamily: "var(--font-body)", fontSize: 11, color: "var(--text-2)",
+                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                    marginBottom: email.labels.length > 0 ? 5 : 0,
+                  }}>
+                    {email.subject}
+                  </div>
+
+                  {email.labels.length > 0 && (
+                    <div style={{ display: "flex", gap: 4 }}>
+                      {email.labels.map((lbl) => {
+                        const lc = labelStyle(lbl);
+                        return (
+                          <span key={lbl} style={{
+                            fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 500,
+                            color: lc.color, background: lc.bg,
+                            padding: "1px 5px", borderRadius: 2,
+                            textTransform: "uppercase", letterSpacing: "0.04em",
+                          }}>
+                            {lbl}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
 
               {summaryEmail?.id === email.id && (
@@ -593,7 +589,7 @@ export default function InboxWidget() {
                 </div>
               )}
 
-              <div className="item-actions" style={{ padding: "0 16px 6px" }}>
+              <div className="item-actions" style={{ padding: "0 10px 6px" }}>
                 {itemActions.map(({ icon: ActionIcon, label, colorClass }) => (
                   <button
                     key={label}

@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { ListChecks, Trash2, MapPin, RefreshCw, Loader2, ExternalLink, Plus, X, CalendarDays } from "lucide-react";
-import { formatDisplayDateWithDay, formatTime as fmtTime } from "@/lib/date-format";
+import { formatDisplayDateWithDay, formatTime as fmtTime, formatCalendarWhen } from "@/lib/date-format";
 
 
 type CalEvent = {
@@ -262,44 +262,50 @@ export default function CalendarWidget() {
               borderTop: isFirst ? undefined : "1px solid var(--border)",
               borderLeft: `3px solid ${eventColor(event.summary)}`,
               background: isNowSection ? "var(--blue-bg, rgba(59,130,246,0.06))" : undefined,
+              display: "flex", alignItems: "flex-start", gap: 6,
             }}>
-              <div style={{ padding: "9px 16px 6px", cursor: "pointer" }}>
-                <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: isNowSection ? "var(--blue)" : "var(--text-3)", display: "block", marginBottom: 2 }}>
-                  {formatTime(event.start, event.allDay)}
-                  {!event.allDay && ` – ${formatTime(event.end, false)}`}
-                </span>
-                <div style={{
-                  fontFamily: "var(--font-body)", fontSize: 12, fontWeight: 500, color: "var(--text)",
-                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 2,
-                }}>
-                  {event.summary}
-                </div>
-                {event.location && (
-                  <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
-                    <MapPin size={9} strokeWidth={1.5} style={{ color: "var(--text-3)", flexShrink: 0 }} />
-                    <span style={{ fontFamily: "var(--font-body)", fontSize: 10, color: "var(--text-3)" }}>
-                      {event.location}
-                    </span>
+              <span style={{
+                fontFamily: "var(--font-mono)", fontSize: 10,
+                color: isNowSection ? "var(--blue)" : "var(--text-3)",
+                width: 66, flexShrink: 0, paddingTop: 9, paddingLeft: 10,
+              }}>
+                {formatCalendarWhen(event.start, event.allDay)}
+              </span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ padding: "9px 16px 6px 0", cursor: "pointer" }}>
+                  <div style={{
+                    fontFamily: "var(--font-body)", fontSize: 12, fontWeight: 500, color: "var(--text)",
+                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 2,
+                  }}>
+                    {event.summary}
                   </div>
-                )}
-              </div>
-              <div className="item-actions" style={{ padding: "0 16px 6px" }}>
-                {itemActions.map(({ icon: ActionIcon, label, colorClass }) => (
-                  <button
-                    key={label}
-                    className={`item-action-btn ${colorClass}`}
-                    data-tip={label}
-                    onClick={() => {
-                      if (label === "Open" && event.htmlLink) {
-                        window.open(event.htmlLink, "_blank");
-                      } else if (label !== "Open") {
-                        runCalAction(label.toLowerCase(), event);
-                      }
-                    }}
-                  >
-                    <ActionIcon size={12} strokeWidth={1.5} />
-                  </button>
-                ))}
+                  {event.location && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                      <MapPin size={9} strokeWidth={1.5} style={{ color: "var(--text-3)", flexShrink: 0 }} />
+                      <span style={{ fontFamily: "var(--font-body)", fontSize: 10, color: "var(--text-3)" }}>
+                        {event.location}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <div className="item-actions" style={{ padding: "0 16px 6px 0" }}>
+                  {itemActions.map(({ icon: ActionIcon, label, colorClass }) => (
+                    <button
+                      key={label}
+                      className={`item-action-btn ${colorClass}`}
+                      data-tip={label}
+                      onClick={() => {
+                        if (label === "Open" && event.htmlLink) {
+                          window.open(event.htmlLink, "_blank");
+                        } else if (label !== "Open") {
+                          runCalAction(label.toLowerCase(), event);
+                        }
+                      }}
+                    >
+                      <ActionIcon size={12} strokeWidth={1.5} />
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           );
@@ -312,22 +318,19 @@ export default function CalendarWidget() {
                   {sectionLabel("Earlier")}
                   {past.map((event, i) => (
                     <div key={event.id} style={{
-                      display: "flex", alignItems: "center", gap: 10, padding: "5px 16px",
+                      display: "flex", alignItems: "center", gap: 6, padding: "5px 10px",
                       borderTop: i > 0 ? "1px solid var(--border)" : undefined,
                       borderLeft: `3px solid ${eventColor(event.summary)}`,
                       opacity: 0.45,
                     }}>
-                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-3)", width: 54, flexShrink: 0 }}>
-                        {formatTime(event.start, event.allDay)}
+                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-3)", width: 66, flexShrink: 0 }}>
+                        {formatCalendarWhen(event.start, event.allDay)}
                       </span>
                       <span style={{
                         fontFamily: "var(--font-body)", fontSize: 11, fontWeight: 500, color: "var(--text)",
                         flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                       }}>
                         {event.summary}
-                      </span>
-                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-3)", flexShrink: 0 }}>
-                        {formatTime(event.end, false)}
                       </span>
                     </div>
                   ))}
@@ -356,21 +359,18 @@ export default function CalendarWidget() {
                   {sectionLabel("Upcoming")}
                   {weekEvents.map((event, i) => (
                     <div key={event.id} style={{
-                      display: "flex", alignItems: "center", gap: 10, padding: "5px 16px",
+                      display: "flex", alignItems: "center", gap: 6, padding: "5px 10px",
                       borderTop: i > 0 ? "1px solid var(--border)" : undefined,
                       borderLeft: `3px solid ${eventColor(event.summary)}`,
                     }}>
-                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-3)", width: 54, flexShrink: 0 }}>
-                        {formatDate(event.start)}
+                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-3)", width: 66, flexShrink: 0 }}>
+                        {formatCalendarWhen(event.start, event.allDay)}
                       </span>
                       <span style={{
                         fontFamily: "var(--font-body)", fontSize: 11, fontWeight: 500, color: "var(--text)",
                         flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                       }}>
                         {event.summary}
-                      </span>
-                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-3)", flexShrink: 0 }}>
-                        {formatTime(event.start, event.allDay)}
                       </span>
                     </div>
                   ))}

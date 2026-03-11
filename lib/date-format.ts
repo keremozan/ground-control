@@ -19,6 +19,42 @@ export function formatTime(iso: string): string {
   return d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 }
 
+function isToday(iso: string): boolean {
+  const now = new Date();
+  const d = new Date(iso.length === 10 ? iso + "T00:00:00" : iso);
+  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+}
+
+/**
+ * Unified temporal label for the left "when" column.
+ * Today + time: "21:56"
+ * Today + no time: "Today"
+ * Other + time: "Mar 15 07:15"
+ * Other + no time: "Mar 10"
+ */
+export function formatWhen(iso: string, hasTime = true): string {
+  if (isToday(iso)) {
+    return hasTime ? formatTime(iso) : "Today";
+  }
+  const base = formatDisplayDate(iso);
+  if (hasTime && iso.length > 10) {
+    return `${base} ${formatTime(iso)}`;
+  }
+  return base;
+}
+
+/**
+ * Calendar-specific: always shows "Today HH:MM" for today, "Mar 15 07:15" otherwise.
+ * For all-day events: "Today" or "Mar 15".
+ */
+export function formatCalendarWhen(iso: string, allDay: boolean): string {
+  if (isToday(iso)) {
+    return allDay ? "Today" : `Today ${formatTime(iso)}`;
+  }
+  const base = formatDisplayDate(iso);
+  return allDay ? base : `${base} ${formatTime(iso)}`;
+}
+
 export type DateUrgency = {
   color: string;
   dot: boolean;

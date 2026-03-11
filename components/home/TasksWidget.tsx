@@ -5,7 +5,7 @@ import { ClassesTabContent } from "./ClassesWidget";
 import { charIcon, charColor } from "@/lib/char-icons";
 import { useChatTrigger } from "@/lib/chat-store";
 import { logAction } from "@/lib/action-log";
-import { formatDisplayDate, getDateUrgency } from "@/lib/date-format";
+import { formatWhen, getDateUrgency } from "@/lib/date-format";
 
 type CharInfo = { id: string; name: string; model: string; tier: string };
 const MODELS = ["haiku", "sonnet", "opus"];
@@ -133,17 +133,21 @@ export default function TasksWidget() {
       .then(r => r.json())
       .then(d => {
         const raw = (d.tasks || {}) as Record<string, Task[]>;
-        // Filter out recently removed tasks
-        if (removedIdsRef.current.size > 0) {
-          const filtered: Record<string, Task[]> = {};
-          for (const [track, tasks] of Object.entries(raw)) {
-            const kept = tasks.filter(t => !removedIdsRef.current.has(t.id));
-            if (kept.length > 0) filtered[track] = kept;
-          }
-          setGrouped(filtered);
-        } else {
-          setGrouped(raw);
+        // Filter out recently removed tasks + tasks with dueDate > 30 days from now
+        const cutoff = new Date();
+        cutoff.setDate(cutoff.getDate() + 30);
+        const cutoffStr = cutoff.toISOString().slice(0, 10);
+        const result: Record<string, Task[]> = {};
+        for (const [track, tasks] of Object.entries(raw)) {
+          const kept = tasks.filter(t => {
+            if (removedIdsRef.current.has(t.id)) return false;
+            // Exclude tasks with due date beyond 30 days (keep no-date and overdue)
+            if (t.dueDate && t.dueDate > cutoffStr) return false;
+            return true;
+          });
+          if (kept.length > 0) result[track] = kept;
         }
+        setGrouped(result);
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -714,13 +718,28 @@ export default function TasksWidget() {
                           opacity: isBusy ? 0.6 : 1,
                         }}
                       >
-                        <div style={{ display: "flex", alignItems: "center", padding: "4px 16px 4px 0", gap: 8, cursor: "pointer" }}>
+                        <div style={{ display: "flex", alignItems: "center", padding: "4px 16px 4px 0", gap: 0, cursor: "pointer" }}>
+                          {/* Left temporal column */}
+                          <div style={{ width: 48, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 4, paddingRight: 6 }}>
+                            {task.dueDate && (() => {
+                              const urgency = dueBadge(task.dueDate);
+                              return (
+                                <>
+                                  {urgency?.dot && <span style={{ width: 4, height: 4, borderRadius: "50%", background: urgency.color, flexShrink: 0 }} />}
+                                  <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: urgency?.color || "var(--text-3)", whiteSpace: "nowrap" }}>
+                                    {formatWhen(task.dueDate, false)}
+                                  </span>
+                                </>
+                              );
+                            })()}
+                          </div>
+                          {/* Character icon */}
                           {(() => {
                             const key = task.assigned ? task.assigned.charAt(0).toUpperCase() + task.assigned.slice(1) : "";
                             const Icon = key ? charIcon[key] : null;
                             const color = task.assigned ? charColor[task.assigned] || "var(--text-3)" : "var(--text-3)";
                             return Icon ? (
-                              <span data-tip={key} style={{ display: "flex", flexShrink: 0 }}>
+                              <span data-tip={key} style={{ display: "flex", flexShrink: 0, marginRight: 6 }}>
                                 <Icon size={10} strokeWidth={1.5} style={{ color }} />
                               </span>
                             ) : null;
@@ -734,21 +753,6 @@ export default function TasksWidget() {
                           {isBusy && (
                             <Loader2 size={10} strokeWidth={1.5} style={{ color: "var(--text-3)", animation: "spin 1s linear infinite", flexShrink: 0 }} />
                           )}
-                          {/* Due date */}
-                          {task.dueDate && (() => {
-                            const urgency = dueBadge(task.dueDate);
-                            return (
-                              <span style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
-                                {urgency?.dot && <span style={{ width: 4, height: 4, borderRadius: "50%", background: urgency.color, flexShrink: 0 }} />}
-                                <span style={{
-                                  fontFamily: "var(--font-mono)", fontSize: 9,
-                                  color: urgency?.color || "var(--text-3)",
-                                }}>
-                                  {formatDisplayDate(task.dueDate)}
-                                </span>
-                              </span>
-                            );
-                          })()}
                           {/* Reschedule button — overdue only */}
                           {task.dueDate && dueBadge(task.dueDate)?.color === '#dc2626' && (
                             <button
@@ -761,8 +765,8 @@ export default function TasksWidget() {
                               <CalendarClock size={10} strokeWidth={1.5} />
                             </button>
                           )}
-                          {/* Priority dropdown */}
-                          <div ref={openDropdown === task.id ? dropdownRef : undefined} style={{ position: "relative", flexShrink: 0 }}>
+                          {/* Priority dropdown — visible on row hover */}
+                          <div ref={openDropdown === task.id ? dropdownRef : undefined} className="task-priority-btn" style={{ position: "relative", flexShrink: 0 }}>
                             <button
                               data-tip="Change priority"
                               disabled={isBusy}
