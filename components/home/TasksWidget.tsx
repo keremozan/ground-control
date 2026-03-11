@@ -5,6 +5,7 @@ import { ClassesTabContent } from "./ClassesWidget";
 import { charIcon, charColor } from "@/lib/char-icons";
 import { useChatTrigger } from "@/lib/chat-store";
 import { logAction } from "@/lib/action-log";
+import { formatDisplayDate, getDateUrgency } from "@/lib/date-format";
 
 type CharInfo = { id: string; name: string; model: string; tier: string };
 const MODELS = ["haiku", "sonnet", "opus"];
@@ -22,21 +23,9 @@ type Task = {
   phaseName?: string;
 };
 
-function dueBadge(dueDate: string | null): { label: string; color: string; bg: string } | null {
+function dueBadge(dueDate: string | null): { color: string; dot: boolean } | null {
   if (!dueDate) return null;
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  const due = new Date(dueDate + 'T00:00:00');
-  const diff = Math.floor((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-  if (diff < 0) return { label: 'OVERDUE', color: '#dc2626', bg: '#dc262618' };
-  if (diff === 0) return { label: 'TODAY', color: '#d97706', bg: '#d9770618' };
-  if (diff <= 7) return { label: `${diff}d`, color: '#2563eb', bg: '#2563eb12' };
-  return null;
-}
-
-function formatDueDate(dueDate: string): string {
-  const d = new Date(dueDate + 'T00:00:00');
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return getDateUrgency(dueDate, "future", 7);
 }
 
 type PriorityFilter = "today" | "week" | "high" | "medium" | "low";
@@ -375,8 +364,8 @@ export default function TasksWidget() {
     for (const [track, tasks] of Object.entries(grouped)) {
       const match = tasks.filter(t => {
         if (!t.dueDate) return false;
-        const badge = dueBadge(t.dueDate);
-        return badge?.label === "TODAY" || badge?.label === "OVERDUE";
+        const u = dueBadge(t.dueDate);
+        return u?.dot === true && (u.color === "#2563eb" || u.color === "#dc2626");
       });
       if (match.length > 0) filtered[track] = match;
     }
@@ -410,9 +399,9 @@ export default function TasksWidget() {
     const p = taskPriorities[t.id] ?? t.priority;
     if (p in priorityCounts) priorityCounts[p]++;
     if (t.dueDate) {
-      const badge = dueBadge(t.dueDate);
-      if (badge?.label === "TODAY" || badge?.label === "OVERDUE") todayCount++;
-      if (badge !== null) weekCount++;
+      const u = dueBadge(t.dueDate);
+      if (u?.dot && (u.color === "#2563eb" || u.color === "#dc2626")) todayCount++;
+      if (u?.dot) weekCount++;
     }
   }
 
@@ -747,30 +736,21 @@ export default function TasksWidget() {
                           )}
                           {/* Due date */}
                           {task.dueDate && (() => {
-                            const badge = dueBadge(task.dueDate);
+                            const urgency = dueBadge(task.dueDate);
                             return (
-                              <span style={{ display: "flex", alignItems: "center", gap: 3, flexShrink: 0 }}>
-                                {badge && (
-                                  <span style={{
-                                    fontFamily: "var(--font-mono)", fontSize: 7.5, fontWeight: 700,
-                                    color: badge.color, background: badge.bg,
-                                    padding: "1px 4px", borderRadius: 3, letterSpacing: "0.03em",
-                                  }}>
-                                    {badge.label}
-                                  </span>
-                                )}
+                              <span style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+                                {urgency?.dot && <span style={{ width: 4, height: 4, borderRadius: "50%", background: urgency.color, flexShrink: 0 }} />}
                                 <span style={{
                                   fontFamily: "var(--font-mono)", fontSize: 9,
-                                  color: badge?.label === 'OVERDUE' ? '#dc2626' : "var(--text-3)",
-                                  fontWeight: badge?.label === 'OVERDUE' ? 600 : 400,
+                                  color: urgency?.color || "var(--text-3)",
                                 }}>
-                                  {formatDueDate(task.dueDate)}
+                                  {formatDisplayDate(task.dueDate)}
                                 </span>
                               </span>
                             );
                           })()}
                           {/* Reschedule button — overdue only */}
-                          {task.dueDate && dueBadge(task.dueDate)?.label === 'OVERDUE' && (
+                          {task.dueDate && dueBadge(task.dueDate)?.color === '#dc2626' && (
                             <button
                               className="item-action-btn item-action-btn-amber"
                               data-tip="Reschedule"

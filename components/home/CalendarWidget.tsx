@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { ListChecks, Trash2, MapPin, RefreshCw, Loader2, ExternalLink, Plus, X, CalendarDays } from "lucide-react";
+import { formatDisplayDateWithDay, formatTime as fmtTime } from "@/lib/date-format";
 
 
 type CalEvent = {
@@ -31,18 +32,11 @@ const defaultEventColor = (_title: string) => "#94a3b8";
 
 function formatTime(iso: string, allDay: boolean): string {
   if (allDay) return "all day";
-  try {
-    const d = new Date(iso);
-    return d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
-  } catch { return ""; }
+  try { return fmtTime(iso); } catch { return ""; }
 }
 
 function formatDate(iso: string): string {
-  try {
-    const d = new Date(iso);
-    const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-    return `${days[d.getDay()]} ${d.getDate()}`;
-  } catch { return ""; }
+  try { return formatDisplayDateWithDay(iso); } catch { return ""; }
 }
 
 function isPast(event: CalEvent): boolean {

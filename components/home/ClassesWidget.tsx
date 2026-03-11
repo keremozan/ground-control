@@ -3,20 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { BookOpen, RefreshCw, Loader2, ChevronRight, ChevronDown, CheckCheck, MessageSquare } from "lucide-react";
 import type { ClassPrepNode, ChecklistItem } from "@/lib/tana";
 import { useChatTrigger } from "@/lib/chat-store";
-
-function formatDate(iso: string): string {
-  const d = new Date(iso + "T00:00:00");
-  const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  return `${days[d.getDay()]} ${months[d.getMonth()]} ${d.getDate()}`;
-}
-
-function daysUntil(iso: string): number {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const target = new Date(iso + "T00:00:00");
-  return Math.round((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-}
+import { formatDisplayDate, getDateUrgency } from "@/lib/date-format";
 
 function coursePill(course: string): { label: string; color: string } {
   if (/203|204|drawing/i.test(course)) return { label: "VA 204", color: "#7c3aed" };
@@ -280,9 +267,9 @@ export function ClassesTabContent() {
       items.map(i => `${i.checked ? '✓' : '○'} ${i.text}`).join('\n');
 
     const checkedCount = allItems.filter(i => i.checked).length;
-    const dateStr = cls.date ? formatDate(cls.date) : '';
-    const days = cls.date ? daysUntil(cls.date) : null;
-    const daysStr = days === 0 ? 'today' : days === 1 ? 'tomorrow' : days !== null ? `in ${days} days` : '';
+    const dateStr = cls.date ? formatDisplayDate(cls.date) : '';
+    const daysCalc = cls.date ? Math.round((new Date(cls.date + "T00:00:00").getTime() - new Date(new Date().toDateString()).getTime()) / 86400000) : null;
+    const daysStr = daysCalc === 0 ? 'today' : daysCalc === 1 ? 'tomorrow' : daysCalc !== null ? `in ${daysCalc} days` : '';
 
     const msg = [
       `${cls.name}${dateStr ? ` — ${dateStr}${daysStr ? ` (${daysStr})` : ''}` : ''}`,
@@ -338,9 +325,9 @@ export function ClassesTabContent() {
         {classes.map((cls, i) => {
           const isExpanded = expanded.has(cls.id);
           const pill = coursePill(cls.course);
-          const days = cls.date ? daysUntil(cls.date) : null;
-          const isToday = days === 0;
-          const isSoon = days !== null && days <= 2 && days > 0;
+          const dateUrgency = cls.date ? getDateUrgency(cls.date, "future") : null;
+          const isToday = dateUrgency?.color === "#2563eb" && dateUrgency?.dot;
+          const isSoon = dateUrgency?.color === "#d97706" && dateUrgency?.dot;
 
           const prepItems = cls.checklist.map(item => ({
             ...item,
@@ -410,22 +397,22 @@ export function ClassesTabContent() {
                 </span>
 
                 {/* Class date */}
-                {cls.date && (
+                {cls.date && dateUrgency && (
                   <span style={{
                     display: "flex", alignItems: "center", gap: 4, flexShrink: 0,
                   }}>
-                    {(isToday || isSoon) && (
+                    {dateUrgency.dot && (
                       <span style={{
                         width: 5, height: 5, borderRadius: "50%", flexShrink: 0,
-                        background: isToday ? "#2563eb" : "#d97706",
+                        background: dateUrgency.color,
                       }} />
                     )}
                     <span style={{
                       fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 600,
-                      color: isToday ? "#2563eb" : isSoon ? "#d97706" : "var(--text-3)",
+                      color: dateUrgency.color,
                       letterSpacing: "0.03em",
                     }}>
-                      {formatDate(cls.date)}
+                      {formatDisplayDate(cls.date)}
                     </span>
                   </span>
                 )}

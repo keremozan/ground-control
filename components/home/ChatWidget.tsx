@@ -583,6 +583,7 @@ function ChatPanel({
   const bodyRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const triggerFiredRef = useRef<ChatTrigger>(null);
 
   const activeChar = characters.find(c => c.id === charId) || characters[0];
   const ActiveIcon = activeChar ? (charIcon[activeChar.name] || BookOpen) : BookOpen;
@@ -677,12 +678,15 @@ function ChatPanel({
   // Handle trigger from wrapper
   useEffect(() => {
     if (!trigger || characters.length === 0) return;
+    if (trigger === triggerFiredRef.current) return; // dedup: same trigger object already fired
+    triggerFiredRef.current = trigger;
     const { seedPrompt, context, model } = trigger;
     if (model) setModelOverride(model);
     setMessages([{ role: "user", content: seedPrompt }]);
     if (context) setPendingContext(context);
     onTriggerConsumed();
     sendMessage(seedPrompt, charId, context, undefined, model);
+    // No cleanup reset: resetting would allow StrictMode's simulated remount to re-fire and double-spawn
   }, [trigger]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Abort on unmount
@@ -1416,6 +1420,7 @@ export default function ChatWidget() {
   const architectInputRef = useRef<HTMLTextAreaElement>(null);
   const [pendingTrigger, setPendingTrigger] = useState<{ tabId: string; trigger: NonNullable<ChatTrigger> } | null>(null);
   const newTabRef = useRef<HTMLDivElement>(null);
+  const triggerHandledRef = useRef<ChatTrigger>(null);
   const { trigger, setTrigger } = useChatTrigger();
 
   // ── Hydrate from localStorage ─────────────────────────────────────────
@@ -1488,6 +1493,8 @@ export default function ChatWidget() {
   // ── Handle trigger from other widgets ─────────────────────────────────
   useEffect(() => {
     if (!trigger || characters.length === 0) return;
+    if (trigger === triggerHandledRef.current) return; // dedup: guard against re-fire if characters changes while trigger is set
+    triggerHandledRef.current = trigger;
     const { charName, seedPrompt, action } = trigger;
     const char = characters.find(c => c.name === charName);
     if (!char) { setTrigger(null); return; }

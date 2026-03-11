@@ -4,6 +4,7 @@ import { Reply, ListChecks, Calendar, Archive, Trash2, CornerUpRight, User, Grad
 import { useChatTrigger } from "@/lib/chat-store";
 import { logAction } from "@/lib/action-log";
 import { charColor } from "@/lib/char-icons";
+import { formatDisplayDate, formatTime as fmtTime, getDateUrgency } from "@/lib/date-format";
 
 type Email = {
   id: string;
@@ -96,22 +97,15 @@ const itemActions = [
   { icon: Trash2,        label: "Delete",    colorClass: "item-action-btn-red"   },
 ];
 
-function formatTime(dateStr: string): string {
+function formatEmailDate(dateStr: string): { text: string; urgency: { color: string; dot: boolean } } {
   try {
-    const d = new Date(dateStr);
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const yesterday = new Date(today.getTime() - 86_400_000);
-    const emailDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-
-    if (emailDay.getTime() === today.getTime()) {
-      return d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+    const urgency = getDateUrgency(dateStr, "past");
+    if (urgency.dot) {
+      // Today: show time instead of date
+      return { text: fmtTime(dateStr), urgency };
     }
-    if (emailDay.getTime() === yesterday.getTime()) return "Yesterday";
-    const days = Math.floor((today.getTime() - emailDay.getTime()) / 86_400_000);
-    if (days < 7) return `${days}d ago`;
-    return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
-  } catch { return ""; }
+    return { text: formatDisplayDate(dateStr), urgency };
+  } catch { return { text: "", urgency: { color: "var(--text-3)", dot: false } }; }
 }
 
 export default function InboxWidget() {
@@ -399,9 +393,15 @@ export default function InboxWidget() {
                     const AccIcon = s.icon;
                     return <AccIcon key={acc} size={11} strokeWidth={1.5} style={{ color: s.color, flexShrink: 0 }} />;
                   })}
-                  <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-3)", flexShrink: 0 }}>
-                    {formatTime(email.date)}
-                  </span>
+                  {(() => {
+                    const { text, urgency } = formatEmailDate(email.date);
+                    return (
+                      <span style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+                        {urgency.dot && <span style={{ width: 4, height: 4, borderRadius: "50%", background: urgency.color, flexShrink: 0 }} />}
+                        <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: urgency.color }}>{text}</span>
+                      </span>
+                    );
+                  })()}
                 </div>
 
                 <div style={{

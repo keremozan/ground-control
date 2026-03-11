@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.1.16 — 2026-03-11
+
+### Dashboard
+- [fix] Unified date format across all panels. Shared `lib/date-format.ts` utility with "Mar 15" base format.
+- [fix] Inbox: "Yesterday" / "6d ago" replaced with "Mar 10". Today's emails keep time with blue dot.
+- [fix] Calendar: "Thu 12" becomes "Thu Mar 12" (month added for clarity at month boundaries).
+- [fix] Tasks: pill badges ("TODAY", "4d", "OVERDUE") replaced with colored dot + colored text system.
+- [fix] Classes: "Thu Mar 12" becomes "Mar 12" (weekday dropped). Dot system uses shared urgency utility.
+- [fix] Crew trigger now fires reliably in StrictMode (dedup ref reset on cleanup).
+
 ## v1.1.15 — 2026-03-11
 
 ### Chat
