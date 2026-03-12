@@ -53,11 +53,21 @@ All three widget color configs use the same format: `{ "#hexcolor": "regex patte
 
 Patterns are served via `/api/system/config` and fetched by widgets on mount.
 
+## Versioning
+
+Semver with these thresholds:
+- **Patch (1.1.x)**: fixes, refactors, config/skill/memory updates, system maintenance, UI tweaks
+- **Minor (1.x.0)**: new widget, new character, new pipeline stage, new autonomous capability, any user-visible new feature
+- **Major (x.0.0)**: architecture overhaul, breaking config changes
+
+Changelog entries accumulate under the current patch. When a session produces a minor-worthy change, bump to next minor (e.g. 1.1.21 to 1.2.0). Run `zsh scripts/release.sh minor` or `zsh scripts/release.sh patch` to tag, sync package.json, and prepare next version header.
+
+Do NOT manually edit the version in package.json. The release script handles it.
+
 ## Git workflow
 
 - GitHub: https://github.com/keremozan/ground-control
 - `ground-control.config.ts`, `mcp-tasks.json`, `docs/plans/`, `data/` are git-ignored
 - Use conventional commits: `feat:`, `fix:`, `refactor:`
-- Tag releases: `git tag v1.0.2`
-- Generate changelog: `npm run changelog` (reads git tags + commits)
+- Release: `zsh scripts/release.sh [patch|minor]` (tags, syncs package.json, prepares next version)
 - Commit the generated CHANGELOG.md and push
