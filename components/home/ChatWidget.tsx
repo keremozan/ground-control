@@ -670,9 +670,14 @@ function ChatPanel({
     fetch("/api/system/skills").then(r => r.json()).then(d => setSkillList(d.skills || [])).catch(() => {});
   }, []);
 
-  // Auto-scroll
+  // Auto-scroll — only if user is near the bottom (prevents jumping while reading up)
   useEffect(() => {
-    if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
+    const el = bodyRef.current;
+    if (!el) return;
+    const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    if (distFromBottom < 120) {
+      el.scrollTop = el.scrollHeight;
+    }
   }, [messages, isLoading, streamingText, toolLog]);
 
   // Handle trigger from wrapper
@@ -706,7 +711,16 @@ function ChatPanel({
     if (pendingContext && !context) setPendingContext(null);
 
     const historyToSend = history && history.length > 0
-      ? history.map(m => ({ role: m.role, content: m.content }))
+      ? history.map(m => ({
+          role: m.role,
+          content: m.content,
+          ...(m.images && m.images.length > 0 ? {
+            images: m.images.map(dataUrl => {
+              const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+              return match ? { mediaType: match[1], data: match[2] } : null;
+            }).filter((x): x is { mediaType: string; data: string } => x !== null),
+          } : {}),
+        }))
       : undefined;
 
     const controller = new AbortController();

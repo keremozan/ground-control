@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.1.21 — 2026-03-12
+
+### Chat
+- [fix] Auto-scroll no longer drags you back to input while reading — only scrolls if within 120px of bottom
+- [fix] Images from previous messages are now included when sending history to Claude — past images visible in context
+
 ## v1.1.20 — 2026-03-12
 
 ### Dashboard

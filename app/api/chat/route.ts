@@ -253,7 +253,7 @@ export async function POST(req: Request) {
     characterId: string;
     message: string;
     context?: string;
-    history?: Array<{ role: string; content: string }>;
+    history?: Array<{ role: string; content: string; images?: Array<{ mediaType: string; data: string }> }>;
     model?: string;
     images?: Array<{ mediaType: string; data: string }>;
     skill?: string;
@@ -268,13 +268,24 @@ export async function POST(req: Request) {
   // Build task content: history + message + optional context
   let taskContent = '';
   if (history && history.length > 0) {
-    const historyText = history.map(m =>
-      `${m.role === 'user' ? 'User' : 'You'}: ${m.content}`
-    ).join('\n\n');
+    let imageIndex = 0;
+    const historyText = history.map(m => {
+      let content = m.content;
+      if (m.images && m.images.length > 0) {
+        const refs = m.images.map(() => `[Image ${++imageIndex}]`).join(', ');
+        content = content ? `${content} ${refs}` : refs;
+      }
+      return `${m.role === 'user' ? 'User' : 'You'}: ${content}`;
+    }).join('\n\n');
     taskContent = `## Conversation so far\n${historyText}\n\n## User's latest message\n${message}`;
   } else {
     taskContent = message;
   }
+
+  // Collect images from history + current message so Claude can see all of them
+  const historyImages = history ? history.flatMap(m => m.images || []) : [];
+  const allImages = [...historyImages, ...(images || [])];
+  const effectiveImages = allImages.length > 0 ? allImages : undefined;
   if (context) {
     taskContent = `${taskContent}\n\n---\n\n${context}`;
   }
@@ -295,7 +306,7 @@ export async function POST(req: Request) {
     label: `Chat: ${char.name}`,
     characterId,
     signal: req.signal,
-    ...(images && images.length > 0 ? { images } : {}),
+    ...(effectiveImages ? { images: effectiveImages } : {}),
   });
 
   const revisionBasePrompt = buildRevisionBasePrompt(characterId);
