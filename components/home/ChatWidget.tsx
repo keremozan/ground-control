@@ -694,9 +694,18 @@ function ChatPanel({
     // No cleanup reset: resetting would allow StrictMode's simulated remount to re-fire and double-spawn
   }, [trigger]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Abort on unmount
+  // Abort on real unmount (not StrictMode's simulated unmount)
+  const mountedRef = useRef(true);
   useEffect(() => {
-    return () => { if (abortRef.current) abortRef.current.abort(); };
+    mountedRef.current = true;
+    return () => {
+      // Delay abort slightly so StrictMode's simulated unmount doesn't kill in-flight triggered requests
+      const ctrl = abortRef.current;
+      mountedRef.current = false;
+      setTimeout(() => {
+        if (!mountedRef.current && ctrl) ctrl.abort();
+      }, 50);
+    };
   }, []);
 
   const sendMessage = async (msg: string, targetCharId?: string, context?: string | null, history?: Message[], modelOverride?: string, images?: Array<{mediaType: string; data: string}>, skill?: string) => {
@@ -1068,10 +1077,13 @@ function ChatPanel({
                   <div className="chat-bubble chat-bubble-assistant" style={{ borderLeftColor: msgChar.color + "40" }}>
                     <ChatMarkdown text={output} accent={msgChar.color} onQuickReply={(text) => {
                       if (!isLoading && canSend) {
-                        // Check if quick-reply mentions a different character → open new tab with context
-                        const targetSwitch = characters.find(c =>
-                          c.id !== charId && text.toLowerCase().includes(c.name.toLowerCase())
-                        );
+                        // Check if quick-reply is an explicit navigation intent → open new tab with context
+                        // Only switch if text starts with a navigation phrase like "Open in X", "Switch to X", "Ask X"
+                        const navPattern = /^(?:open in|switch to|ask|send to|forward to)\s+(\w+)/i;
+                        const navMatch = text.match(navPattern);
+                        const targetSwitch = navMatch
+                          ? characters.find(c => c.id !== charId && c.name.toLowerCase() === navMatch[1].toLowerCase())
+                          : undefined;
                         if (targetSwitch) {
                           const ctx = messages.map(m =>
                             `${m.role === 'user' ? 'User' : m.charName || 'Assistant'}: ${m.content}`

@@ -5,6 +5,8 @@
 ### Chat
 - [fix] Auto-scroll no longer drags you back to input while reading — only scrolls if within 120px of bottom
 - [fix] Images from previous messages are now included when sending history to Claude — past images visible in context
+- [fix] Quick-reply character-switching now requires explicit navigation prefix ("Open in X", "Switch to X", "Ask X"). Previously any button containing a character name triggered a tab switch, breaking action buttons like "Create task for Clerk".
+- [fix] StrictMode abort race: delayed unmount abort by 50ms so simulated remounts don't cancel in-flight triggered requests.
 
 ## v1.1.20 — 2026-03-12
 
