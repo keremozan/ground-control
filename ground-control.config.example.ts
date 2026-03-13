@@ -69,6 +69,7 @@ const config = {
         description: 'Autonomous research — progress project phases, process readings',
         cron: '09:00 daily',
         label: 'Daily research',
+        maxTurns: 50,
         enabled: true,
       },
       // ── Evening tasks: spawn characters with pending work ──
@@ -156,6 +157,7 @@ const config = {
       label: string;
       mode?: string;
       type?: 'single' | 'process-tasks';
+      maxTurns?: number;
       enabled: boolean;
     }[],
   },

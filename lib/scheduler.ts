@@ -11,6 +11,7 @@ export type ScheduleJob = {
   label: string;
   mode?: string;
   type?: 'single' | 'process-tasks';  // default: 'single'
+  maxTurns?: number;  // override default maxTurns for this job
   enabled: boolean;
 };
 

@@ -670,50 +670,19 @@ export async function trashTask(nodeId: string) {
  * add a short summary child, then delete the task.
  */
 export async function archiveTask(nodeId: string, taskName: string, trackId: string | null) {
-  // Try to create a #log entry, but always trash the task even if logging fails
+  // Create a #log entry with the task summary as node name, then trash the task
   try {
-    let logNodeId: string | null = null;
-
-    if (trackId) {
-      const logs = await mcpCall('tools/call', {
-        name: 'search_nodes',
-        arguments: {
-          query: {
-            and: [
-              { hasType: LOG_TAG_ID },
-              { field: { fieldId: TRACK_FIELD_ID, nodeId: trackId } },
-            ],
-          },
-          limit: 1,
-        },
-      });
-      if (Array.isArray(logs) && logs.length > 0) {
-        logNodeId = logs[0].id;
-      }
-    }
-
-    if (!logNodeId) {
-      const today = new Date().toISOString().split('T')[0];
-      const trackRef = trackId ? `[[^${trackId}]]` : '';
-      const todayLabel = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      const content = `- Log #[[^${LOG_TAG_ID}]]\n  - [[^${TRACK_FIELD_ID}]]:: ${trackRef}\n  - [[^SYS_A90]]:: [[date:${today}]]\n  - ${todayLabel}: ${taskName}`;
-      await mcpCall('tools/call', {
-        name: 'import_tana_paste',
-        arguments: {
-          parentNodeId: TANA_INBOX_ID,
-          content,
-        },
-      });
-    } else {
-      const todayLabel = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      await mcpCall('tools/call', {
-        name: 'import_tana_paste',
-        arguments: {
-          parentNodeId: logNodeId,
-          content: `- ${todayLabel}: ${taskName}`,
-        },
-      });
-    }
+    const today = new Date().toISOString().split('T')[0];
+    const todayLabel = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const trackLine = trackId ? `\n  - [[^${TRACK_FIELD_ID}]]:: [[^${trackId}]]` : '';
+    const content = `- ${todayLabel}: ${taskName} #[[^${LOG_TAG_ID}]]${trackLine}\n  - [[^SYS_A90]]:: [[date:${today}]]`;
+    await mcpCall('tools/call', {
+      name: 'import_tana_paste',
+      arguments: {
+        parentNodeId: TANA_INBOX_ID,
+        content,
+      },
+    });
   } catch {
     // Log creation failed, but we still trash the task
   }

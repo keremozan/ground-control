@@ -2,6 +2,11 @@
 
 ## v1.1.23 — 2026-03-13
 
+### System
+- [fix] SUCourse submissions now require explicit user confirmation
+- [fix] Character narration of action steps removed
+- [refactor] Knowledge base queries optimized to reduce unnecessary searches
+
 ### Chat
 - [fix] Flag button now shows confirmation feedback with check icon after successful flag
 
