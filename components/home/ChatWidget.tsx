@@ -7,7 +7,7 @@ import TanaIcon from "@/components/icons/TanaIcon";
 import { parseToolName } from "@/lib/mcp-icons";
 import { resolveIcon } from "@/lib/icon-map";
 import {
-  BookOpen, Copy, CornerUpRight, GripHorizontal, Loader2,
+  BookOpen, Copy, CornerUpRight, Flag, GitCommit, GripHorizontal, Loader2,
   MessageSquare, Send, Square, Trash2, Plus, Wrench, X,
 } from "lucide-react";
 
@@ -298,8 +298,6 @@ function ChatMarkdown({ text, accent, onQuickReply }: { text: string; accent?: s
       if (p.startsWith('**') && p.endsWith('**')) {
         nodes.push(<strong key={j} style={{
           color: accent || 'var(--text)',
-          borderBottom: `1.5px solid ${accent || 'var(--text)'}30`,
-          paddingBottom: 0.5,
         }}>{p.slice(2, -2)}</strong>);
         return;
       }
@@ -1444,6 +1442,11 @@ export default function ChatWidget() {
   const [showArchitectInput, setShowArchitectInput] = useState(false);
   const [architectInputValue, setArchitectInputValue] = useState("");
   const architectInputRef = useRef<HTMLTextAreaElement>(null);
+  const [releasing, setReleasing] = useState(false);
+  const [releaseEntry, setReleaseEntry] = useState("");
+  const [releasePrivate, setReleasePrivate] = useState(false);
+  const [showReleaseInput, setShowReleaseInput] = useState(false);
+  const releaseInputRef = useRef<HTMLTextAreaElement>(null);
   const [pendingTrigger, setPendingTrigger] = useState<{ tabId: string; trigger: NonNullable<ChatTrigger> } | null>(null);
   const newTabRef = useRef<HTMLDivElement>(null);
   const triggerHandledRef = useRef<ChatTrigger>(null);
@@ -1628,6 +1631,51 @@ export default function ChatWidget() {
     setActiveTabId(newId);
   }, [tabs, activeTabId, characters]);
 
+  const [flagging, setFlagging] = useState(false);
+
+  const flagConversation = useCallback(async () => {
+    const tab = tabs.find(t => t.id === activeTabId);
+    if (!tab || tab.messages.length === 0) return;
+    const char = characters.find(c => c.id === tab.charId);
+    setFlagging(true);
+    try {
+      await fetch("/api/flag-conversation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          character: char?.name ?? "Unknown",
+          tabLabel: tab.label || char?.name || "Chat",
+          messages: tab.messages.map(m => ({ role: m.role, content: m.content.slice(0, 4000) })),
+        }),
+      });
+      logAction({ widget: "chat", action: "flag", target: tab.label || char?.name || "Chat", character: char?.name });
+    } catch { /* non-fatal */ }
+    setFlagging(false);
+  }, [tabs, activeTabId, characters]);
+
+  const releaseChangelog = useCallback(async () => {
+    if (!releaseEntry.trim()) return;
+    setReleasing(true);
+    try {
+      const res = await fetch("/api/release", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          publicEntry: releaseEntry.trim(),
+          privateEntry: releasePrivate ? releaseEntry.trim() : undefined,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        logAction({ widget: "chat", action: "release", target: data.version || "changelog", detail: releaseEntry.trim().slice(0, 80) });
+        setShowReleaseInput(false);
+        setReleaseEntry("");
+        setReleasePrivate(false);
+      }
+    } catch { /* non-fatal */ }
+    setReleasing(false);
+  }, [releaseEntry, releasePrivate]);
+
   const handleMessagesChange = useCallback((tabId: string, msgs: Message[]) => {
     setTabs(prev => prev.map(t => t.id === tabId ? { ...t, messages: msgs } : t));
   }, []);
@@ -1677,6 +1725,25 @@ export default function ChatWidget() {
           >
             <Wrench size={12} strokeWidth={1.5} />
           </button>
+          <button
+            className="widget-toolbar-btn"
+            data-tip="Flag for Architect review"
+            onClick={flagConversation}
+            disabled={flagging}
+            style={flagging ? { opacity: 0.5 } : undefined}
+          >
+            {flagging
+              ? <Loader2 size={12} strokeWidth={1.5} className="animate-spin" />
+              : <Flag size={12} strokeWidth={1.5} />}
+          </button>
+          <button
+            className="widget-toolbar-btn"
+            data-tip="Update changelog"
+            onClick={() => setShowReleaseInput(v => !v)}
+            style={showReleaseInput ? { color: "var(--green)", opacity: 1 } : undefined}
+          >
+            <GitCommit size={12} strokeWidth={1.5} />
+          </button>
           <button className="widget-toolbar-btn" data-tip="Copy all" onClick={copyAllChat}>
             <Copy size={12} strokeWidth={1.5} />
           </button>
@@ -1719,6 +1786,57 @@ export default function ChatWidget() {
           >
             <CornerUpRight size={11} strokeWidth={2} />
           </button>
+        </div>
+      )}
+
+      {/* Release / changelog input */}
+      {showReleaseInput && (
+        <div style={{
+          borderBottom: "1px solid var(--border)", background: "var(--surface-2)",
+          padding: "6px 10px", flexShrink: 0, display: "flex", flexDirection: "column", gap: 4,
+        }}>
+          <textarea
+            ref={releaseInputRef}
+            autoFocus
+            value={releaseEntry}
+            onChange={e => setReleaseEntry(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); releaseChangelog(); }
+              if (e.key === "Escape") { setShowReleaseInput(false); setReleaseEntry(""); }
+            }}
+            placeholder="changelog entry (e.g. [fix] Chat flag button now visible)"
+            rows={2}
+            style={{
+              flex: 1, fontFamily: "var(--font-mono)", fontSize: 10,
+              color: "var(--text)", background: "transparent",
+              border: "none", outline: "none", resize: "none",
+              padding: 0, lineHeight: 1.5, width: "100%",
+            }}
+          />
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: "var(--text-3)", cursor: "pointer" }}>
+              <input
+                type="checkbox"
+                checked={releasePrivate}
+                onChange={e => setReleasePrivate(e.target.checked)}
+                style={{ width: 10, height: 10 }}
+              />
+              also private
+            </label>
+            <div style={{ flex: 1 }} />
+            <button
+              onClick={releaseChangelog}
+              disabled={releasing || !releaseEntry.trim()}
+              style={{
+                background: "transparent", border: "none", cursor: "pointer",
+                color: "var(--green)", padding: 2, display: "flex", alignItems: "center", gap: 4,
+                fontSize: 10, fontFamily: "var(--font-mono)", opacity: releasing || !releaseEntry.trim() ? 0.4 : 1,
+              }}
+            >
+              {releasing ? <Loader2 size={11} strokeWidth={2} className="animate-spin" /> : <CornerUpRight size={11} strokeWidth={2} />}
+              commit
+            </button>
+          </div>
         </div>
       )}
 
