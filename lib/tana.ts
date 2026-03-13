@@ -379,13 +379,13 @@ export async function getTanaProjects(): Promise<TanaProject[]> {
         .replace(/\s*—\s*$/, '')
         .trim();
 
-      // Parse deadline from **timeline** field (end date after dash)
+      // Parse deadline from Timeline node: "Timeline: Nov 18, 2025 → Aug 1, 2026"
       let deadline: string | null = null;
-      const timelineMatch = md.match(/\*\*timeline\*\*:\s*([^\n<]+)/i);
+      const timelineMatch = md.match(/Timeline:\s*(.+?)(?:\s*<!--)/i);
       if (timelineMatch) {
         const raw = timelineMatch[1].trim();
-        // Look for end date after dash/em-dash: "Mar 1 - Apr 15" or "Mar 1 — Apr 15"
-        const endMatch = raw.match(/[-—]\s*(.+)$/);
+        // End date is after → or - or —
+        const endMatch = raw.match(/[→\-—]\s*(.+)$/);
         if (endMatch) {
           const endRaw = endMatch[1].trim();
           if (/^\d{4}-\d{2}-\d{2}$/.test(endRaw)) {
@@ -403,37 +403,46 @@ export async function getTanaProjects(): Promise<TanaProject[]> {
         }
       }
 
-      // Parse phases (workstream children) from markdown
-      // Look for ## headings with node-ids, then check for **workstream status** fields
-      const phases: TanaProject['phases'] = [];
-      const sections = md.split(/(?=^## )/m);
-      for (const section of sections) {
-        const headingMatch = section.match(/^## (.+?)(?:\s*<!--\s*node-id:\s*([\w-]+)\s*-->)?$/m);
-        if (!headingMatch) continue;
-        const phaseName = headingMatch[1]
-          .replace(/<span[^>]*>[^<]*<\/span>/g, '')
-          .replace(/\s*—\s*$/, '')
-          .trim();
-        const phaseId = headingMatch[2];
-        if (!phaseId) continue;
-
-        // Check for workstream status field
-        const wsStatusMatch = section.match(/\*\*workstream status\*\*:\s*\[([^\]]+)\]\(tana:([\w-]+)\)/);
-        if (!wsStatusMatch) continue;
-
-        const statusId = wsStatusMatch[2];
-        const status = (WS_STATUS_OPTIONS[statusId] || 'pending') as 'pending' | 'active' | 'completed';
-
-        // Count checkboxes
-        const doneMatches = section.match(/- \[x\]/g);
-        const todoMatches = section.match(/- \[ \]/g);
-        const doneCount = doneMatches ? doneMatches.length : 0;
-        const taskCount = doneCount + (todoMatches ? todoMatches.length : 0);
-
-        phases.push({ id: phaseId, name: phaseName, status, taskCount, doneCount });
+      // Extract phase node IDs from workstream field
+      // Format: "- [ ] PhaseName #phase <!-- node-id: ID -->"
+      const phaseIds: { id: string; name: string }[] = [];
+      const phaseRegex = /- \[[ x]\]\s+(.+?)\s+#phase\s*<!--\s*node-id:\s*([\w-]+)\s*-->/g;
+      let pm;
+      while ((pm = phaseRegex.exec(md)) !== null) {
+        const pName = pm[1].replace(/<span[^>]*>[^<]*<\/span>/g, '').trim();
+        phaseIds.push({ id: pm[2], name: pName });
       }
 
-      // Find most recent #log entry for this project's track
+      // Read each phase node to get status and task counts
+      const phases: TanaProject['phases'] = [];
+      for (const { id: phaseId, name: pName } of phaseIds) {
+        try {
+          const phaseMd = await mcpCall('tools/call', {
+            name: 'read_node',
+            arguments: { nodeId: phaseId, maxDepth: 1 },
+          }) as string;
+          if (typeof phaseMd !== 'string') continue;
+
+          // Parse status: "**status**: [active](tana:_WTVDkF_TAvO)"
+          const statusMatch = phaseMd.match(/\*\*status\*\*:\s*\[([^\]]+)\]\(tana:([\w-]+)\)/);
+          let status: 'pending' | 'active' | 'completed' = 'pending';
+          if (statusMatch) {
+            status = (WS_STATUS_OPTIONS[statusMatch[2]] || 'pending') as 'pending' | 'active' | 'completed';
+          }
+
+          // Count task checkboxes (exclude the phase's own checkbox)
+          const doneMatches = phaseMd.match(/- \[x\].*#task/g);
+          const todoMatches = phaseMd.match(/- \[ \].*#task/g);
+          const doneCount = doneMatches ? doneMatches.length : 0;
+          const taskCount = doneCount + (todoMatches ? todoMatches.length : 0);
+
+          phases.push({ id: phaseId, name: pName, status, taskCount, doneCount });
+        } catch {
+          phases.push({ id: phaseId, name: pName, status: 'pending', taskCount: 0, doneCount: 0 });
+        }
+      }
+
+      // Find most recent #log entry for this project's track (skip old "Log" titled nodes)
       let lastActivity: TanaProject['lastActivity'] = null;
       try {
         const logNodes = await mcpCall('tools/call', {
@@ -445,19 +454,22 @@ export async function getTanaProjects(): Promise<TanaProject[]> {
                 { field: { fieldId: TRACK_FIELD_ID, nodeId: node.id } },
               ],
             },
-            limit: 1,
+            limit: 5,
           },
         });
-        if (Array.isArray(logNodes) && logNodes.length > 0) {
-          const logNode = logNodes[0];
-          const logName = (logNode.name as string)
-            .replace(/<span[^>]*>[^<]*<\/span>/g, '')
-            .replace(/\s*—\s*$/, '')
-            .trim();
-          // Extract date from log name (e.g. "Mar 13: did something")
-          const logDateMatch = logName.match(/^(\w+ \d+)/);
-          const logDate = logDateMatch ? logDateMatch[1] : '';
-          lastActivity = { date: logDate, summary: logName };
+        if (Array.isArray(logNodes)) {
+          for (const logNode of logNodes) {
+            const logName = (logNode.name as string)
+              .replace(/<span[^>]*>[^<]*<\/span>/g, '')
+              .replace(/\s*—\s*$/, '')
+              .trim();
+            // Skip old "Log" titled nodes (generic wrapper pattern)
+            if (logName === 'Log' || logName === '') continue;
+            const logDateMatch = logName.match(/^(\w+ \d+)/);
+            const logDate = logDateMatch ? logDateMatch[1] : '';
+            lastActivity = { date: logDate, summary: logName };
+            break;
+          }
         }
       } catch {
         // Log lookup failed, skip
