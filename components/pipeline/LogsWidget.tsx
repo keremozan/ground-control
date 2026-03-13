@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { getLog, clearLog, subscribeLog, type ActionLogEntry } from "@/lib/action-log";
+import { getLog, logAction, clearLog, subscribeLog, type ActionLogEntry } from "@/lib/action-log";
 import { charIcon, charColor } from "@/lib/char-icons";
 import type { JobResult } from "@/lib/scheduler";
 import { BookOpen, RefreshCw, ExternalLink, Trash2 } from "lucide-react";
@@ -14,6 +14,7 @@ const actionColor: Record<string, string> = {
   archive:  "var(--amber)",
   delete:   "var(--red)",
   run:      "var(--blue)",
+  flag:     "var(--amber)",
 };
 
 function formatTime(iso: string): string {

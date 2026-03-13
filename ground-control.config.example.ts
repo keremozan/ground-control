@@ -60,6 +60,17 @@ const config = {
         mode: 'full',
         enabled: true,
       },
+      // ── Scholar: autonomous research session ──
+      {
+        id: 'scholar-daily',
+        charName: 'scholar',
+        displayName: 'Scholar',
+        seedPrompt: 'Run the scholar-daily skill. Execute a full autonomous research session: find all scholar-auto projects, work through active phases, process readings, produce daily report.',
+        description: 'Autonomous research — progress project phases, process readings',
+        cron: '09:00 daily',
+        label: 'Daily research',
+        enabled: true,
+      },
       // ── Evening tasks: spawn characters with pending work ──
       {
         id: 'evening-tasks',

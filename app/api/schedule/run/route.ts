@@ -8,6 +8,7 @@ import {
   JOB_RESULTS_PATH, MAX_JOB_RESULTS,
   TASK_CHARACTERS as TASK_CHAR_LIST, SKIP_TRACK_PATTERN,
 } from '@/lib/config';
+import { markJobRun } from '@/lib/job-state';
 import fs from 'fs';
 import path from 'path';
 
@@ -134,8 +135,11 @@ export async function POST(req: Request) {
     const existing = readResults();
     writeResults([result, ...existing]);
 
+    markJobRun(jobId, 'success');
+
     return Response.json({ ok: true, result });
   } catch (err) {
+    markJobRun(jobId, 'error');
     return Response.json({ ok: false, error: String(err) }, { status: 500 });
   }
 }

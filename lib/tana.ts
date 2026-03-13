@@ -995,7 +995,7 @@ export async function toggleClassItem(nodeId: string, checked: boolean): Promise
   await mcpCall('tools/call', { name: tool, arguments: { nodeId } });
 }
 
-/** Check all remaining unchecked prep items for a class node. Returns count checked. */
+/** Check all remaining unchecked checklist items for a class node. Returns count checked. */
 export async function checkRemainingPrepItems(classNodeId: string): Promise<number> {
   const md = await mcpCall('tools/call', {
     name: 'read_node',
@@ -1003,7 +1003,7 @@ export async function checkRemainingPrepItems(classNodeId: string): Promise<numb
   });
   if (typeof md !== 'string') return 0;
   const checklist = parseChecklist(md);
-  const toCheck = checklist.filter(i => i.group === 'prep' && !i.checked);
+  const toCheck = checklist.filter(i => !i.checked);
   for (const item of toCheck) {
     await mcpCall('tools/call', { name: 'check_node', arguments: { nodeId: item.id } });
   }

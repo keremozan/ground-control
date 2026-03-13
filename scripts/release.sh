@@ -71,5 +71,7 @@ sed -i '' "s/\"version\": \"[^\"]*\"/\"version\": \"$next\"/" package.json
 git add "$CHANGELOG" package.json
 git commit -m "chore: prepare v$next"
 
+echo "Pushing..."
+git push && git push --tags
+
 echo "Done. v$current released, v$next ready."
-echo "Push with: git push && git push --tags"

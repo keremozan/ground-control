@@ -173,6 +173,24 @@ export default function CrewWidget() {
     return () => clearInterval(interval);
   }, [fetchScheduledTasks]);
 
+  // Catch up on missed scheduled jobs when dashboard opens
+  useEffect(() => {
+    fetch('/api/schedule/catch-up', { method: 'POST' })
+      .then(r => r.json())
+      .then(async (data: { missed: { jobId: string; label: string }[] }) => {
+        for (const job of data.missed) {
+          try {
+            await fetch('/api/schedule/run', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ jobId: job.jobId }),
+            });
+          } catch { /* silent */ }
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const handleDoNow = async (jobId: string) => {
     if (runningJobsRef.current.has(jobId)) return;
     runningJobsRef.current.add(jobId);

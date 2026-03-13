@@ -237,12 +237,11 @@ export function ClassesTabContent() {
       });
       setLocalChecked(prev => {
         const next = { ...prev };
-        cls.checklist.filter(i => i.group === 'prep').forEach(i => { next[i.id] = true; });
+        cls.checklist.forEach(i => { next[i.id] = true; });
         return next;
       });
-      const prepCount = cls.checklist.filter(i => i.group === 'prep').length;
       setClasses(prev => prev.map(c => c.id === cls.id
-        ? { ...c, checkedItems: prepCount + c.checklist.filter(i => i.group === 'post-lesson' && i.checked).length }
+        ? { ...c, checkedItems: c.totalItems }
         : c
       ));
     } finally {

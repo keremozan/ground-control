@@ -2,10 +2,15 @@
 
 ## v1.1.22 — 2026-03-12
 
-### Chat
-- [fix] Bold text no longer gets underlined
+### Scheduler
+- [new] Missed-job catch-up: persists lastRunAt per job, dashboard checks on mount and runs overdue jobs automatically
+- [new] Scholar daily research job (09:00 daily) in scheduler
+
+### Classes
+- [fix] "Check all" now checks all items (prep + post-lesson), not just prep items
 
 ### Chat
+- [fix] Bold text no longer gets underlined
 - [new] Flag button in chat header toolbar — saves active conversation to `flagged-conversations.jsonl` for Architect/Watcher review
 - [fix] `logAction` import missing from LogsWidget (pre-existing bug, caused silent failure in job injection)
 
