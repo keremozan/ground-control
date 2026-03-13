@@ -2,6 +2,13 @@
 
 ## v1.1.22 — 2026-03-12
 
+### Chat
+- [fix] Bold text no longer gets underlined
+
+### Chat
+- [new] Flag button in chat header toolbar — saves active conversation to `flagged-conversations.jsonl` for Architect/Watcher review
+- [fix] `logAction` import missing from LogsWidget (pre-existing bug, caused silent failure in job injection)
+
 ## v1.1.21 — 2026-03-12
 
 ### Chat
