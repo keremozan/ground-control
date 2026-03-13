@@ -2,6 +2,9 @@
 
 ## v1.1.23 — 2026-03-13
 
+### Dashboard
+- [fix] Widget buttons ("Prep done", "Lesson done") now only check boxes instead of opening chat
+
 ### Chat
 - [fix] Chat now scrolls to the end when opened or switched to
 
