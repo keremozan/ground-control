@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.1.23 — 2026-03-13
+
+### Chat
+- [fix] Flag button now shows confirmation feedback with check icon after successful flag
+
+### Chat
+- [fix] Flag button now shows green check on success (flagged state was set but never rendered — button just blinked back to flag icon)
+
+### Inbox
+- [fix] Go button now works the email directly instead of extracting tasks — default seed is "do the work + log it in Tana", user input overrides if provided
+
 ## v1.1.22 — 2026-03-12
 
 ### Scheduler
