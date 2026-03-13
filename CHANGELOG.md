@@ -2,6 +2,9 @@
 
 ## v1.1.23 — 2026-03-13
 
+### Chat
+- [fix] Chat now scrolls to the end when opened or switched to
+
 ### System
 - [fix] SUCourse submissions now require explicit user confirmation
 - [fix] Character narration of action steps removed
