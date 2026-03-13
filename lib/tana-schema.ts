@@ -13,6 +13,7 @@ export const TANA = {
     log: 'z_H8Mci5LUzW',
     workstream: 'txLXRNzCMqD_',
     phaseLegacy: 'Nx5_4yu6_TeR',
+    project: 'RPx5UwFt1XeT',
   },
   fields: {
     status: 'wRd8g4jr7Nqr',
@@ -71,6 +72,16 @@ export const TANA = {
   classFields: {
     course: '7F0FVER5hNKv',
   },
+  projectFields: {
+    status: 'wjzROi94qPvy',
+    workstream: '4N-MdeDT4aRR',
+  },
+  projectStatusOptions: {
+    '4opOEQe0mmPs': 'active',
+    'JomqzvW7Y2KM': 'next',
+    'n8uweUQL_z3o': 'completed',
+    '2PmNvc-JfQRJ': 'frozen',
+  } as Record<string, string>,
 } as const;
 
 // Reverse lookups
