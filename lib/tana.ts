@@ -352,7 +352,7 @@ export async function getTanaProjects(): Promise<TanaProject[]> {
       query: {
         and: [
           { hasType: PROJECT_TAG_ID },
-          { field: { fieldId: PROJECT_STATUS_FIELD_ID, nodeId: '4opOEQe0mmPs' } },
+          { field: { fieldId: PROJECT_STATUS_FIELD_ID, nodeId: TANA.projectStatusByName.active } },
         ],
       },
       limit: 50,

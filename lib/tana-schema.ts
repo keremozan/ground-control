@@ -82,6 +82,12 @@ export const TANA = {
     'n8uweUQL_z3o': 'completed',
     '2PmNvc-JfQRJ': 'frozen',
   } as Record<string, string>,
+  projectStatusByName: {
+    active: '4opOEQe0mmPs',
+    next: 'JomqzvW7Y2KM',
+    completed: 'n8uweUQL_z3o',
+    frozen: '2PmNvc-JfQRJ',
+  } as Record<string, string>,
 } as const;
 
 // Reverse lookups

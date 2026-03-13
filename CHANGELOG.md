@@ -1,5 +1,18 @@
 # Changelog
 
+## v1.2.0 — 2026-03-13
+
+### Projects Tab
+- [new] Projects tab in TasksWidget showing all active projects with phase pipeline bars, health indicators, and last activity
+- [new] /api/tana-projects endpoint fetching project data from Tana (phases, task counts, deadlines, recent logs)
+- [new] Projects grouped by deadline month (March, April, etc.) with "Ongoing" for no-deadline projects
+- [new] Health dots: green (active), amber (approaching deadline or stalling), red (overdue or stalled 14+ days)
+
+### Tana Logging
+- [fix] #log nodes now use descriptive names ("Mar 13: Task summary") instead of generic "Log" title
+- [fix] archiveTask() simplified: creates individual #log nodes per task, no more shared log-per-track pattern
+- [new] maxTurns support per scheduler job (scholar-daily uses 50)
+
 ## v1.1.23 — 2026-03-13
 
 ### Dashboard

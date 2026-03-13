@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Play, CheckCircle, Archive, Trash2, RefreshCw, Loader2, ChevronRight, X, Send, SkipForward, ExternalLink, ChevronDown, CalendarClock, Plus, ListChecks, BookOpen } from "lucide-react";
+import { Play, CheckCircle, Archive, Trash2, RefreshCw, Loader2, ChevronRight, X, Send, SkipForward, ExternalLink, ChevronDown, CalendarClock, Plus, ListChecks, BookOpen, FolderKanban } from "lucide-react";
 import { ClassesTabContent } from "./ClassesWidget";
 import { charIcon, charColor } from "@/lib/char-icons";
 import { useChatTrigger } from "@/lib/chat-store";
@@ -69,8 +69,264 @@ function TabBtn({ label, icon, active, onClick }: { label: string; icon?: React.
   );
 }
 
+// --- Projects tab ---
+
+interface ProjectPhase {
+  id: string;
+  name: string;
+  status: 'pending' | 'active' | 'completed';
+  taskCount: number;
+  doneCount: number;
+}
+
+interface Project {
+  id: string;
+  name: string;
+  trackId: string;
+  deadline: string | null;
+  phases: ProjectPhase[];
+  lastActivity: { date: string; summary: string } | null;
+}
+
+function getHealthColor(project: Project): string {
+  const now = new Date();
+  const dayMs = 86400000;
+
+  // Check deadline
+  let deadlinePassed = false;
+  let deadlineWithin14 = false;
+  if (project.deadline) {
+    const dl = new Date(project.deadline);
+    if (dl < now) deadlinePassed = true;
+    else if (dl.getTime() - now.getTime() < 14 * dayMs) deadlineWithin14 = true;
+  }
+
+  // Check activity staleness
+  let daysSinceActivity: number | null = null;
+  if (project.lastActivity?.date) {
+    const parsed = new Date(project.lastActivity.date + " " + now.getFullYear());
+    // If parsed date is in the future by more than 30 days, it's probably last year
+    if (parsed.getTime() - now.getTime() > 30 * dayMs) {
+      parsed.setFullYear(now.getFullYear() - 1);
+    }
+    daysSinceActivity = Math.floor((now.getTime() - parsed.getTime()) / dayMs);
+  }
+
+  // Red: deadline passed OR no activity in 14+ days
+  if (deadlinePassed) return "#ef4444";
+  if (daysSinceActivity !== null && daysSinceActivity >= 14) return "#ef4444";
+
+  // Amber: deadline within 14 days OR no activity 7-14 days
+  if (deadlineWithin14) return "#f59e0b";
+  if (daysSinceActivity !== null && daysSinceActivity >= 7) return "#f59e0b";
+
+  // Green: recent activity (within 7 days)
+  if (daysSinceActivity !== null && daysSinceActivity < 7) return "#22c55e";
+
+  // Gray: no activity data and no deadline pressure
+  return "#9c9b95";
+}
+
+function groupByMonth(projects: Project[]): { label: string; projects: Project[] }[] {
+  const months = new Map<string, Project[]>();
+  const ongoing: Project[] = [];
+
+  for (const p of projects) {
+    if (!p.deadline) {
+      ongoing.push(p);
+    } else {
+      const d = new Date(p.deadline);
+      const label = d.toLocaleString("en-US", { month: "long" }).toUpperCase();
+      const key = `${d.getFullYear()}-${String(d.getMonth()).padStart(2, "0")}-${label}`;
+      if (!months.has(key)) months.set(key, []);
+      months.get(key)!.push(p);
+    }
+  }
+
+  // Sort by date key
+  const sorted = [...months.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  const groups = sorted.map(([key, projs]) => ({ label: key.split("-").slice(2).join("-"), projects: projs }));
+  if (ongoing.length > 0) groups.push({ label: "ONGOING", projects: ongoing });
+  return groups;
+}
+
+function PhasePipelineBar({ phases, trackColor: tc }: { phases: ProjectPhase[]; trackColor: string }) {
+  if (phases.length === 0) return null;
+  return (
+    <div style={{ display: "flex", gap: 2, height: 6, borderRadius: 2, overflow: "hidden" }}>
+      {phases.map(phase => {
+        const bg = phase.status === "completed" ? tc
+          : phase.status === "active" ? tc + "80"
+          : "#e5e5e0";
+        return (
+          <div
+            key={phase.id}
+            title={`${phase.name}: ${phase.doneCount}/${phase.taskCount}`}
+            style={{ flex: 1, background: bg, borderRadius: 2 }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+function PhaseLabels({ phases }: { phases: ProjectPhase[] }) {
+  if (phases.length === 0) return null;
+  return (
+    <div style={{ display: "flex", gap: 2 }}>
+      {phases.map(phase => (
+        <div
+          key={phase.id}
+          style={{
+            flex: 1,
+            fontSize: 10,
+            fontWeight: phase.status === "active" ? 600 : 400,
+            color: phase.status === "active" ? "var(--text-2)" : "var(--text-3)",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {phase.name}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ProjectsTabContent() {
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [getTrackColor, setGetTrackColor] = useState<(t: string) => string>(() => () => "#9c9b95");
+
+  useEffect(() => {
+    setLoading(true);
+    Promise.all([
+      fetch("/api/tana-projects").then(r => r.json()),
+      fetch("/api/system/config").then(r => r.json()),
+    ]).then(([projData, configData]) => {
+      const projs: Project[] = projData.projects || [];
+      setProjects(projs);
+      if (configData.trackColorPatterns) {
+        setGetTrackColor(() => buildTrackColor(configData.trackColorPatterns));
+      }
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: 20, gap: 8 }}>
+        <Loader2 size={14} strokeWidth={1.5} style={{ color: "var(--text-3)", animation: "spin 1s linear infinite" }} />
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-3)" }}>Loading projects...</span>
+      </div>
+    );
+  }
+
+  if (projects.length === 0) {
+    return (
+      <div style={{ padding: 16, textAlign: "center" }}>
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-3)" }}>No active projects</span>
+      </div>
+    );
+  }
+
+  const groups = groupByMonth(projects);
+
+  const handleProjectClick = (projectId: string) => {
+    fetch("/api/tana-tasks/action", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ nodeId: projectId, action: "open" }),
+    }).catch(() => {});
+  };
+
+  const formatDeadline = (deadline: string) => {
+    const d = new Date(deadline);
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  };
+
+  return (
+    <div className="widget-body" style={{ padding: "4px 0" }}>
+      {groups.map(group => (
+        <div key={group.label}>
+          <div style={{
+            fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 600,
+            color: "var(--text-3)", textTransform: "uppercase",
+            padding: "12px 16px 4px",
+          }}>
+            {group.label}
+          </div>
+          {group.projects.map(project => {
+            const tc = getTrackColor(project.name);
+            const healthColor = getHealthColor(project);
+            const totalDone = project.phases.reduce((s, p) => s + p.doneCount, 0);
+            const totalTasks = project.phases.reduce((s, p) => s + p.taskCount, 0);
+
+            return (
+              <div
+                key={project.id}
+                onClick={() => handleProjectClick(project.id)}
+                style={{
+                  padding: "8px 16px",
+                  cursor: "pointer",
+                  borderLeft: `3px solid ${tc}`,
+                  marginLeft: 12,
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = "var(--surface-hover, #f8f8f6)"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
+              >
+                {/* Header: health dot + name + deadline */}
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                  <span style={{
+                    width: 7, height: 7, borderRadius: "50%",
+                    background: healthColor, flexShrink: 0,
+                  }} />
+                  <span style={{
+                    fontFamily: "var(--font-body)", fontSize: 13, fontWeight: 600,
+                    color: "var(--text)", flex: 1,
+                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                  }}>
+                    {project.name}
+                  </span>
+                  {project.deadline && (
+                    <span style={{
+                      fontFamily: "var(--font-mono)", fontSize: 11,
+                      color: "var(--text-3)", flexShrink: 0,
+                    }}>
+                      {formatDeadline(project.deadline)}
+                    </span>
+                  )}
+                </div>
+
+                {/* Phase pipeline */}
+                {project.phases.length > 0 && (
+                  <div style={{ marginBottom: 2 }}>
+                    <PhasePipelineBar phases={project.phases} trackColor={tc} />
+                    <PhaseLabels phases={project.phases} />
+                  </div>
+                )}
+
+                {/* Summary line */}
+                <div style={{
+                  fontFamily: "var(--font-mono)", fontSize: 11,
+                  color: "var(--text-2)",
+                }}>
+                  {totalTasks > 0 ? `${totalDone}/${totalTasks} done` : ""}
+                  {totalTasks > 0 && project.lastActivity ? " \u00B7 " : ""}
+                  {project.lastActivity ? `${project.lastActivity.date}: ${project.lastActivity.summary}` : ""}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function TasksWidget() {
-  const [activeTab, setActiveTab] = useState<"tasks" | "classes">("tasks");
+  const [activeTab, setActiveTab] = useState<"projects" | "tasks" | "classes">("tasks");
   const [grouped, setGrouped] = useState<Record<string, Task[]>>({});
   const [loading, setLoading] = useState(true);
   const [priority, setPriority] = useState<PriorityFilter>("today");
@@ -421,6 +677,7 @@ export default function TasksWidget() {
     <div className="widget">
       <div className="widget-header">
         <div style={{ display: "flex", alignItems: "center", gap: 0 }}>
+          <TabBtn label="Projects" icon={<FolderKanban size={13} strokeWidth={1.5} />} active={activeTab === "projects"} onClick={() => setActiveTab("projects")} />
           <TabBtn label="Tasks" icon={<ListChecks size={13} strokeWidth={1.5} />} active={activeTab === "tasks"} onClick={() => setActiveTab("tasks")} />
           <TabBtn label="Classes" icon={<BookOpen size={13} strokeWidth={1.5} />} active={activeTab === "classes"} onClick={() => setActiveTab("classes")} />
         </div>
@@ -913,6 +1170,7 @@ export default function TasksWidget() {
         })}
       </div>
       </>}
+      {activeTab === "projects" && <ProjectsTabContent />}
       {activeTab === "classes" && <ClassesTabContent />}
     </div>
   );
