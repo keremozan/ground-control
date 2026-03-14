@@ -218,11 +218,6 @@ export function ClassesTabContent() {
     } finally {
       setLessonDoneLoading(null);
     }
-    setTrigger({
-      charName: 'Proctor',
-      seedPrompt: `prep done for ${cls.name}. Ready to lesson.`,
-      action: 'prep done',
-    });
   }
 
   async function handleLessonDone(cls: ClassPrepNode) {
@@ -247,11 +242,6 @@ export function ClassesTabContent() {
     } finally {
       setLessonDoneLoading(null);
     }
-    setTrigger({
-      charName: 'Proctor',
-      seedPrompt: `lesson done, ${cls.name}`,
-      action: 'lesson done',
-    });
   }
 
   function handleSendToProctor(cls: ClassPrepNode) {
@@ -357,6 +347,18 @@ export function ClassesTabContent() {
                   background: isToday ? "rgba(37,99,235,0.04)" : "transparent",
                 }}
               >
+                {/* When column */}
+                <span style={{ width: 72, flexShrink: 0, display: "flex", alignItems: "center", gap: 4 }}>
+                  {cls.date && dateUrgency ? (
+                    <>
+                      <span style={{ width: 4, height: 4, borderRadius: "50%", background: dateUrgency.dot ? dateUrgency.color : "transparent", flexShrink: 0 }} />
+                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: dateUrgency.color, whiteSpace: "nowrap" }}>
+                        {formatWhen(cls.date, false)}
+                      </span>
+                    </>
+                  ) : null}
+                </span>
+
                 <ChevronRight
                   size={10} strokeWidth={2}
                   style={{
@@ -395,15 +397,6 @@ export function ClassesTabContent() {
                   {cls.name}
                 </span>
 
-                {/* Date on right */}
-                {cls.date && dateUrgency && (
-                  <span style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0, marginLeft: 8 }}>
-                    <span style={{ width: 4, height: 4, borderRadius: "50%", background: dateUrgency.dot ? dateUrgency.color : "transparent", flexShrink: 0 }} />
-                    <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: dateUrgency.color, whiteSpace: "nowrap" }}>
-                      {formatWhen(cls.date, false)}
-                    </span>
-                  </span>
-                )}
               </div>
 
               {/* Progress bar (always visible) */}

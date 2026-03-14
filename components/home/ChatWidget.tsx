@@ -7,7 +7,7 @@ import TanaIcon from "@/components/icons/TanaIcon";
 import { parseToolName } from "@/lib/mcp-icons";
 import { resolveIcon } from "@/lib/icon-map";
 import {
-  BookOpen, Copy, CornerUpRight, Flag, GitCommit, GripHorizontal, Loader2,
+  BookOpen, Check, Copy, CornerUpRight, Flag, GitCommit, GripHorizontal, Loader2,
   MessageSquare, Send, Square, Trash2, Plus, Wrench, X,
 } from "lucide-react";
 
@@ -551,12 +551,13 @@ type ChatPanelProps = {
   canSend: boolean;
   trigger: ChatTrigger;
   onTriggerConsumed: () => void;
+  isActive: boolean;
 };
 
 function ChatPanel({
   tabId, characters, charId, initialMessages, initialModel,
   onMessagesChange, onLoadingChange, canSend,
-  trigger, onTriggerConsumed,
+  trigger, onTriggerConsumed, isActive,
 }: ChatPanelProps) {
   const { setTrigger: setCharTrigger } = useChatTrigger();
   const [messages, setMessages] = useState<Message[]>(initialMessages);
@@ -677,6 +678,16 @@ function ChatPanel({
       el.scrollTop = el.scrollHeight;
     }
   }, [messages, isLoading, streamingText, toolLog]);
+
+  // Scroll to bottom when tab becomes visible
+  useEffect(() => {
+    if (!isActive) return;
+    requestAnimationFrame(() => {
+      const el = bodyRef.current;
+      if (!el) return;
+      el.scrollTop = el.scrollHeight;
+    });
+  }, [isActive]);
 
   // Handle trigger from wrapper
   useEffect(() => {
@@ -1628,6 +1639,7 @@ export default function ChatWidget() {
   }, [tabs, activeTabId, characters]);
 
   const [flagging, setFlagging] = useState(false);
+  const [flagged, setFlagged] = useState(false);
 
   const flagConversation = useCallback(async () => {
     const tab = tabs.find(t => t.id === activeTabId);
@@ -1645,6 +1657,8 @@ export default function ChatWidget() {
         }),
       });
       logAction({ widget: "chat", action: "flag", target: tab.label || char?.name || "Chat", character: char?.name });
+      setFlagged(true);
+      setTimeout(() => setFlagged(false), 2000);
     } catch { /* non-fatal */ }
     setFlagging(false);
   }, [tabs, activeTabId, characters]);
@@ -1724,12 +1738,14 @@ export default function ChatWidget() {
             className="widget-toolbar-btn"
             data-tip="Flag for Architect review"
             onClick={flagConversation}
-            disabled={flagging}
-            style={flagging ? { opacity: 0.5 } : undefined}
+            disabled={flagging || flagged}
+            style={flagged ? { color: "var(--green, #22c55e)", opacity: 1 } : flagging ? { opacity: 0.5 } : undefined}
           >
             {flagging
               ? <Loader2 size={12} strokeWidth={1.5} className="animate-spin" />
-              : <Flag size={12} strokeWidth={1.5} />}
+              : flagged
+                ? <Check size={12} strokeWidth={1.5} />
+                : <Flag size={12} strokeWidth={1.5} />}
           </button>
           <button
             className="widget-toolbar-btn"
@@ -1937,6 +1953,7 @@ export default function ChatWidget() {
               canSend={canSend}
               trigger={pendingTrigger?.tabId === tab.id ? pendingTrigger.trigger : null}
               onTriggerConsumed={() => setPendingTrigger(null)}
+              isActive={isActive}
             />
           </div>
         );

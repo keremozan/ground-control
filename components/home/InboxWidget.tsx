@@ -354,14 +354,26 @@ export default function InboxWidget() {
                 opacity: isBusy ? 0.6 : 1,
               }}
             >
-              <div style={{ display: "flex", padding: "9px 10px 6px 16px", gap: 6, cursor: "pointer", alignItems: "first baseline" }}>
+              <div style={{ display: "flex", padding: "9px 10px 6px 16px", gap: 0, cursor: "pointer", alignItems: "first baseline" }}>
+                {/* When column */}
+                {(() => {
+                  const urgency = getDateUrgency(email.date, "past");
+                  return (
+                    <span style={{ width: 72, flexShrink: 0, display: "flex", alignItems: "center", gap: 4 }}>
+                      <span style={{ width: 4, height: 4, borderRadius: "50%", background: urgency.dot ? urgency.color : "transparent", flexShrink: 0 }} />
+                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: urgency.color, whiteSpace: "nowrap" }}>
+                        {formatWhen(email.date, true)}
+                      </span>
+                    </span>
+                  );
+                })()}
                 {/* Crew icon (from pattern color) or account icon fallback */}
                 {(() => {
                   const patternColor = emailColor(email.from, email.subject);
                   const crew = patternColor ? iconForColor(patternColor) : null;
                   if (crew) {
                     return (
-                      <span style={{ display: "flex", flexShrink: 0, position: "relative", top: 1 }}>
+                      <span style={{ display: "flex", flexShrink: 0, position: "relative", top: 1, marginRight: 6 }}>
                         <crew.Icon size={12} strokeWidth={1.5} style={{ color: crew.color }} />
                       </span>
                     );
@@ -371,7 +383,7 @@ export default function InboxWidget() {
                   if (!s) return null;
                   const AccIcon = s.icon;
                   return (
-                    <span style={{ display: "flex", flexShrink: 0, position: "relative", top: 1 }}>
+                    <span style={{ display: "flex", flexShrink: 0, position: "relative", top: 1, marginRight: 6 }}>
                       <AccIcon size={12} strokeWidth={1.5} style={{ color: s.color }} />
                     </span>
                   );
@@ -400,18 +412,6 @@ export default function InboxWidget() {
                       const AccIcon = s.icon;
                       return <AccIcon key={acc} size={11} strokeWidth={1.5} style={{ color: s.color, flexShrink: 0 }} />;
                     })}
-                    {/* Date on the right */}
-                    {(() => {
-                      const urgency = getDateUrgency(email.date, "past");
-                      return (
-                        <span style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
-                          <span style={{ width: 4, height: 4, borderRadius: "50%", background: urgency.dot ? urgency.color : "transparent", flexShrink: 0 }} />
-                          <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: urgency.color, whiteSpace: "nowrap" }}>
-                            {formatWhen(email.date, true)}
-                          </span>
-                        </span>
-                      );
-                    })()}
                   </div>
 
                   <div style={{
@@ -555,10 +555,13 @@ export default function InboxWidget() {
                     value={taskInput}
                     onChange={e => setTaskInput(e.target.value)}
                     onKeyDown={e => {
-                      if (e.key === "Enter") runAIAction("task", email, { userPrompt: taskInput.trim() || undefined, charOverride: taskChar });
+                      if (e.key === "Enter") {
+                        const prompt = taskInput.trim() || "Do the work on this email. Read the context, take the needed action, and when done create a Tana log entry in the relevant track.";
+                        runAIAction("task", email, { userPrompt: prompt, charOverride: taskChar });
+                      }
                       if (e.key === "Escape") { setTaskEmail(null); setTaskInput(""); }
                     }}
-                    placeholder="What should be done... (optional)"
+                    placeholder="What to do... (optional, defaults to: do the work + log)"
                     style={{
                       fontFamily: "var(--font-body)", fontSize: 11,
                       background: "var(--surface)", border: "1px solid var(--border)",
@@ -593,8 +596,11 @@ export default function InboxWidget() {
                     </button>
                     <button
                       className="item-action-btn item-action-btn-blue"
-                      data-tip="Send to character with context"
-                      onClick={() => runAIAction("task", email, { userPrompt: taskInput.trim() || undefined, charOverride: taskChar })}
+                      data-tip="Work on this email, then log it"
+                      onClick={() => {
+                        const prompt = taskInput.trim() || "Do the work on this email. Read the context, take the needed action, and when done create a Tana log entry in the relevant track.";
+                        runAIAction("task", email, { userPrompt: prompt, charOverride: taskChar });
+                      }}
                       style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 3, width: "auto", padding: "0 6px", fontFamily: "var(--font-mono)", fontSize: 9 }}
                     >
                       <Play size={10} strokeWidth={1.5} />

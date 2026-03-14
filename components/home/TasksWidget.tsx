@@ -970,6 +970,20 @@ export default function TasksWidget() {
                         }}
                       >
                         <div style={{ display: "flex", alignItems: "center", padding: "4px 16px 4px 16px", gap: 0, cursor: "pointer" }}>
+                          {/* When column */}
+                          <span style={{ width: 72, flexShrink: 0, display: "flex", alignItems: "center", gap: 4 }}>
+                            {task.dueDate ? (() => {
+                              const urgency = dueBadge(task.dueDate);
+                              return (
+                                <>
+                                  <span style={{ width: 4, height: 4, borderRadius: "50%", background: urgency?.dot ? urgency.color : "transparent", flexShrink: 0 }} />
+                                  <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: urgency?.color || "var(--text-3)", whiteSpace: "nowrap" }}>
+                                    {formatWhen(task.dueDate, false)}
+                                  </span>
+                                </>
+                              );
+                            })() : null}
+                          </span>
                           {/* Character icon */}
                           {(() => {
                             const key = task.assigned ? task.assigned.charAt(0).toUpperCase() + task.assigned.slice(1) : "";
@@ -987,17 +1001,6 @@ export default function TasksWidget() {
                           }}>
                             {task.name}
                           </span>
-                          {task.dueDate && (() => {
-                            const urgency = dueBadge(task.dueDate);
-                            return (
-                              <span style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0, marginLeft: 8 }}>
-                                <span style={{ width: 4, height: 4, borderRadius: "50%", background: urgency?.dot ? urgency.color : "transparent", flexShrink: 0 }} />
-                                <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: urgency?.color || "var(--text-3)", whiteSpace: "nowrap" }}>
-                                  {formatWhen(task.dueDate, false)}
-                                </span>
-                              </span>
-                            );
-                          })()}
                           {isBusy && (
                             <Loader2 size={10} strokeWidth={1.5} style={{ color: "var(--text-3)", animation: "spin 1s linear infinite", flexShrink: 0 }} />
                           )}
@@ -1036,7 +1039,7 @@ export default function TasksWidget() {
                           {/* Priority dropdown in action bar */}
                           <div ref={openDropdown === task.id ? dropdownRef : undefined} style={{ position: "relative", display: "inline-flex" }}>
                             <button
-                              className="item-action-btn"
+                              className="item-action-btn task-priority-btn"
                               data-tip="Priority"
                               disabled={isBusy}
                               onClick={e => { e.stopPropagation(); setOpenDropdown(openDropdown === task.id ? null : task.id); }}

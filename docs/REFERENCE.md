@@ -22,10 +22,13 @@ New users: `npm install && npm run setup` — interactive wizard generates `grou
 
 | Character | Domain | Model | Role |
 |-----------|--------|-------|------|
-| Postman | Communications | haiku | Scans inputs (email, WhatsApp, Tana), creates #post nodes, routes to characters |
-| Scholar | Intellectual | sonnet | Research, writing, brainstorming |
-| Clerk | Admin | haiku | Admin tasks, scheduling, forms |
+| Postman | Communications | sonnet | Scans inputs (email, WhatsApp, Tana), creates #post nodes, routes to characters |
+| Scholar | Intellectual | sonnet | Research, writing, brainstorming, thesis, publications |
+| Proctor | Teaching | sonnet | Materials, slides, SUCourse, TA coordination |
+| Clerk | Admin | sonnet | Admin tasks, forms, petitions, CV, calendar scan |
 | Coach | Personal | sonnet | Wellbeing check-ins, weekly reviews |
+| Curator | Art | sonnet | Gallery management, exhibitions, art projects |
+| Doctor | Health | sonnet | Health data analysis, weekly reports |
 | Architect | Systems | sonnet | System maintenance, code, Tana schema, dashboard |
 | Oracle | Strategic | opus | Big-picture advice, cross-domain pattern recognition |
 
