@@ -130,8 +130,8 @@ function getHealthColor(project: Project): string {
 
 // Removed: groupByMonth, PhasePipelineBar, PhaseLabels (replaced by Gantt view)
 
-const ROW_HEIGHT = 44;
-const LEFT_COL = 140;
+const ROW_HEIGHT = 56;
+const LEFT_COL = 180;
 const MONTH_NAMES = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
 const DAY_MARKERS = [1, 8, 15, 22];
 
@@ -301,6 +301,10 @@ function ProjectsTabContent() {
           {sorted.map(project => {
             const tc = getTrackColor(project.name);
             const healthColor = getHealthColor(project);
+            const activePhase = project.phases.find(p => p.status === "active");
+            const totalTasks = project.phases.reduce((s, p) => s + p.taskCount, 0);
+            const doneTasks = project.phases.reduce((s, p) => s + p.doneCount, 0);
+            const completedPhases = project.phases.filter(p => p.status === "completed").length;
             return (
               <div
                 key={project.id}
@@ -321,14 +325,25 @@ function ProjectsTabContent() {
                   width: 7, height: 7, borderRadius: "50%",
                   background: healthColor, flexShrink: 0, marginLeft: 8,
                 }} />
-                <span style={{
-                  fontFamily: "var(--font-body)", fontSize: 11, fontWeight: 600,
-                  color: "var(--text)",
-                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                  lineHeight: "1.2",
-                }}>
-                  {project.name}
-                </span>
+                <div style={{ overflow: "hidden", minWidth: 0 }}>
+                  <div style={{
+                    fontFamily: "var(--font-body)", fontSize: 11, fontWeight: 600,
+                    color: "var(--text)",
+                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                    lineHeight: "1.3",
+                  }}>
+                    {project.name}
+                  </div>
+                  <div style={{
+                    fontFamily: "var(--font-mono)", fontSize: 9,
+                    color: "var(--text-3)",
+                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                    lineHeight: "1.3", marginTop: 1,
+                  }}>
+                    {activePhase ? activePhase.name : (completedPhases === project.phases.length && project.phases.length > 0 ? "All phases done" : "")}
+                    {totalTasks > 0 && <span style={{ marginLeft: activePhase ? 4 : 0, opacity: 0.7 }}>{doneTasks}/{totalTasks}</span>}
+                  </div>
+                </div>
               </div>
             );
           })}
@@ -385,7 +400,7 @@ function ProjectsTabContent() {
             }
 
             // Phase segments within bar
-            let phaseSegments: { left: number; width: number; color: string; name: string }[] = [];
+            let phaseSegments: { left: number; width: number; color: string; name: string; isActive: boolean }[] = [];
             if (barVisible && hasBar && project.phases.length > 0) {
               const sMs = new Date(project.startDate!).getTime();
               const eMs = new Date(project.deadline!).getTime();
@@ -407,11 +422,22 @@ function ProjectsTabContent() {
                   : phase.status === "active" ? tc + "80"
                   : "#e5e5e0";
 
-                return { left: segLeft, width: segWidth, color: bg, name: phase.name };
-              }).filter(Boolean) as typeof phaseSegments;
+                return { left: segLeft, width: segWidth, color: bg, name: phase.name, isActive: phase.status === "active" };
+              }).filter(Boolean) as { left: number; width: number; color: string; name: string; isActive: boolean }[];
             }
 
-            const showNameInBar = barVisible && barWidth > 100;
+            // Deadline marker position
+            let deadlinePx = 0;
+            let deadlineVisible = false;
+            if (hasBar) {
+              const eMs = new Date(project.deadline!).getTime();
+              if (eMs >= windowStartMs && eMs <= windowEndMs) {
+                deadlinePx = dateToPx(eMs);
+                deadlineVisible = true;
+              }
+            }
+
+            const BAR_H = 24;
 
             return (
               <div
@@ -449,10 +475,9 @@ function ProjectsTabContent() {
                     // Render phase segments
                     <div style={{
                       position: "absolute",
-                      left: barLeft, top: (ROW_HEIGHT - 20) / 2,
-                      width: barWidth, height: 20,
+                      left: barLeft, top: (ROW_HEIGHT - BAR_H) / 2,
+                      width: barWidth, height: BAR_H,
                       borderRadius: 4, overflow: "hidden",
-                      display: "flex",
                     }}>
                       {phaseSegments.map((seg, i) => (
                         <div
@@ -462,47 +487,52 @@ function ProjectsTabContent() {
                             position: "absolute",
                             left: seg.left - barLeft,
                             width: seg.width,
-                            height: 20,
+                            height: BAR_H,
                             background: seg.color,
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            overflow: "hidden",
+                            borderRight: i < phaseSegments.length - 1 ? "1px solid rgba(255,255,255,0.3)" : "none",
                           }}
-                        />
+                        >
+                          {seg.width > 50 && (
+                            <span style={{
+                              fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 600,
+                              color: seg.isActive ? "#fff" : (seg.color === "#e5e5e0" ? "var(--text-3)" : "#fff"),
+                              textShadow: seg.color !== "#e5e5e0" ? "0 1px 2px rgba(0,0,0,0.25)" : "none",
+                              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                              padding: "0 4px", letterSpacing: "0.02em",
+                            }}>
+                              {seg.name}
+                            </span>
+                          )}
+                        </div>
                       ))}
-                      {showNameInBar && (
-                        <span style={{
-                          position: "relative", zIndex: 1,
-                          fontFamily: "var(--font-body)", fontSize: 10, fontWeight: 600,
-                          color: "#fff", lineHeight: "20px",
-                          paddingLeft: 6,
-                          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                          textShadow: "0 1px 2px rgba(0,0,0,0.3)",
-                          width: barWidth, display: "block",
-                        }}>
-                          {project.name}
-                        </span>
-                      )}
                     </div>
                   ) : (
                     // Single solid bar (no phases)
                     <div style={{
                       position: "absolute",
-                      left: barLeft, top: (ROW_HEIGHT - 20) / 2,
-                      width: barWidth, height: 20,
-                      borderRadius: 4, background: tc,
+                      left: barLeft, top: (ROW_HEIGHT - BAR_H) / 2,
+                      width: barWidth, height: BAR_H,
+                      borderRadius: 4, background: tc + "60",
                       display: "flex", alignItems: "center",
                       overflow: "hidden",
-                    }}>
-                      {showNameInBar && (
-                        <span style={{
-                          fontFamily: "var(--font-body)", fontSize: 10, fontWeight: 600,
-                          color: "#fff", paddingLeft: 6,
-                          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                          textShadow: "0 1px 2px rgba(0,0,0,0.3)",
-                        }}>
-                          {project.name}
-                        </span>
-                      )}
-                    </div>
+                    }} />
                   )
+                )}
+
+                {/* Deadline diamond marker */}
+                {deadlineVisible && (
+                  <div style={{
+                    position: "absolute",
+                    left: deadlinePx - 5, top: (ROW_HEIGHT - 10) / 2,
+                    width: 10, height: 10,
+                    background: tc,
+                    transform: "rotate(45deg)",
+                    borderRadius: 1,
+                    zIndex: 1,
+                    pointerEvents: "none",
+                  }} />
                 )}
               </div>
             );
