@@ -89,42 +89,16 @@ interface Project {
   lastActivity: { date: string; summary: string } | null;
 }
 
-function formatDeadline(dateStr: string): { text: string; urgent: boolean; diffDays: number } {
-  const dl = new Date(dateStr);
-  const now = new Date();
-  const diffDays = Math.ceil((dl.getTime() - now.getTime()) / 86400000);
-  const mon = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-  const text = `${mon[dl.getMonth()]} ${dl.getDate()}`;
-  if (diffDays < 0) return { text: `${text} (overdue)`, urgent: true, diffDays };
-  if (diffDays <= 14) return { text: `${text} (${diffDays}d)`, urgent: true, diffDays };
-  if (diffDays <= 30) return { text: `${text} (${diffDays}d)`, urgent: false, diffDays };
-  return { text, urgent: false, diffDays };
-}
-
-function getProjectHealth(project: Project): { color: string; label: string } {
-  const dl = project.deadline ? formatDeadline(project.deadline) : null;
-  const activePhases = project.phases.filter(p => p.status === "active");
-  const totalTasks = project.phases.reduce((s, p) => s + p.taskCount, 0);
-  const doneTasks = project.phases.reduce((s, p) => s + p.doneCount, 0);
-
-  // Red: overdue or deadline < 14d with no active work
-  if (dl && dl.diffDays < 0) return { color: "#ef4444", label: "Overdue" };
-  if (dl && dl.diffDays <= 14 && activePhases.length === 0) return { color: "#ef4444", label: "At risk" };
-
-  // Amber: deadline < 30d, or has phases but none active
-  if (dl && dl.diffDays <= 30) return { color: "#f59e0b", label: "Attention" };
-  if (project.phases.length > 0 && activePhases.length === 0) return { color: "#f59e0b", label: "Stalled" };
-
-  // Green: active phases exist
-  if (activePhases.length > 0) return { color: "#22c55e", label: "On track" };
-
-  // Gray: no phases or no deadline
-  return { color: "#9c9b95", label: "No data" };
-}
+const LEFT_COL = 150;
+const PHASE_H = 20;
+const HEADER_H = 24;
+const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
 function ProjectsTabContent() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
+  const timelineRef = useRef<HTMLDivElement>(null);
+  const [timelineWidth, setTimelineWidth] = useState(0);
 
   useEffect(() => {
     setLoading(true);
@@ -133,6 +107,15 @@ function ProjectsTabContent() {
       setLoading(false);
     }).catch(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (!timelineRef.current) return;
+    const obs = new ResizeObserver(entries => {
+      for (const e of entries) setTimelineWidth(e.contentRect.width);
+    });
+    obs.observe(timelineRef.current);
+    return () => obs.disconnect();
+  }, [loading]);
 
   if (loading) {
     return (
@@ -159,7 +142,7 @@ function ProjectsTabContent() {
     }).catch(() => {});
   };
 
-  // Sort by deadline (soonest first), no-deadline at end
+  // Sort by deadline soonest first
   const sorted = [...projects].sort((a, b) => {
     if (!a.deadline && !b.deadline) return 0;
     if (!a.deadline) return 1;
@@ -167,134 +150,222 @@ function ProjectsTabContent() {
     return a.deadline.localeCompare(b.deadline);
   });
 
+  // Compute time window: earliest start to latest deadline, clamped to reasonable range
+  const now = new Date();
+  let minMs = now.getTime();
+  let maxMs = now.getTime();
+  for (const p of sorted) {
+    if (p.startDate) minMs = Math.min(minMs, new Date(p.startDate).getTime());
+    if (p.deadline) maxMs = Math.max(maxMs, new Date(p.deadline).getTime());
+  }
+  // Snap to month boundaries
+  const winStart = new Date(new Date(minMs).getFullYear(), new Date(minMs).getMonth(), 1);
+  const winEndDate = new Date(maxMs);
+  const winEnd = new Date(winEndDate.getFullYear(), winEndDate.getMonth() + 1, 0, 23, 59, 59);
+  const winStartMs = winStart.getTime();
+  const winEndMs = winEnd.getTime();
+
+  // Build months
+  const months: { label: string; startMs: number; endMs: number }[] = [];
+  const cur = new Date(winStart);
+  while (cur.getTime() <= winEndMs) {
+    const mEnd = new Date(cur.getFullYear(), cur.getMonth() + 1, 0, 23, 59, 59);
+    months.push({
+      label: MONTH_NAMES[cur.getMonth()],
+      startMs: cur.getTime(),
+      endMs: Math.min(mEnd.getTime(), winEndMs),
+    });
+    cur.setMonth(cur.getMonth() + 1);
+  }
+
+  const dateToPx = (ms: number): number => {
+    if (timelineWidth <= 0 || winEndMs <= winStartMs) return 0;
+    return ((ms - winStartMs) / (winEndMs - winStartMs)) * timelineWidth;
+  };
+
+  const todayPx = dateToPx(now.getTime());
+  const todayVisible = now.getTime() >= winStartMs && now.getTime() <= winEndMs;
+
+  // Build rows: project headers + phase rows
+  type Row = { type: "project"; project: Project } | { type: "phase"; project: Project; phase: ProjectPhase; idx: number; total: number };
+  const rows: Row[] = [];
+  for (const p of sorted) {
+    rows.push({ type: "project", project: p });
+    if (p.phases.length > 0) {
+      p.phases.forEach((phase, idx) => {
+        rows.push({ type: "phase", project: p, phase, idx, total: p.phases.length });
+      });
+    }
+  }
+
   return (
     <div className="widget-body" style={{ padding: 0 }}>
-      {sorted.map(project => {
-        const totalTasks = project.phases.reduce((s, p) => s + p.taskCount, 0);
-        const doneTasks = project.phases.reduce((s, p) => s + p.doneCount, 0);
-        const dl = project.deadline ? formatDeadline(project.deadline) : null;
-        const health = getProjectHealth(project);
-
-        return (
-          <div
-            key={project.id}
-            className="item-row"
-            onClick={() => handleProjectClick(project.id)}
-            style={{
-              padding: "10px 12px",
-              borderBottom: "1px solid var(--border)",
-              cursor: "pointer",
-            }}
-          >
-            {/* Row 1: health dot + name + task count + deadline */}
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span
-                title={health.label}
-                style={{
-                  width: 7, height: 7, borderRadius: "50%",
-                  background: health.color, flexShrink: 0,
-                }}
-              />
-              <span style={{
-                fontFamily: "var(--font-body)", fontSize: 12, fontWeight: 600,
-                color: "var(--text)",
-                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                flex: 1, minWidth: 0,
-              }}>
-                {project.name}
-              </span>
-              {totalTasks > 0 && (
-                <span style={{
-                  fontFamily: "var(--font-mono)", fontSize: 9,
-                  color: "var(--text-3)", flexShrink: 0,
-                }}>
-                  {doneTasks}/{totalTasks}
-                </span>
-              )}
-              {dl && (
-                <span style={{
-                  fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 500,
-                  color: dl.urgent ? "#ef4444" : "var(--text-3)",
-                  flexShrink: 0,
-                }}>
-                  {dl.text}
-                </span>
-              )}
-            </div>
-
-            {/* Row 2: phase timeline with today marker */}
-            {project.phases.length > 0 && (() => {
-              const sMs = project.startDate ? new Date(project.startDate).getTime() : 0;
-              const eMs = project.deadline ? new Date(project.deadline).getTime() : 0;
-              const nowMs = Date.now();
-              const totalMs = eMs - sMs;
-              // Today position as percentage of project duration
-              const todayPct = totalMs > 0 ? Math.max(0, Math.min(100, ((nowMs - sMs) / totalMs) * 100)) : -1;
-
+      <div style={{ display: "flex", minHeight: 0 }}>
+        {/* Left labels */}
+        <div style={{ width: LEFT_COL, minWidth: LEFT_COL, flexShrink: 0, borderRight: "1px solid var(--border)" }}>
+          {/* Month header spacer */}
+          <div style={{ height: HEADER_H, borderBottom: "1px solid var(--border)" }} />
+          {rows.map((row, ri) => {
+            if (row.type === "project") {
+              const p = row.project;
+              const totalTasks = p.phases.reduce((s, ph) => s + ph.taskCount, 0);
+              const doneTasks = p.phases.reduce((s, ph) => s + ph.doneCount, 0);
               return (
-                <div style={{ position: "relative", marginTop: 6, marginLeft: 15 }}>
-                  {/* Phase segments */}
-                  <div style={{
-                    display: "flex", gap: 2,
-                    height: 18, borderRadius: 3, overflow: "hidden",
+                <div
+                  key={`ph-${p.id}`}
+                  onClick={() => handleProjectClick(p.id)}
+                  style={{
+                    height: HEADER_H,
+                    display: "flex", alignItems: "center", gap: 6,
+                    padding: "0 8px",
+                    borderBottom: "1px solid var(--border)",
+                    background: "var(--surface)",
+                    cursor: "pointer",
+                  }}
+                >
+                  <span style={{
+                    fontFamily: "var(--font-body)", fontSize: 11, fontWeight: 700,
+                    color: "var(--text)",
+                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                    flex: 1, minWidth: 0,
                   }}>
-                    {project.phases.map((phase, i) => {
-                      const bg = phase.status === "completed" ? "var(--text-3)"
-                        : phase.status === "active" ? "var(--text)"
-                        : "var(--border)";
-                      const fg = phase.status === "active" ? "#fff"
-                        : phase.status === "completed" ? "#fff"
-                        : "var(--text-3)";
-                      return (
-                        <div
-                          key={i}
-                          title={`${phase.name}${phase.taskCount > 0 ? ` (${phase.doneCount}/${phase.taskCount})` : ""}`}
-                          style={{
-                            flex: 1, minWidth: 0,
-                            background: bg,
-                            borderRadius: 3,
-                            display: "flex", alignItems: "center",
-                            padding: "0 5px",
-                            overflow: "hidden",
-                          }}
-                        >
-                          <span style={{
-                            fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 600,
-                            color: fg,
-                            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                            letterSpacing: "0.01em",
-                          }}>
-                            {phase.name}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  {/* Today marker */}
-                  {todayPct >= 0 && todayPct <= 100 && (
-                    <div style={{
-                      position: "absolute",
-                      left: `${todayPct}%`,
-                      top: -2, width: 0, height: 22,
-                      borderLeft: "2px solid var(--blue)",
-                      pointerEvents: "none",
-                      zIndex: 1,
-                    }}>
-                      <div style={{
-                        position: "absolute", top: -5, left: -4,
-                        width: 0, height: 0,
-                        borderLeft: "4px solid transparent",
-                        borderRight: "4px solid transparent",
-                        borderTop: "5px solid var(--blue)",
-                      }} />
-                    </div>
+                    {p.name}
+                  </span>
+                  {totalTasks > 0 && (
+                    <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "var(--text-3)", flexShrink: 0 }}>
+                      {doneTasks}/{totalTasks}
+                    </span>
                   )}
                 </div>
               );
-            })()}
+            }
+            const { phase } = row;
+            return (
+              <div
+                key={`pl-${row.project.id}-${row.idx}`}
+                style={{
+                  height: PHASE_H,
+                  display: "flex", alignItems: "center",
+                  padding: "0 8px 0 16px",
+                  borderBottom: row.idx === row.total - 1 ? "1px solid var(--border)" : "none",
+                }}
+              >
+                <span style={{
+                  fontFamily: "var(--font-mono)", fontSize: 9,
+                  color: phase.status === "active" ? "var(--text)" : "var(--text-3)",
+                  fontWeight: phase.status === "active" ? 600 : 400,
+                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                }}>
+                  {phase.name}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Timeline area */}
+        <div ref={timelineRef} style={{ flex: 1, minWidth: 0, position: "relative", overflow: "hidden" }}>
+          {/* Month headers */}
+          <div style={{ height: HEADER_H, borderBottom: "1px solid var(--border)", position: "relative" }}>
+            {months.map((m, i) => {
+              const left = dateToPx(m.startMs);
+              const w = dateToPx(m.endMs) - left;
+              return (
+                <div key={i} style={{
+                  position: "absolute", left, width: Math.max(w, 0),
+                  height: HEADER_H, display: "flex", alignItems: "center", justifyContent: "center",
+                  borderRight: "1px solid var(--border)",
+                }}>
+                  <span style={{
+                    fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 600,
+                    color: "var(--text-3)", letterSpacing: "0.04em",
+                  }}>
+                    {m.label}
+                  </span>
+                </div>
+              );
+            })}
           </div>
-        );
-      })}
+
+          {/* Rows */}
+          {rows.map((row, ri) => {
+            if (row.type === "project") {
+              return (
+                <div key={`tr-${row.project.id}`} style={{
+                  height: HEADER_H,
+                  borderBottom: "1px solid var(--border)",
+                  background: "var(--surface)",
+                  position: "relative",
+                }}>
+                  {/* Month grid lines in header */}
+                  {months.map((m, i) => (
+                    <div key={i} style={{
+                      position: "absolute", left: dateToPx(m.startMs), top: 0, bottom: 0,
+                      width: 1, background: "var(--border)", opacity: 0.5,
+                    }} />
+                  ))}
+                </div>
+              );
+            }
+
+            const { project, phase, idx, total } = row;
+            const sMs = project.startDate ? new Date(project.startDate).getTime() : winStartMs;
+            const eMs = project.deadline ? new Date(project.deadline).getTime() : winEndMs;
+            const dur = eMs - sMs;
+            // Each phase gets equal slice of project duration
+            const phaseStartMs = sMs + (idx / total) * dur;
+            const phaseEndMs = sMs + ((idx + 1) / total) * dur;
+            const clampedStart = Math.max(phaseStartMs, winStartMs);
+            const clampedEnd = Math.min(phaseEndMs, winEndMs);
+            const barLeft = dateToPx(clampedStart);
+            const barWidth = Math.max(dateToPx(clampedEnd) - barLeft, 0);
+
+            const bg = phase.status === "completed" ? "var(--text-3)"
+              : phase.status === "active" ? "var(--text)"
+              : "var(--border)";
+
+            return (
+              <div
+                key={`tr-${project.id}-${idx}`}
+                style={{
+                  height: PHASE_H,
+                  position: "relative",
+                  borderBottom: idx === total - 1 ? "1px solid var(--border)" : "none",
+                }}
+              >
+                {/* Month grid lines */}
+                {months.map((m, i) => (
+                  <div key={i} style={{
+                    position: "absolute", left: dateToPx(m.startMs), top: 0, bottom: 0,
+                    width: 1, background: "var(--border)", opacity: 0.3,
+                  }} />
+                ))}
+                {/* Phase bar */}
+                {barWidth > 0 && (
+                  <div style={{
+                    position: "absolute",
+                    left: barLeft, top: 3,
+                    width: barWidth, height: PHASE_H - 6,
+                    borderRadius: 3,
+                    background: bg,
+                    opacity: phase.status === "pending" ? 0.5 : 1,
+                  }} />
+                )}
+              </div>
+            );
+          })}
+
+          {/* Today line */}
+          {todayVisible && timelineWidth > 0 && (
+            <div style={{
+              position: "absolute", left: todayPx, top: 0, bottom: 0,
+              width: 2, background: "var(--blue)",
+              pointerEvents: "none", zIndex: 2,
+              opacity: 0.7,
+            }} />
+          )}
+        </div>
+      </div>
     </div>
   );
 }
