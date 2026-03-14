@@ -89,16 +89,37 @@ interface Project {
   lastActivity: { date: string; summary: string } | null;
 }
 
-function formatDeadline(dateStr: string): { text: string; urgent: boolean } {
+function formatDeadline(dateStr: string): { text: string; urgent: boolean; diffDays: number } {
   const dl = new Date(dateStr);
   const now = new Date();
   const diffDays = Math.ceil((dl.getTime() - now.getTime()) / 86400000);
   const mon = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   const text = `${mon[dl.getMonth()]} ${dl.getDate()}`;
-  if (diffDays < 0) return { text: `${text} (overdue)`, urgent: true };
-  if (diffDays <= 14) return { text: `${text} (${diffDays}d)`, urgent: true };
-  if (diffDays <= 30) return { text: `${text} (${diffDays}d)`, urgent: false };
-  return { text, urgent: false };
+  if (diffDays < 0) return { text: `${text} (overdue)`, urgent: true, diffDays };
+  if (diffDays <= 14) return { text: `${text} (${diffDays}d)`, urgent: true, diffDays };
+  if (diffDays <= 30) return { text: `${text} (${diffDays}d)`, urgent: false, diffDays };
+  return { text, urgent: false, diffDays };
+}
+
+function getProjectHealth(project: Project): { color: string; label: string } {
+  const dl = project.deadline ? formatDeadline(project.deadline) : null;
+  const activePhases = project.phases.filter(p => p.status === "active");
+  const totalTasks = project.phases.reduce((s, p) => s + p.taskCount, 0);
+  const doneTasks = project.phases.reduce((s, p) => s + p.doneCount, 0);
+
+  // Red: overdue or deadline < 14d with no active work
+  if (dl && dl.diffDays < 0) return { color: "#ef4444", label: "Overdue" };
+  if (dl && dl.diffDays <= 14 && activePhases.length === 0) return { color: "#ef4444", label: "At risk" };
+
+  // Amber: deadline < 30d, or has phases but none active
+  if (dl && dl.diffDays <= 30) return { color: "#f59e0b", label: "Attention" };
+  if (project.phases.length > 0 && activePhases.length === 0) return { color: "#f59e0b", label: "Stalled" };
+
+  // Green: active phases exist
+  if (activePhases.length > 0) return { color: "#22c55e", label: "On track" };
+
+  // Gray: no phases or no deadline
+  return { color: "#9c9b95", label: "No data" };
 }
 
 function ProjectsTabContent() {
@@ -149,12 +170,10 @@ function ProjectsTabContent() {
   return (
     <div className="widget-body" style={{ padding: 0 }}>
       {sorted.map(project => {
-        const activePhases = project.phases.filter(p => p.status === "active");
-        const completedPhases = project.phases.filter(p => p.status === "completed");
-        const totalPhases = project.phases.length;
         const totalTasks = project.phases.reduce((s, p) => s + p.taskCount, 0);
         const doneTasks = project.phases.reduce((s, p) => s + p.doneCount, 0);
         const dl = project.deadline ? formatDeadline(project.deadline) : null;
+        const health = getProjectHealth(project);
 
         return (
           <div
@@ -167,16 +186,31 @@ function ProjectsTabContent() {
               cursor: "pointer",
             }}
           >
-            {/* Row 1: name + deadline */}
-            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
+            {/* Row 1: health dot + name + task count + deadline */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span
+                title={health.label}
+                style={{
+                  width: 7, height: 7, borderRadius: "50%",
+                  background: health.color, flexShrink: 0,
+                }}
+              />
               <span style={{
                 fontFamily: "var(--font-body)", fontSize: 12, fontWeight: 600,
                 color: "var(--text)",
                 overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                minWidth: 0,
+                flex: 1, minWidth: 0,
               }}>
                 {project.name}
               </span>
+              {totalTasks > 0 && (
+                <span style={{
+                  fontFamily: "var(--font-mono)", fontSize: 9,
+                  color: "var(--text-3)", flexShrink: 0,
+                }}>
+                  {doneTasks}/{totalTasks}
+                </span>
+              )}
               {dl && (
                 <span style={{
                   fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 500,
@@ -188,45 +222,45 @@ function ProjectsTabContent() {
               )}
             </div>
 
-            {/* Row 2: phases + tasks */}
-            <div style={{
-              display: "flex", alignItems: "center", gap: 8, marginTop: 4,
-              fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-3)",
-            }}>
-              {/* Phase progress pills */}
-              {totalPhases > 0 && (
-                <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
-                  {project.phases.map((phase, i) => (
+            {/* Row 2: phase timeline bar */}
+            {project.phases.length > 0 && (
+              <div style={{
+                display: "flex", gap: 2, marginTop: 6, marginLeft: 15,
+                height: 18, borderRadius: 3, overflow: "hidden",
+              }}>
+                {project.phases.map((phase, i) => {
+                  const bg = phase.status === "completed" ? "var(--text-3)"
+                    : phase.status === "active" ? "var(--text)"
+                    : "var(--border)";
+                  const fg = phase.status === "active" ? "#fff"
+                    : phase.status === "completed" ? "#fff"
+                    : "var(--text-3)";
+                  return (
                     <div
                       key={i}
-                      title={phase.name}
+                      title={`${phase.name}${phase.taskCount > 0 ? ` (${phase.doneCount}/${phase.taskCount})` : ""}`}
                       style={{
-                        width: phase.status === "active" ? "auto" : 6,
-                        height: 6,
-                        minWidth: 6,
+                        flex: 1, minWidth: 0,
+                        background: bg,
                         borderRadius: 3,
-                        background: phase.status === "completed" ? "var(--text-3)"
-                          : phase.status === "active" ? "var(--text)"
-                          : "var(--border)",
-                        padding: phase.status === "active" ? "0 5px" : 0,
-                        fontSize: 8, fontWeight: 600, lineHeight: "6px",
-                        color: "#fff",
                         display: "flex", alignItems: "center",
+                        padding: "0 5px",
+                        overflow: "hidden",
                       }}
                     >
-                      {phase.status === "active" && (
-                        <span style={{ lineHeight: "6px" }}>{phase.name.length > 16 ? phase.name.slice(0, 16) + "..." : phase.name}</span>
-                      )}
+                      <span style={{
+                        fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 600,
+                        color: fg,
+                        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                        letterSpacing: "0.01em",
+                      }}>
+                        {phase.name}
+                      </span>
                     </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Task count */}
-              {totalTasks > 0 && (
-                <span style={{ opacity: 0.7 }}>{doneTasks}/{totalTasks} tasks</span>
-              )}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         );
       })}
