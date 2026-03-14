@@ -1,7 +1,7 @@
 export const runtime = 'nodejs';
 import fs from 'fs';
 import path from 'path';
-import { getOverdueTasks, deleteTask } from '@/lib/scheduled-tasks';
+import { claimOverdueTasks } from '@/lib/scheduled-tasks';
 import { buildCharacterPrompt } from '@/lib/prompt';
 import { getCharacters } from '@/lib/characters';
 import { spawnAndCollect } from '@/lib/spawn';
@@ -33,7 +33,7 @@ function writeResults(results: JobResult[]) {
 }
 
 export async function POST() {
-  const overdue = getOverdueTasks();
+  const overdue = claimOverdueTasks();
   if (overdue.length === 0) {
     return Response.json({ ran: 0, tasks: [] });
   }
@@ -43,10 +43,7 @@ export async function POST() {
 
   for (const task of overdue) {
     const char = characters[task.charName];
-    if (!char) {
-      deleteTask(task.id);
-      continue;
-    }
+    if (!char) continue;
 
     const displayName = task.charName.charAt(0).toUpperCase() + task.charName.slice(1);
     const taskContent = `${task.seedPrompt}\n\n---\n\n${SCHEDULED_AUTONOMY}`;
@@ -88,7 +85,6 @@ export async function POST() {
       writeResults([result, ...existing]);
     }
 
-    deleteTask(task.id);
   }
 
   return Response.json({ ran: ranLabels.length, tasks: ranLabels });

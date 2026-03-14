@@ -48,9 +48,16 @@ export default function LogsWidget({
       .then(r => r.json())
       .then((data: { results?: import("@/lib/scheduler").JobResult[] }) => {
         const results = data.results || [];
+        // Re-read from localStorage at resolution time to avoid React StrictMode double-inject
+        let fresh: Set<string>;
+        try {
+          fresh = new Set(JSON.parse(localStorage.getItem(INJECTED_KEY) || "[]"));
+        } catch {
+          fresh = new Set();
+        }
         let changed = false;
         for (const r of results) {
-          if (injected.has(r.jobId)) continue;
+          if (fresh.has(r.jobId)) continue;
           logAction({
             widget: "scheduler",
             action: "run",
@@ -60,11 +67,11 @@ export default function LogsWidget({
             jobId: r.jobId,
             timestamp: r.timestamp,
           });
-          injected.add(r.jobId);
+          fresh.add(r.jobId);
           changed = true;
         }
         if (changed) {
-          try { localStorage.setItem(INJECTED_KEY, JSON.stringify([...injected])); } catch {}
+          try { localStorage.setItem(INJECTED_KEY, JSON.stringify([...fresh])); } catch {}
         }
       })
       .catch(() => {});

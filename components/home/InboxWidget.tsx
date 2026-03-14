@@ -354,7 +354,7 @@ export default function InboxWidget() {
                 opacity: isBusy ? 0.6 : 1,
               }}
             >
-              <div style={{ display: "flex", padding: "9px 10px 6px 16px", gap: 0, cursor: "pointer", alignItems: "first baseline" }}>
+              <div style={{ display: "flex", padding: "9px 10px 6px 16px", gap: 0, cursor: "pointer", alignItems: "flex-start" }}>
                 {/* When column */}
                 {(() => {
                   const urgency = getDateUrgency(email.date, "past");
@@ -373,7 +373,7 @@ export default function InboxWidget() {
                   const crew = patternColor ? iconForColor(patternColor) : null;
                   if (crew) {
                     return (
-                      <span style={{ display: "flex", flexShrink: 0, position: "relative", top: 1, marginLeft: 4, marginRight: 6 }}>
+                      <span style={{ display: "flex", flexShrink: 0, marginLeft: 4, marginRight: 6, marginTop: 1 }}>
                         <crew.Icon size={12} strokeWidth={1.5} style={{ color: crew.color }} />
                       </span>
                     );

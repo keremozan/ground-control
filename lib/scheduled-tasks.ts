@@ -50,3 +50,16 @@ export function getOverdueTasks(): ScheduledTask[] {
   const now = Date.now();
   return readTasks().filter(t => new Date(t.scheduledAt).getTime() <= now);
 }
+
+/** Atomically claims and removes overdue tasks in one synchronous operation.
+ * Safe against concurrent calls within the same Node.js process — the read+write
+ * pair runs before any await, so a second concurrent call sees an empty queue. */
+export function claimOverdueTasks(): ScheduledTask[] {
+  const tasks = readTasks();
+  const now = Date.now();
+  const overdue = tasks.filter(t => new Date(t.scheduledAt).getTime() <= now);
+  if (overdue.length > 0) {
+    writeTasks(tasks.filter(t => new Date(t.scheduledAt).getTime() > now));
+  }
+  return overdue;
+}

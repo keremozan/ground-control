@@ -25,6 +25,36 @@ async function calFetch(path: string, opts?: RequestInit) {
   return res.json();
 }
 
+async function fetchEventsInRange(timeMin: string, timeMax: string): Promise<CalendarEvent[]> {
+  const calList = await calFetch('/users/me/calendarList');
+  const calendars: { id: string }[] = calList.items || [];
+  const allEvents: CalendarEvent[] = [];
+  await Promise.all(
+    calendars.map(async (cal) => {
+      try {
+        const params = new URLSearchParams({ timeMin, timeMax, singleEvents: 'true', orderBy: 'startTime' });
+        const data = await calFetch(`/calendars/${encodeURIComponent(cal.id)}/events?${params}`);
+        for (const ev of data.items || []) {
+          if (ev.status === 'cancelled') continue;
+          const allDay = !!ev.start?.date;
+          allEvents.push({
+            id: ev.id,
+            summary: ev.summary || '(no title)',
+            start: ev.start?.dateTime || ev.start?.date || '',
+            end: ev.end?.dateTime || ev.end?.date || '',
+            location: ev.location,
+            allDay,
+            calendarId: cal.id,
+            htmlLink: ev.htmlLink,
+          });
+        }
+      } catch {}
+    })
+  );
+  allEvents.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
+  return allEvents;
+}
+
 /** Create a calendar event on the primary calendar */
 export async function createCalendarEvent(data: {
   summary: string;
@@ -52,85 +82,31 @@ export async function deleteCalendarEvent(calendarId: string, eventId: string) {
 
 export async function getTodayEvents(): Promise<CalendarEvent[]> {
   const now = new Date();
-  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-  const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).toISOString();
-
-  // Get calendar list first
-  const calList = await calFetch('/users/me/calendarList');
-  const calendars: { id: string }[] = calList.items || [];
-
-  // Fetch events from all calendars in parallel
-  const allEvents: CalendarEvent[] = [];
-  await Promise.all(
-    calendars.map(async (cal) => {
-      try {
-        const params = new URLSearchParams({
-          timeMin: startOfDay,
-          timeMax: endOfDay,
-          singleEvents: 'true',
-          orderBy: 'startTime',
-        });
-        const data = await calFetch(`/calendars/${encodeURIComponent(cal.id)}/events?${params}`);
-        for (const ev of data.items || []) {
-          if (ev.status === 'cancelled') continue;
-          const allDay = !!ev.start?.date;
-          allEvents.push({
-            id: ev.id,
-            summary: ev.summary || '(no title)',
-            start: ev.start?.dateTime || ev.start?.date || '',
-            end: ev.end?.dateTime || ev.end?.date || '',
-            location: ev.location,
-            allDay,
-            calendarId: cal.id,
-            htmlLink: ev.htmlLink,
-          });
-        }
-      } catch {}
-    })
-  );
-
-  // Sort by start time
-  allEvents.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
-  return allEvents;
+  const timeMin = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+  const timeMax = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).toISOString();
+  return fetchEventsInRange(timeMin, timeMax);
 }
 
 export async function getWeekEvents(): Promise<CalendarEvent[]> {
   const now = new Date();
-  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-  const endOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7).toISOString();
+  const timeMin = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+  const timeMax = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7).toISOString();
+  return fetchEventsInRange(timeMin, timeMax);
+}
 
-  const calList = await calFetch('/users/me/calendarList');
-  const calendars: { id: string }[] = calList.items || [];
+/** Events for Mon–Sun of the current week (offset 0) or another week */
+export async function getFullWeekEvents(weekOffset = 0): Promise<CalendarEvent[]> {
+  const now = new Date();
+  const dow = now.getDay(); // 0=Sun
+  const mondayOffset = dow === 0 ? -6 : 1 - dow;
+  const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + mondayOffset + weekOffset * 7);
+  const sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 7);
+  return fetchEventsInRange(monday.toISOString(), sunday.toISOString());
+}
 
-  const allEvents: CalendarEvent[] = [];
-  await Promise.all(
-    calendars.map(async (cal) => {
-      try {
-        const params = new URLSearchParams({
-          timeMin: startOfDay,
-          timeMax: endOfWeek,
-          singleEvents: 'true',
-          orderBy: 'startTime',
-        });
-        const data = await calFetch(`/calendars/${encodeURIComponent(cal.id)}/events?${params}`);
-        for (const ev of data.items || []) {
-          if (ev.status === 'cancelled') continue;
-          const allDay = !!ev.start?.date;
-          allEvents.push({
-            id: ev.id,
-            summary: ev.summary || '(no title)',
-            start: ev.start?.dateTime || ev.start?.date || '',
-            end: ev.end?.dateTime || ev.end?.date || '',
-            location: ev.location,
-            allDay,
-            calendarId: cal.id,
-            htmlLink: ev.htmlLink,
-          });
-        }
-      } catch {}
-    })
-  );
-
-  allEvents.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
-  return allEvents;
+/** Events for an entire calendar month (month is 0-indexed) */
+export async function getMonthEvents(year: number, month: number): Promise<CalendarEvent[]> {
+  const timeMin = new Date(year, month, 1).toISOString();
+  const timeMax = new Date(year, month + 1, 1).toISOString();
+  return fetchEventsInRange(timeMin, timeMax);
 }

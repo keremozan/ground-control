@@ -8,9 +8,10 @@ import {
   Activity, Database, Eye, Compass, FolderOpen,
   CalendarDays, CalendarClock, CalendarSearch, HardDrive,
   Reply, ListChecks, Calendar, CornerUpRight,
-  Zap, MailPlus, CalendarPlus, ClipboardList, ScanLine,
+  Zap, MailPlus, MailX, CalendarPlus, ClipboardList, ScanLine,
   Clock, Settings, Power, AlertTriangle, FolderCog, ArrowRight,
   Play, CheckCircle, Archive, Lightbulb, Stethoscope, RotateCcw,
+  Layers, Network, BookMarked, Eraser,
   type LucideIcon,
 } from "lucide-react";
 import TanaIcon from "@/components/icons/TanaIcon";
@@ -25,9 +26,10 @@ export const iconMap: Record<string, LucideIcon> = {
   Activity, Database, Eye, Compass, FolderOpen,
   CalendarDays, CalendarClock, CalendarSearch, HardDrive,
   Reply, ListChecks, Calendar, CornerUpRight,
-  Zap, MailPlus, CalendarPlus, ClipboardList, ScanLine,
+  Zap, MailPlus, MailX, CalendarPlus, ClipboardList, ScanLine,
   Clock, Settings, Power, AlertTriangle, FolderCog, ArrowRight,
   Play, CheckCircle, Archive, Lightbulb, Stethoscope, RotateCcw,
+  Layers, Network, BookMarked, Eraser,
   Tana: TanaIcon as unknown as LucideIcon,
 };
 

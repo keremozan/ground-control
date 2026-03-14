@@ -2,10 +2,10 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { resolveIcon } from "@/lib/icon-map";
 import { useChatTrigger } from "@/lib/chat-store";
-import { logAction, clearLog } from "@/lib/action-log";
+import { logAction, clearLog, getLog, subscribeLog, type ActionLogEntry } from "@/lib/action-log";
 import { SCHEDULE_JOBS, type JobResult } from "@/lib/scheduler";
 import { charIcon, charColor } from "@/lib/char-icons";
-import { Loader2, Play, X, CalendarDays, BookOpen, SlidersHorizontal, CheckCircle, AlertCircle, Activity, Wrench, Bot, Trash2, Clock, Pencil } from "lucide-react";
+import { Loader2, Play, X, CalendarDays, BookOpen, SlidersHorizontal, CheckCircle, AlertCircle, Activity, Wrench, Bot, Trash2, Clock, Pencil, MessageSquare } from "lucide-react";
 import CharDetailDrawer from "@/components/home/CharDetailDrawer";
 import LogsWidget from "@/components/pipeline/LogsWidget";
 import ProposalsWidget from "@/components/pipeline/ProposalsWidget";
@@ -36,6 +36,15 @@ type CharacterInfo = {
   sharedKnowledge?: string[];
 };
 
+function groupActionsByPrefix(actions: ActionInfo[]): ActionInfo[][] {
+  const auto = actions.filter(a => a.autonomous);
+  const interactive = actions.filter(a => !a.autonomous);
+  const groups: ActionInfo[][] = [];
+  if (interactive.length > 0) groups.push(interactive);
+  if (auto.length > 0) groups.push(auto);
+  return groups.length > 0 ? groups : [actions];
+}
+
 export default function CrewWidget() {
   const { setTrigger } = useChatTrigger();
   const [characters, setCharacters] = useState<CharacterInfo[]>([]);
@@ -49,6 +58,9 @@ export default function CrewWidget() {
       const saved = localStorage.getItem("crew-context-on");
       return saved ? new Set(JSON.parse(saved)) : new Set();
     } catch { return new Set(); }
+  });
+  const [selectedCharId, setSelectedCharId] = useState<string>(() => {
+    try { return localStorage.getItem("crew-selected-char") || ""; } catch { return ""; }
   });
   const [lastRuns, setLastRuns] = useState<Record<string, JobResult>>({});
   const [runningJobs, setRunningJobs] = useState<Set<string>>(new Set());
@@ -70,8 +82,17 @@ export default function CrewWidget() {
   const [runningTask, setRunningTask] = useState<string | null>(null);
   const [editingJob, setEditingJob] = useState<{ id: string; label: string; seedPrompt: string } | null>(null);
   const [jobOverrides, setJobOverrides] = useState<Record<string, string>>({});
+  const [recentLogs, setRecentLogs] = useState<ActionLogEntry[]>(() => getLog());
+  useEffect(() => subscribeLog(() => setRecentLogs([...getLog()])), []);
 
   const CREW_ORDER = ["postman", "clerk", "scholar", "scribe", "curator", "proctor", "archivist", "steward", "architect", "engineer", "watcher", "kybernetes", "coach", "doctor", "oracle"];
+  const CREW_CATEGORIES = [
+    { label: "Comms", ids: ["postman"] },
+    { label: "Knowledge", ids: ["scholar", "scribe"] },
+    { label: "Ops", ids: ["clerk", "proctor", "curator", "archivist", "steward"] },
+    { label: "Meta", ids: ["architect", "engineer", "watcher", "kybernetes"] },
+    { label: "Personal", ids: ["coach", "doctor", "oracle"] },
+  ];
 
   useEffect(() => {
     fetch("/api/characters")
@@ -215,13 +236,21 @@ export default function CrewWidget() {
 
   const formatLastRun = (result: JobResult) => {
     const d = new Date(result.timestamp);
-    const now = new Date();
-    const time = d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
-    if (d.toDateString() === now.toDateString()) return time;
     const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    return `${days[d.getDay()]} ${d.getDate()} ${months[d.getMonth()]} ${time}`;
+    const time = d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+    return `${days[d.getDay()]} ${time}`;
   };
+
+  const relativeTime = (iso: string) => {
+    const diff = Date.now() - new Date(iso).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return "now";
+    if (mins < 60) return `${mins}m`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h`;
+    return `${Math.floor(hrs / 24)}d`;
+  };
+
 
   const enabledJobs = SCHEDULE_JOBS.filter(j => j.enabled);
 
@@ -305,7 +334,7 @@ export default function CrewWidget() {
     setCyclePhase("checking tasks...");
     const taskChars = new Set(characters.filter(c => c.tier !== "meta").map(c => c.id));
     type TanaTask = { id: string; name: string; status: string; assigned: string | null; track: string };
-    let charTasks: Record<string, TanaTask[]> = {};
+    const charTasks: Record<string, TanaTask[]> = {};
     try {
       const res = await fetch("/api/tana-tasks");
       const data = await res.json();
@@ -364,7 +393,7 @@ export default function CrewWidget() {
     setDispatchPhase("checking tasks...");
     const taskChars = new Set(characters.filter(c => c.tier !== "meta").map(c => c.id));
     type TanaTask = { id: string; name: string; status: string; assigned: string | null; track: string };
-    let charTasks: Record<string, TanaTask[]> = {};
+    const charTasks: Record<string, TanaTask[]> = {};
     try {
       const res = await fetch("/api/tana-tasks");
       const data = await res.json();
@@ -453,6 +482,18 @@ export default function CrewWidget() {
     }
   };
 
+  const selectChar = (id: string) => {
+    setSelectedCharId(id);
+    setPromptAction(null);
+    setPromptInput("");
+    try { localStorage.setItem("crew-selected-char", id); } catch {}
+  };
+
+  // Derived: always resolve to a character even if selectedCharId is unset
+  const selectedChar = characters.find(c => c.id === selectedCharId) || characters[0] || null;
+  const isSelectedBusy = selectedChar ? [...runningActions].some(k => k.startsWith(`${selectedChar.name}:`)) : false;
+  const SelectedIcon = selectedChar ? resolveIcon(selectedChar.icon) : Bot;
+
   return (
     <div className="widget" style={{ position: "relative" }}>
       <div className="widget-header">
@@ -469,185 +510,356 @@ export default function CrewWidget() {
         )}
       </div>
 
-      <div className="widget-body" style={{ padding: activeTab === "crew" ? "4px 10px 6px" : 0 }}>
-        {activeTab === "crew" && <>
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: "6px",
-        }}>
-          {characters.map((char) => {
-            const Icon = resolveIcon(char.icon);
-            const seeds = char.seeds || {};
-            const actions = char.actions || [];
-            const charBusy = [...runningActions].some(k => k.startsWith(`${char.name}:`));
-
-            return (
-              <div
-                key={char.id}
-                className="crew-card"
-                style={{
-                  padding: "6px 6px 5px",
-                  border: "1px solid var(--border)",
-                  borderRadius: 6,
-                }}
-              >
-                <div
-                  style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}
-                  onClick={() => setTrigger({ charName: char.name, seedPrompt: '', action: 'chat', openOnly: true })}
-                >
-                  <div style={{
-                    width: 26, height: 26, borderRadius: 6, flexShrink: 0,
-                    background: char.color + "16",
-                    border: `1px solid ${char.color}28`,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    animation: charBusy ? "pulse-crew 1.5s ease-in-out infinite" : undefined,
-                  }}>
-                    <Icon size={12} strokeWidth={1.5} style={{ color: char.color }} />
-                  </div>
-
-                  <div style={{ flex: 1, minWidth: 0 }}>
+      <div className="widget-body" style={{ padding: activeTab === "crew" ? "6px 10px 8px" : 0 }}>
+        {activeTab === "crew" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {/* Roster */}
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
+              {characters.map(char => {
+                const Icon = resolveIcon(char.icon);
+                const isSelected = selectedChar?.id === char.id;
+                const charBusy = [...runningActions].some(k => k.startsWith(`${char.name}:`));
+                const hasRecentLog = recentLogs.some(e => e.character?.toLowerCase() === char.name.toLowerCase());
+                return (
+                  <button
+                    key={char.id}
+                    onClick={() => selectChar(char.id)}
+                    style={{
+                      width: "calc(25% - 3px)",
+                      height: 28,
+                      display: "flex", alignItems: "center", gap: 5,
+                      padding: "0 7px 0 6px",
+                      border: `1px solid ${isSelected ? char.color + "55" : "var(--border)"}`,
+                      borderRadius: 5,
+                      background: isSelected ? char.color + "0e" : "transparent",
+                      cursor: "pointer",
+                      transition: "all 0.12s",
+                      flexShrink: 0,
+                      overflow: "hidden",
+                    }}
+                  >
                     <div style={{
-                      fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 500,
-                      color: "var(--text)", lineHeight: 1.3,
+                      width: 14, height: 14, borderRadius: 3, flexShrink: 0,
+                      background: char.color + "14",
+                      border: `1px solid ${char.color}22`,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                    }}>
+                      {charBusy
+                        ? <Loader2 size={8} strokeWidth={2} style={{ color: char.color, animation: "spin 1s linear infinite" }} />
+                        : <Icon size={8} strokeWidth={1.5} style={{ color: char.color }} />
+                      }
+                    </div>
+                    <span style={{
+                      fontFamily: "var(--font-mono)", fontSize: 9,
+                      color: isSelected ? char.color : "var(--text-2)",
+                      overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                      flex: 1,
                     }}>
                       {char.name}
-                    </div>
-                    <div style={{
-                      fontFamily: "var(--font-body)", fontSize: 9,
-                      color: "var(--text-3)", textTransform: "capitalize",
-                    }}>
-                      {char.domain || char.tier}
-                    </div>
-                  </div>
-                  <button
-                    onClick={e => { e.stopPropagation(); setDrawerChar(char); }}
-                    data-tip="Details"
-                    style={{
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      width: 20, height: 20, borderRadius: 4, flexShrink: 0,
-                      background: "transparent", border: "none",
-                      cursor: "pointer", color: "var(--text-3)",
-                      opacity: 0.4, transition: "opacity 0.12s",
-                    }}
-                    onMouseEnter={e => (e.currentTarget.style.opacity = "1")}
-                    onMouseLeave={e => (e.currentTarget.style.opacity = "0.4")}
-                  >
-                    <SlidersHorizontal size={11} strokeWidth={1.5} />
+                    </span>
+                    {(charBusy || hasRecentLog) && (
+                      <span style={{
+                        width: 4, height: 4, borderRadius: "50%", flexShrink: 0,
+                        background: char.color,
+                        opacity: charBusy ? 1 : 0.3,
+                        animation: charBusy ? "pulse-crew 1.5s ease-in-out infinite" : undefined,
+                        transition: "all 0.2s",
+                      }} />
+                    )}
                   </button>
-                </div>
+                );
+              })}
+            </div>
 
-                {actions.length > 0 && (
-                  <div className="crew-card-actions" style={{ flexWrap: "wrap", gap: 3, marginTop: 4 }}>
-                    {actions.map((action) => {
-                      const seedPrompt = seeds[action.label];
-                      const AIcon = resolveIcon(action.icon);
-                      const isAuto = action.autonomous === true;
-                      const isAutoInput = action.autonomousInput === true;
-                      const isDirect = !!action.endpoint;
-                      const isRunning = runningActions.has(`${char.name}:${action.label}`);
-                      const ctxKey = `${char.name}:${action.label}`;
-                      const isCtxOn = !isAuto && !isDirect && !isAutoInput && contextOn.has(ctxKey);
-                      return (
-                        <span key={action.label} style={{ display: "inline-flex", alignItems: "center", gap: 0 }}>
-                          <button
-                            className="item-action-btn"
-                            data-tip={action.description || action.label}
-                            disabled={isRunning}
-                            onClick={isDirect
-                              ? () => runEndpoint(char.name, action.label, action.endpoint!)
-                              : seedPrompt
-                                ? isAuto
-                                  ? () => runAutonomous(char.name, action.label, seedPrompt)
-                                  : () => fireAction(char.name, action, seedPrompt)
-                                : undefined
-                            }
-                            style={{
-                              width: "auto", height: 18, gap: 3, padding: "0 5px 0 4px",
-                              opacity: isRunning ? 0.5 : 1,
-                              color: char.color,
-                              borderRadius: 3, fontSize: 9,
-                            }}
-                          >
-                            {isRunning
-                              ? <Loader2 size={9} strokeWidth={1.5} style={{ animation: "spin 1s linear infinite" }} />
-                              : <AIcon size={9} strokeWidth={1.5} />
-                            }
-                            <span style={{ fontFamily: "var(--font-mono)", fontSize: 9 }}>{action.label}</span>
-                          </button>
-                          {!isAuto && !isDirect && !isAutoInput && (
-                            <span
-                              data-tip={isCtxOn ? "Context on" : "Context off"}
-                              onClick={() => toggleContext(char.name, action.label)}
-                              style={{
-                                display: "inline-flex", alignItems: "center", justifyContent: "center",
-                                width: 14, height: 14, cursor: "pointer", flexShrink: 0,
-                              }}
-                            >
-                              <span style={{
-                                width: 5, height: 5, borderRadius: "50%",
-                                background: isCtxOn ? char.color : "var(--text-3)",
-                                opacity: isCtxOn ? 1 : 0.25,
-                                transition: "all 0.15s",
-                              }} />
-                            </span>
-                          )}
-                        </span>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {/* Inline context prompt */}
-                {promptAction?.charName === char.name && (
+            {/* Focus panel */}
+            {selectedChar && (() => {
+              const seeds = selectedChar.seeds || {};
+              const actions = selectedChar.actions || [];
+              const charJobs = enabledJobs.filter(j => j.charName === selectedChar.id);
+              const charLogs = recentLogs
+                .filter(e => e.character?.toLowerCase() === selectedChar.name.toLowerCase())
+                .filter((e, i, arr) => i === 0 || e.target !== arr[i - 1].target)
+                .slice(0, 4);
+              return (
+                <div style={{
+                  border: `1px solid ${selectedChar.color}30`,
+                  borderRadius: 7, overflow: "hidden",
+                }}>
+                  {/* Character header */}
                   <div style={{
-                    borderTop: "1px solid var(--border)", background: "var(--surface-2)",
-                    borderRadius: "0 0 6px 6px", padding: "6px 6px",
-                    marginTop: 4, marginLeft: -6, marginRight: -6, marginBottom: -5,
+                    display: "flex", alignItems: "center", gap: 10,
+                    padding: "9px 12px",
+                    background: selectedChar.color + "08",
+                    borderBottom: actions.length > 0 ? `1px solid ${selectedChar.color}18` : "none",
                   }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                      <textarea
-                        ref={promptRef}
-                        value={promptInput}
-                        onChange={e => setPromptInput(e.target.value)}
-                        onKeyDown={e => {
-                          if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submitPrompt(); }
-                          if (e.key === "Escape") { setPromptAction(null); setPromptInput(""); }
-                        }}
-                        placeholder={promptAction?.placeholder || "context"}
-                        rows={1}
-                        style={{
-                          flex: 1, fontFamily: "var(--font-mono)", fontSize: 10,
-                          background: "var(--surface)", border: "1px solid var(--border)",
-                          borderRadius: 4, padding: "4px 8px", color: "var(--text)",
-                          outline: "none", resize: "vertical", minHeight: 24, maxHeight: 120,
-                          lineHeight: 1.5,
-                        }}
-                      />
+                    <div style={{
+                      width: 36, height: 36, borderRadius: 8, flexShrink: 0,
+                      background: selectedChar.color + "18",
+                      border: `1px solid ${selectedChar.color}30`,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      animation: isSelectedBusy ? "pulse-crew 1.5s ease-in-out infinite" : undefined,
+                    }}>
+                      <SelectedIcon size={16} strokeWidth={1.5} style={{ color: selectedChar.color }} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{
+                        fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: 500,
+                        color: "var(--text)", lineHeight: 1.2,
+                      }}>
+                        {selectedChar.name}
+                      </div>
+                      <div style={{
+                        fontFamily: "var(--font-body)", fontSize: 10,
+                        color: "var(--text-3)", textTransform: "capitalize", marginTop: 1,
+                      }}>
+                        {selectedChar.domain || selectedChar.tier}
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
                       <button
-                        className="item-action-btn item-action-btn-blue"
-                        onClick={submitPrompt}
-                        style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 2, width: "auto", padding: "0 5px", fontFamily: "var(--font-mono)", fontSize: 9, height: 18 }}
+                        onClick={() => setTrigger({ charName: selectedChar.name, seedPrompt: '', action: 'chat', openOnly: true })}
+                        data-tip="Open chat"
+                        style={{
+                          display: "flex", alignItems: "center", gap: 4,
+                          fontFamily: "var(--font-mono)", fontSize: 10,
+                          color: selectedChar.color,
+                          background: selectedChar.color + "12",
+                          border: `1px solid ${selectedChar.color}30`,
+                          borderRadius: 4, padding: "4px 8px", cursor: "pointer",
+                          transition: "all 0.12s",
+                        }}
                       >
-                        <Play size={9} strokeWidth={1.5} />
-                        Go
+                        <MessageSquare size={10} strokeWidth={1.5} />
+                        Chat
                       </button>
                       <button
-                        className="item-action-btn"
-                        onClick={() => { setPromptAction(null); setPromptInput(""); }}
-                        style={{ cursor: "pointer", height: 18 }}
+                        onClick={() => setDrawerChar(selectedChar)}
+                        data-tip="Details"
+                        style={{
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          width: 28, height: 28, borderRadius: 4,
+                          background: "transparent", border: "1px solid var(--border)",
+                          cursor: "pointer", color: "var(--text-3)",
+                          transition: "all 0.12s",
+                        }}
+                        onMouseEnter={e => (e.currentTarget.style.color = "var(--text)")}
+                        onMouseLeave={e => (e.currentTarget.style.color = "var(--text-3)")}
                       >
-                        <X size={10} strokeWidth={1.5} />
+                        <SlidersHorizontal size={11} strokeWidth={1.5} />
                       </button>
                     </div>
                   </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
 
-        </>}
+                  {/* Actions */}
+                  {actions.length > 0 && (
+                    <div style={{ padding: "9px 12px" }}>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                        {groupActionsByPrefix(actions).map((group, gi) => (
+                            <div key={gi}>
+                              {gi > 0 && (
+                                <div style={{ height: 1, background: "var(--border)", margin: "2px 0 5px", opacity: 0.7 }} />
+                              )}
+                              <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
+                                {group.map((action) => {
+                                  const seedPrompt = seeds[action.label];
+                                  const AIcon = resolveIcon(action.icon);
+                                  const isAuto = action.autonomous === true;
+                                  const isAutoInput = action.autonomousInput === true;
+                                  const isDirect = !!action.endpoint;
+                                  const isRunning = runningActions.has(`${selectedChar.name}:${action.label}`);
+                                  const ctxKey = `${selectedChar.name}:${action.label}`;
+                                  const isCtxOn = !isAuto && !isDirect && !isAutoInput && contextOn.has(ctxKey);
+                                  return (
+                                    <span key={action.label} style={{ display: "inline-flex", alignItems: "center", gap: 0 }}>
+                                      <button
+                                        className="item-action-btn"
+                                        data-tip={action.description || action.label}
+                                        disabled={isRunning}
+                                        onClick={isDirect
+                                          ? () => runEndpoint(selectedChar.name, action.label, action.endpoint!)
+                                          : seedPrompt
+                                            ? isAuto
+                                              ? () => runAutonomous(selectedChar.name, action.label, seedPrompt)
+                                              : () => fireAction(selectedChar.name, action, seedPrompt)
+                                            : undefined
+                                        }
+                                        style={{
+                                          width: "auto", height: 26, gap: 5, padding: "0 9px 0 7px",
+                                          opacity: isRunning ? 0.5 : 1,
+                                          color: selectedChar.color,
+                                          borderRadius: 4, fontSize: 10,
+                                          border: `1px solid ${selectedChar.color}28`,
+                                          background: selectedChar.color + "08",
+                                        }}
+                                      >
+                                        {isRunning
+                                          ? <Loader2 size={11} strokeWidth={1.5} style={{ animation: "spin 1s linear infinite" }} />
+                                          : <AIcon size={11} strokeWidth={1.5} />
+                                        }
+                                        <span style={{ fontFamily: "var(--font-mono)", fontSize: 10 }}>{action.label}</span>
+                                      </button>
+                                      {!isAuto && !isDirect && !isAutoInput && (
+                                        <span
+                                          data-tip={isCtxOn ? "Context on" : "Context off"}
+                                          onClick={() => toggleContext(selectedChar.name, action.label)}
+                                          style={{
+                                            display: "inline-flex", alignItems: "center", justifyContent: "center",
+                                            width: 14, height: 14, cursor: "pointer", flexShrink: 0,
+                                          }}
+                                        >
+                                          <span style={{
+                                            width: 5, height: 5, borderRadius: "50%",
+                                            background: isCtxOn ? selectedChar.color : "var(--text-3)",
+                                            opacity: isCtxOn ? 1 : 0.25,
+                                            transition: "all 0.15s",
+                                          }} />
+                                        </span>
+                                      )}
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                        ))}
+                      </div>
+
+                      {/* Inline context prompt */}
+                      {promptAction?.charName === selectedChar.name && (
+                        <div style={{
+                          borderTop: "1px solid var(--border)",
+                          marginTop: 8, paddingTop: 8,
+                        }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                            <textarea
+                              ref={promptRef}
+                              value={promptInput}
+                              onChange={e => setPromptInput(e.target.value)}
+                              onKeyDown={e => {
+                                if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submitPrompt(); }
+                                if (e.key === "Escape") { setPromptAction(null); setPromptInput(""); }
+                              }}
+                              placeholder={promptAction?.placeholder || "context"}
+                              rows={1}
+                              style={{
+                                flex: 1, fontFamily: "var(--font-mono)", fontSize: 10,
+                                background: "var(--surface)", border: "1px solid var(--border)",
+                                borderRadius: 4, padding: "4px 8px", color: "var(--text)",
+                                outline: "none", resize: "vertical", minHeight: 24, maxHeight: 120,
+                                lineHeight: 1.5,
+                              }}
+                            />
+                            <button
+                              className="item-action-btn item-action-btn-blue"
+                              onClick={submitPrompt}
+                              style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 2, width: "auto", padding: "0 5px", fontFamily: "var(--font-mono)", fontSize: 9, height: 18 }}
+                            >
+                              <Play size={9} strokeWidth={1.5} />
+                              Go
+                            </button>
+                            <button
+                              className="item-action-btn"
+                              onClick={() => { setPromptAction(null); setPromptInput(""); }}
+                              style={{ cursor: "pointer", height: 18 }}
+                            >
+                              <X size={10} strokeWidth={1.5} />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Jobs & Recent */}
+                  {(charJobs.length > 0 || charLogs.length > 0) && (
+                    <div style={{
+                      borderTop: `1px solid ${selectedChar.color}18`,
+                      display: "flex", flexDirection: "column", padding: "8px 12px", gap: 6,
+                    }}>
+                        {charJobs.length > 0 && (
+                          <div>
+                            <div style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "var(--text-3)", marginBottom: 5, letterSpacing: "0.02em" }}>
+                              Jobs
+                            </div>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                              {charJobs.map(job => {
+                                const lastResult = lastRuns[job.id];
+                                const isRunning = runningJobs.has(job.id);
+                                return (
+                                  <div key={job.id} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                    <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-2)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                      {job.label}
+                                    </span>
+                                    {lastResult && (
+                                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "var(--text-3)", flexShrink: 0 }}>
+                                        {formatLastRun(lastResult)}
+                                      </span>
+                                    )}
+                                    <button
+                                      onClick={() => handleDoNow(job.id)}
+                                      disabled={isRunning}
+                                      style={{
+                                        display: "flex", alignItems: "center", justifyContent: "center",
+                                        width: 20, height: 20, flexShrink: 0,
+                                        background: "transparent",
+                                        border: `1px solid ${selectedChar.color}30`,
+                                        borderRadius: 4, cursor: isRunning ? "default" : "pointer",
+                                        color: isRunning ? "var(--text-3)" : selectedChar.color,
+                                      }}
+                                    >
+                                      {isRunning
+                                        ? <Loader2 size={9} strokeWidth={2} style={{ animation: "spin 1s linear infinite" }} />
+                                        : <Play size={8} strokeWidth={2} />}
+                                    </button>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                        {charLogs.length > 0 && (
+                          <div style={{ borderTop: charJobs.length > 0 ? "1px solid var(--border)" : "none", paddingTop: charJobs.length > 0 ? 6 : 0 }}>
+                            <div
+                              onClick={() => setActiveTab("logs")}
+                              style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "var(--text-3)", marginBottom: 5, cursor: "pointer", display: "flex", alignItems: "center", gap: 3, letterSpacing: "0.02em" }}
+                            >
+                              Recent <span style={{ opacity: 0.5, fontSize: 10 }}>↗</span>
+                            </div>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                              {charLogs.map((entry, i) => (
+                                <div key={i}
+                                  onClick={() => setActiveTab("logs")}
+                                  style={{
+                                    display: "flex", alignItems: "center", gap: 4,
+                                    fontFamily: "var(--font-mono)", fontSize: 10,
+                                    cursor: "pointer",
+                                  }}
+                                >
+                                  <span style={{
+                                    flex: 1, color: "var(--text-2)",
+                                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                                  }}>
+                                    {entry.target}
+                                    {entry.detail && entry.detail !== entry.target && (
+                                      <span style={{ marginLeft: 4, color: "var(--text-3)", opacity: 0.7 }}>
+                                        {entry.detail}
+                                      </span>
+                                    )}
+                                  </span>
+                                  <span style={{ flexShrink: 0, fontSize: 9, color: "var(--text-3)" }}>
+                                    {relativeTime(entry.timestamp)}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          </div>
+        )}
 
         {activeTab === "schedules" && (
           <div style={{ padding: "4px 10px 6px" }}>
