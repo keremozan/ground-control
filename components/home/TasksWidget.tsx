@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Play, CheckCircle, Archive, Trash2, RefreshCw, Loader2, ChevronRight, ChevronLeft, X, Send, SkipForward, ExternalLink, ChevronDown, CalendarClock, Plus, ListChecks, BookOpen, FolderKanban } from "lucide-react";
+import { Play, CheckCircle, Archive, Trash2, RefreshCw, Loader2, ChevronRight, X, Send, SkipForward, ExternalLink, ChevronDown, CalendarClock, Plus, ListChecks, BookOpen, FolderKanban } from "lucide-react";
 import { ClassesTabContent } from "./ClassesWidget";
 import { charIcon, charColor } from "@/lib/char-icons";
 import { useChatTrigger } from "@/lib/chat-store";
@@ -89,19 +89,21 @@ interface Project {
   lastActivity: { date: string; summary: string } | null;
 }
 
-// Removed: groupByMonth, PhasePipelineBar, PhaseLabels, getHealthColor (replaced by Gantt view)
-
-const ROW_HEIGHT = 56;
-const LEFT_COL = 180;
-const MONTH_NAMES = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
-const DAY_MARKERS = [1, 8, 15, 22];
+function formatDeadline(dateStr: string): { text: string; urgent: boolean } {
+  const dl = new Date(dateStr);
+  const now = new Date();
+  const diffDays = Math.ceil((dl.getTime() - now.getTime()) / 86400000);
+  const mon = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const text = `${mon[dl.getMonth()]} ${dl.getDate()}`;
+  if (diffDays < 0) return { text: `${text} (overdue)`, urgent: true };
+  if (diffDays <= 14) return { text: `${text} (${diffDays}d)`, urgent: true };
+  if (diffDays <= 30) return { text: `${text} (${diffDays}d)`, urgent: false };
+  return { text, urgent: false };
+}
 
 function ProjectsTabContent() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
-  const [monthOffset, setMonthOffset] = useState(0);
-  const timelineRef = useRef<HTMLDivElement>(null);
-  const [timelineWidth, setTimelineWidth] = useState(0);
 
   useEffect(() => {
     setLoading(true);
@@ -110,18 +112,6 @@ function ProjectsTabContent() {
       setLoading(false);
     }).catch(() => setLoading(false));
   }, []);
-
-  // Measure timeline width
-  useEffect(() => {
-    if (!timelineRef.current) return;
-    const observer = new ResizeObserver(entries => {
-      for (const entry of entries) {
-        setTimelineWidth(entry.contentRect.width);
-      }
-    });
-    observer.observe(timelineRef.current);
-    return () => observer.disconnect();
-  }, [loading]);
 
   if (loading) {
     return (
@@ -148,283 +138,98 @@ function ProjectsTabContent() {
     }).catch(() => {});
   };
 
-  // Sort projects by startDate (earliest first), no-date projects at end
+  // Sort by deadline (soonest first), no-deadline at end
   const sorted = [...projects].sort((a, b) => {
-    if (!a.startDate && !b.startDate) return 0;
-    if (!a.startDate) return 1;
-    if (!b.startDate) return -1;
-    return a.startDate.localeCompare(b.startDate);
+    if (!a.deadline && !b.deadline) return 0;
+    if (!a.deadline) return 1;
+    if (!b.deadline) return -1;
+    return a.deadline.localeCompare(b.deadline);
   });
-
-  // 3-month window centered on current month + offset
-  const now = new Date();
-  const windowStart = new Date(now.getFullYear(), now.getMonth() + monthOffset - 1, 1);
-  const windowEnd = new Date(now.getFullYear(), now.getMonth() + monthOffset + 2, 0, 23, 59, 59);
-  const windowStartMs = windowStart.getTime();
-  const windowEndMs = windowEnd.getTime();
-
-  // Build month columns
-  const months: { year: number; month: number; label: string; startMs: number; endMs: number }[] = [];
-  for (let i = -1; i <= 1; i++) {
-    const m = new Date(now.getFullYear(), now.getMonth() + monthOffset + i, 1);
-    const mEnd = new Date(m.getFullYear(), m.getMonth() + 1, 0, 23, 59, 59);
-    months.push({
-      year: m.getFullYear(),
-      month: m.getMonth(),
-      label: MONTH_NAMES[m.getMonth()],
-      startMs: m.getTime(),
-      endMs: mEnd.getTime(),
-    });
-  }
-
-  // Convert date ms to pixel X within timeline
-  const dateToPx = (ms: number): number => {
-    if (timelineWidth <= 0) return 0;
-    return ((ms - windowStartMs) / (windowEndMs - windowStartMs)) * timelineWidth;
-  };
-
-  // Today position
-  const todayMs = now.getTime();
-  const todayPx = dateToPx(todayMs);
-  const todayVisible = todayMs >= windowStartMs && todayMs <= windowEndMs;
 
   return (
     <div className="widget-body" style={{ padding: 0 }}>
-      {/* Navigation bar */}
-      <div style={{
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "6px 12px", borderBottom: "1px solid var(--border)",
-      }}>
-        <button
-          onClick={() => setMonthOffset(o => o - 1)}
-          style={{
-            display: "flex", alignItems: "center", justifyContent: "center",
-            width: 22, height: 22, borderRadius: 4,
-            border: "1px solid var(--border)", background: "var(--surface)",
-            cursor: "pointer", color: "var(--text-2)",
-          }}
-        >
-          <ChevronLeft size={12} strokeWidth={2} />
-        </button>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{
-            fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 600,
-            color: "var(--text-2)", letterSpacing: "0.04em",
-          }}>
-            {months.map(m => m.label).join(" / ")}
-          </span>
-          {monthOffset !== 0 && (
-            <button
-              onClick={() => setMonthOffset(0)}
-              style={{
-                fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 500,
-                padding: "2px 6px", borderRadius: 3,
-                border: "1px solid var(--border)", background: "var(--surface)",
-                cursor: "pointer", color: "var(--blue)",
-              }}
-            >
-              Today
-            </button>
-          )}
-        </div>
-        <button
-          onClick={() => setMonthOffset(o => o + 1)}
-          style={{
-            display: "flex", alignItems: "center", justifyContent: "center",
-            width: 22, height: 22, borderRadius: 4,
-            border: "1px solid var(--border)", background: "var(--surface)",
-            cursor: "pointer", color: "var(--text-2)",
-          }}
-        >
-          <ChevronRight size={12} strokeWidth={2} />
-        </button>
-      </div>
+      {sorted.map(project => {
+        const activePhases = project.phases.filter(p => p.status === "active");
+        const completedPhases = project.phases.filter(p => p.status === "completed");
+        const totalPhases = project.phases.length;
+        const totalTasks = project.phases.reduce((s, p) => s + p.taskCount, 0);
+        const doneTasks = project.phases.reduce((s, p) => s + p.doneCount, 0);
+        const dl = project.deadline ? formatDeadline(project.deadline) : null;
 
-      {/* Timeline content */}
-      <div style={{ display: "flex", minHeight: 0 }}>
-        {/* Left column: project names */}
-        <div style={{
-          width: LEFT_COL, minWidth: LEFT_COL, flexShrink: 0,
-          borderRight: "1px solid var(--border)",
-        }}>
-          {/* Header spacer */}
-          <div style={{ height: 28, borderBottom: "1px solid var(--border)" }} />
-          {/* Project rows */}
-          {sorted.map(project => {
-            const activePhases = project.phases.filter(p => p.status === "active");
-            const totalTasks = project.phases.reduce((s, p) => s + p.taskCount, 0);
-            const doneTasks = project.phases.reduce((s, p) => s + p.doneCount, 0);
-            const subtitle = activePhases.length > 0
-              ? activePhases.map(p => p.name).join(", ")
-              : "";
-            return (
-              <div
-                key={project.id}
-                onClick={() => handleProjectClick(project.id)}
-                style={{
-                  height: ROW_HEIGHT,
-                  display: "flex", alignItems: "center",
-                  padding: "0 8px",
-                  borderBottom: "1px solid var(--border)",
-                  cursor: "pointer",
-                  overflow: "hidden",
-                }}
-                onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = "var(--surface-hover, #f8f8f6)"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
-              >
-                <div style={{ overflow: "hidden", minWidth: 0 }}>
-                  <div style={{
-                    fontFamily: "var(--font-body)", fontSize: 11, fontWeight: 600,
-                    color: "var(--text)",
-                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                    lineHeight: "1.3",
-                  }}>
-                    {project.name}
-                  </div>
-                  {(subtitle || totalTasks > 0) && (
-                    <div style={{
-                      fontFamily: "var(--font-mono)", fontSize: 9,
-                      color: "var(--text-3)",
-                      overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                      lineHeight: "1.3", marginTop: 1,
-                    }}>
-                      {subtitle}{totalTasks > 0 && <span style={{ marginLeft: subtitle ? 4 : 0, opacity: 0.7 }}>{doneTasks}/{totalTasks}</span>}
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Right area: timeline grid */}
-        <div ref={timelineRef} style={{ flex: 1, minWidth: 0, position: "relative", overflow: "hidden" }}>
-          {/* Month headers */}
-          <div style={{
-            display: "flex", height: 28,
-            borderBottom: "1px solid var(--border)",
-          }}>
-            {months.map((m, i) => {
-              const left = dateToPx(m.startMs);
-              const right = dateToPx(Math.min(m.endMs, windowEndMs));
-              const width = right - left;
-              return (
-                <div key={`${m.year}-${m.month}`} style={{
-                  position: "absolute", left, width: Math.max(width, 0),
-                  height: 28, display: "flex", alignItems: "center", justifyContent: "center",
-                  borderRight: i < months.length - 1 ? "1px solid var(--border)" : "none",
+        return (
+          <div
+            key={project.id}
+            className="item-row"
+            onClick={() => handleProjectClick(project.id)}
+            style={{
+              padding: "10px 12px",
+              borderBottom: "1px solid var(--border)",
+              cursor: "pointer",
+            }}
+          >
+            {/* Row 1: name + deadline */}
+            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
+              <span style={{
+                fontFamily: "var(--font-body)", fontSize: 12, fontWeight: 600,
+                color: "var(--text)",
+                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                minWidth: 0,
+              }}>
+                {project.name}
+              </span>
+              {dl && (
+                <span style={{
+                  fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 500,
+                  color: dl.urgent ? "#ef4444" : "var(--text-3)",
+                  flexShrink: 0,
                 }}>
-                  <span style={{
-                    fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 600,
-                    color: "var(--text-3)", letterSpacing: "0.06em",
-                  }}>
-                    {m.label}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
+                  {dl.text}
+                </span>
+              )}
+            </div>
 
-          {/* Rows with bars */}
-          {sorted.map(project => {
-            const hasBar = project.startDate && project.deadline;
-
-            let barLeft = 0;
-            let barWidth = 0;
-            let barVisible = false;
-
-            if (hasBar) {
-              const sMs = new Date(project.startDate!).getTime();
-              const eMs = new Date(project.deadline!).getTime();
-              const clampedStart = Math.max(sMs, windowStartMs);
-              const clampedEnd = Math.min(eMs, windowEndMs);
-              if (clampedStart < clampedEnd) {
-                barLeft = dateToPx(clampedStart);
-                barWidth = dateToPx(clampedEnd) - barLeft;
-                barVisible = true;
-              }
-            }
-
-            // Deadline marker
-            let deadlinePx = 0;
-            let deadlineVisible = false;
-            if (hasBar) {
-              const eMs = new Date(project.deadline!).getTime();
-              if (eMs >= windowStartMs && eMs <= windowEndMs) {
-                deadlinePx = dateToPx(eMs);
-                deadlineVisible = true;
-              }
-            }
-
-            const BAR_H = 8;
-
-            return (
-              <div
-                key={project.id}
-                onClick={() => handleProjectClick(project.id)}
-                style={{
-                  height: ROW_HEIGHT,
-                  position: "relative",
-                  borderBottom: "1px solid var(--border)",
-                  cursor: "pointer",
-                }}
-                onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = "var(--surface-hover, #f8f8f6)"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
-              >
-                {/* Week marker lines */}
-                {timelineWidth > 0 && months.map(m => (
-                  DAY_MARKERS.map(d => {
-                    const dayMs = new Date(m.year, m.month, d).getTime();
-                    if (dayMs < windowStartMs || dayMs > windowEndMs) return null;
-                    return (
-                      <div key={`${m.year}-${m.month}-${d}`} style={{
-                        position: "absolute", left: dateToPx(dayMs), top: 0, bottom: 0,
-                        width: 1, background: "var(--border)", opacity: 0.3,
-                        pointerEvents: "none",
-                      }} />
-                    );
-                  })
-                ))}
-
-                {/* Simple bar */}
-                {barVisible && (
-                  <div style={{
-                    position: "absolute",
-                    left: barLeft, top: (ROW_HEIGHT - BAR_H) / 2,
-                    width: barWidth, height: BAR_H,
-                    borderRadius: BAR_H / 2,
-                    background: "var(--text-3)",
-                    opacity: 0.35,
-                  }} />
-                )}
-
-                {/* Deadline diamond */}
-                {deadlineVisible && (
-                  <div style={{
-                    position: "absolute",
-                    left: deadlinePx - 4, top: (ROW_HEIGHT - 8) / 2,
-                    width: 8, height: 8,
-                    background: "var(--text-3)",
-                    transform: "rotate(45deg)",
-                    borderRadius: 1,
-                    zIndex: 1,
-                    pointerEvents: "none",
-                  }} />
-                )}
-              </div>
-            );
-          })}
-
-          {/* Today line (rendered on top of everything) */}
-          {todayVisible && timelineWidth > 0 && (
+            {/* Row 2: phases + tasks */}
             <div style={{
-              position: "absolute", left: todayPx, top: 0, bottom: 0,
-              width: 1, background: "var(--blue)",
-              pointerEvents: "none", zIndex: 2,
-            }} />
-          )}
-        </div>
-      </div>
+              display: "flex", alignItems: "center", gap: 8, marginTop: 4,
+              fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-3)",
+            }}>
+              {/* Phase progress pills */}
+              {totalPhases > 0 && (
+                <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                  {project.phases.map((phase, i) => (
+                    <div
+                      key={i}
+                      title={phase.name}
+                      style={{
+                        width: phase.status === "active" ? "auto" : 6,
+                        height: 6,
+                        minWidth: 6,
+                        borderRadius: 3,
+                        background: phase.status === "completed" ? "var(--text-3)"
+                          : phase.status === "active" ? "var(--text)"
+                          : "var(--border)",
+                        padding: phase.status === "active" ? "0 5px" : 0,
+                        fontSize: 8, fontWeight: 600, lineHeight: "6px",
+                        color: "#fff",
+                        display: "flex", alignItems: "center",
+                      }}
+                    >
+                      {phase.status === "active" && (
+                        <span style={{ lineHeight: "6px" }}>{phase.name.length > 16 ? phase.name.slice(0, 16) + "..." : phase.name}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Task count */}
+              {totalTasks > 0 && (
+                <span style={{ opacity: 0.7 }}>{doneTasks}/{totalTasks} tasks</span>
+              )}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
