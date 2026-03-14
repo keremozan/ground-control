@@ -110,6 +110,7 @@ export type TanaProject = {
   id: string;
   name: string;
   trackId: string;
+  startDate: string | null;
   deadline: string | null;
   phases: {
     id: string;
@@ -379,38 +380,53 @@ export async function getTanaProjects(): Promise<TanaProject[]> {
         .replace(/\s*—\s*$/, '')
         .trim();
 
-      // Parse deadline from Timeline node: "Timeline: Nov 18, 2025 → Aug 1, 2026"
+      // Parse start/end dates from timeline (field "**timeline**: X → Y" or plain "Timeline: X → Y")
+      let startDate: string | null = null;
       let deadline: string | null = null;
-      const timelineMatch = md.match(/Timeline:\s*(.+?)(?:\s*<!--)/i);
+
+      function parseNaturalDate(raw: string): string | null {
+        const trimmed = raw.trim();
+        if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+        const withYear = /,\s*\d{4}$/.test(trimmed) ? trimmed : `${trimmed}, ${new Date().getFullYear()}`;
+        const parsed = new Date(withYear);
+        if (isNaN(parsed.getTime())) return null;
+        const y = parsed.getFullYear();
+        const m = String(parsed.getMonth() + 1).padStart(2, '0');
+        const d = String(parsed.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+      }
+
+      const timelineMatch = md.match(/\*\*timeline\*\*:\s*(.+?)(?:\s*<!--)/i)
+        || md.match(/Timeline:\s*(.+?)(?:\s*<!--)/i);
       if (timelineMatch) {
         const raw = timelineMatch[1].trim();
-        // End date is after → or - or —
-        const endMatch = raw.match(/[→\-—]\s*(.+)$/);
-        if (endMatch) {
-          const endRaw = endMatch[1].trim();
-          if (/^\d{4}-\d{2}-\d{2}$/.test(endRaw)) {
-            deadline = endRaw;
-          } else {
-            const withYear = /,\s*\d{4}$/.test(endRaw) ? endRaw : `${endRaw}, ${new Date().getFullYear()}`;
-            const parsed = new Date(withYear);
-            if (!isNaN(parsed.getTime())) {
-              const y = parsed.getFullYear();
-              const m = String(parsed.getMonth() + 1).padStart(2, '0');
-              const d = String(parsed.getDate()).padStart(2, '0');
-              deadline = `${y}-${m}-${d}`;
-            }
-          }
+        const parts = raw.split(/\s*[→\-—]\s*/);
+        if (parts.length >= 2) {
+          startDate = parseNaturalDate(parts[0]);
+          deadline = parseNaturalDate(parts[parts.length - 1]);
+        } else if (parts.length === 1) {
+          deadline = parseNaturalDate(parts[0]);
         }
       }
 
-      // Extract phase node IDs from workstream field
-      // Format: "- [ ] PhaseName #phase <!-- node-id: ID -->"
+      // Extract workstream children (any tag, not just #phase)
+      // They appear after **workstream**: at deeper indentation than project-level fields
       const phaseIds: { id: string; name: string }[] = [];
-      const phaseRegex = /- \[[ x]\]\s+(.+?)\s+#phase\s*<!--\s*node-id:\s*([\w-]+)\s*-->/g;
-      let pm;
-      while ((pm = phaseRegex.exec(md)) !== null) {
-        const pName = pm[1].replace(/<span[^>]*>[^<]*<\/span>/g, '').trim();
-        phaseIds.push({ id: pm[2], name: pName });
+      const wsStart = md.indexOf('**workstream**:');
+      if (wsStart !== -1) {
+        const wsLines = md.substring(wsStart).split('\n').slice(1);
+        for (const line of wsLines) {
+          // Stop at project-level siblings (indent <= 2 spaces)
+          if (/^\s{0,2}-\s/.test(line)) break;
+          // Skip truncation messages and empty lines
+          if (/\*\[\.\.\./.test(line) || !line.trim()) continue;
+          // Match child: plain "Name #tag <!-- node-id: ID -->" or reference "[Name #tag](tana:ID)"
+          const pm = line.match(/- (?:\[[ x]\]\s+)?(.+?)\s+#\w+\s*<!--\s*node-id:\s*([\w-]+)\s*-->/)
+            || line.match(/\[(.+?)\s+#\w+\]\(tana:([\w-]+)\)/);
+          if (pm) {
+            phaseIds.push({ id: pm[2], name: pm[1].replace(/<span[^>]*>[^<]*<\/span>/g, '').trim() });
+          }
+        }
       }
 
       // Read each phase node to get status and task counts
@@ -479,6 +495,7 @@ export async function getTanaProjects(): Promise<TanaProject[]> {
         id: node.id,
         name: cleanName,
         trackId: node.id,
+        startDate,
         deadline,
         phases,
         lastActivity,
