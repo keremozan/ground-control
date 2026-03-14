@@ -2,6 +2,9 @@
 
 ## v1.5.1 — 2026-03-14
 
+### Scheduler
+- [fix] Catch-up skips in-progress jobs: `startedAt` persisted to job-state.json on run start, catch-up ignores jobs started within last 15 minutes (survives process restarts unlike in-memory dedup)
+
 ## v1.5.0 — 2026-03-14
 
 ### Scheduler

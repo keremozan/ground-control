@@ -3,7 +3,11 @@ import path from 'path';
 
 const STATE_FILE = path.join(process.cwd(), 'data', 'job-state.json');
 
-export type JobState = Record<string, { lastRunAt: string; lastResult?: 'success' | 'error' }>;
+export type JobState = Record<string, {
+  lastRunAt: string;
+  lastResult?: 'success' | 'error';
+  startedAt?: string;
+}>;
 
 export function readJobState(): JobState {
   try {
@@ -17,6 +21,12 @@ export function writeJobState(state: JobState) {
   const dir = path.dirname(STATE_FILE);
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2));
+}
+
+export function markJobStarted(jobId: string) {
+  const state = readJobState();
+  state[jobId] = { ...(state[jobId] ?? {}), startedAt: new Date().toISOString(), lastRunAt: state[jobId]?.lastRunAt ?? new Date().toISOString() };
+  writeJobState(state);
 }
 
 export function markJobRun(jobId: string, result: 'success' | 'error') {

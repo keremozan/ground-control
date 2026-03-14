@@ -16,6 +16,9 @@ function expectedIntervalMs(cron: string): number {
   return 24 * 60 * 60 * 1000; // default daily
 }
 
+// Jobs running longer than this are assumed stuck, not in-progress
+const MAX_JOB_DURATION_MS = 15 * 60 * 1000; // 15 minutes
+
 export async function POST() {
   const state = readJobState();
   const now = Date.now();
@@ -23,6 +26,11 @@ export async function POST() {
 
   for (const job of SCHEDULE_JOBS) {
     if (!job.enabled) continue;
+
+    // Skip jobs that started recently (in-progress protection)
+    const startedAt = state[job.id]?.startedAt;
+    if (startedAt && now - new Date(startedAt).getTime() < MAX_JOB_DURATION_MS) continue;
+
     const last = state[job.id]?.lastRunAt;
     const interval = expectedIntervalMs(job.cron);
     // Add 30min grace period

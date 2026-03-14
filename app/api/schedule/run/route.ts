@@ -8,7 +8,7 @@ import {
   JOB_RESULTS_PATH, MAX_JOB_RESULTS,
   TASK_CHARACTERS as TASK_CHAR_LIST, SKIP_TRACK_PATTERN,
 } from '@/lib/config';
-import { markJobRun } from '@/lib/job-state';
+import { markJobRun, markJobStarted } from '@/lib/job-state';
 import fs from 'fs';
 import path from 'path';
 
@@ -112,6 +112,10 @@ export async function POST(req: Request) {
   for (const [key, ts] of IN_FLIGHT) {
     if (now - ts > DEDUP_WINDOW_MS * 2) IN_FLIGHT.delete(key);
   }
+
+  // Persist start time to job-state.json so catch-up skips in-progress jobs
+  // (works across process restarts / hot reloads unlike the in-memory IN_FLIGHT map)
+  if (body.jobId) markJobStarted(jobId);
 
   // ── process-tasks: multi-character task processing ──
   const job = body.jobId ? SCHEDULE_JOBS.find(j => j.id === body.jobId) : undefined;
