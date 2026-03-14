@@ -64,7 +64,7 @@ function buildLabelStyle(extraLabels: Record<string, { color: string; bg: string
 
 // Default character for each inbox action (lowercase ID matching character JSON)
 const ACTION_DEFAULTS: Record<string, string> = {
-  task: "postman", schedule: "clerk", reply: "postman", summarize: "postman",
+  task: "postman", schedule: "steward", reply: "postman", summarize: "postman",
 };
 
 // AI actions → default character + seed template

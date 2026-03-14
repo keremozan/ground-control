@@ -21,10 +21,28 @@ export type Character = {
   gates?: string[];
   seeds?: Record<string, string>;
   suggestions?: string[];
+  canSpawn?: string[];
   trackPatterns?: string[];
   routingKeywords?: string[];
   schedules?: { id: string; displayName: string; seedPrompt: string; cron: string; label: string; enabled: boolean }[];
 };
+
+export function validateSpawn(
+  callerId: string | undefined,
+  targetId: string,
+  depth: number
+): { ok: boolean; error?: string } {
+  if (depth >= 3) return { ok: false, error: 'Max spawn depth (3) exceeded' };
+  const characters = getCharacters();
+  if (!characters[targetId]) return { ok: false, error: `Character "${targetId}" not found` };
+  if (callerId) {
+    const caller = characters[callerId];
+    if (!caller) return { ok: false, error: `Caller "${callerId}" not found` };
+    if (!caller.canSpawn?.includes(targetId))
+      return { ok: false, error: `"${callerId}" cannot spawn "${targetId}"` };
+  }
+  return { ok: true };
+}
 
 // Character colors — matches CSS vars in globals.css
 export const CHARACTER_COLORS: Record<string, string> = {
@@ -34,6 +52,11 @@ export const CHARACTER_COLORS: Record<string, string> = {
   coach:     '#047857',
   architect: '#475569',
   oracle:    '#9333ea',
+  scribe:    '#d97706',
+  watcher:   '#64748b',
+  engineer:  '#374151',
+  archivist: '#92400e',
+  steward:   '#0d9488',
 };
 
 let _cache: Record<string, Character> | null = null;

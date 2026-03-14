@@ -2,6 +2,7 @@ import {
   Mail, BookOpen, Briefcase,
   Heart, Wrench, Telescope,
   Users, Stethoscope, Palette, GraduationCap,
+  Pen, Eye, Hammer, Archive, Clock,
   type LucideIcon,
 } from "lucide-react";
 
@@ -17,6 +18,11 @@ export const charColor: Record<string, string> = {
   architect: '#475569',  // slate
   oracle:    '#0891b2',  // cyan/teal
   doctor:    '#0284c7',  // sky blue
+  scribe:    '#d97706',  // amber
+  watcher:   '#64748b',  // slate
+  engineer:  '#374151',  // gray
+  archivist: '#92400e',  // brown
+  steward:   '#0d9488',  // teal
   system:    '#64748b',  // gray
 };
 
@@ -30,6 +36,11 @@ export const charIcon: Record<string, LucideIcon> = {
   Architect: Wrench,
   Oracle:    Telescope,
   Doctor:    Stethoscope,
+  Scribe:    Pen,
+  Watcher:   Eye,
+  Engineer:  Hammer,
+  Archivist: Archive,
+  Steward:   Clock,
   Crew:      Users,
 };
 

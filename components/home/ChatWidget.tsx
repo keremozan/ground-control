@@ -7,7 +7,7 @@ import TanaIcon from "@/components/icons/TanaIcon";
 import { parseToolName } from "@/lib/mcp-icons";
 import { resolveIcon } from "@/lib/icon-map";
 import {
-  BookOpen, Check, Copy, CornerUpRight, Flag, GitCommit, GripHorizontal, Loader2,
+  BookOpen, Check, Copy, CornerUpRight, Flag, GripHorizontal, Loader2,
   MessageSquare, Send, Square, Trash2, Plus, Wrench, X,
 } from "lucide-react";
 
@@ -1451,7 +1451,6 @@ export default function ChatWidget() {
   const [showArchitectInput, setShowArchitectInput] = useState(false);
   const [architectInputValue, setArchitectInputValue] = useState("");
   const architectInputRef = useRef<HTMLTextAreaElement>(null);
-  const [releasing, setReleasing] = useState(false);
   const [pendingTrigger, setPendingTrigger] = useState<{ tabId: string; trigger: NonNullable<ChatTrigger> } | null>(null);
   const newTabRef = useRef<HTMLDivElement>(null);
   const triggerHandledRef = useRef<ChatTrigger>(null);
@@ -1661,27 +1660,6 @@ export default function ChatWidget() {
     setFlagging(false);
   }, [tabs, activeTabId, characters]);
 
-  const releaseChangelog = useCallback(async () => {
-    const tab = tabs.find(t => t.id === activeTabId);
-    if (!tab || tab.messages.length === 0) return;
-    const char = characters.find(c => c.id === tab.charId);
-    setReleasing(true);
-    try {
-      const res = await fetch("/api/release", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: tab.messages.map(m => ({ role: m.role, content: m.content.slice(0, 2000) })),
-          character: char?.name,
-        }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        logAction({ widget: "chat", action: "release", target: data.version || "changelog", detail: data.publicEntry?.slice(0, 80) });
-      }
-    } catch { /* non-fatal */ }
-    setReleasing(false);
-  }, [tabs, activeTabId, characters]);
 
   const handleMessagesChange = useCallback((tabId: string, msgs: Message[]) => {
     setTabs(prev => prev.map(t => t.id === tabId ? { ...t, messages: msgs } : t));
@@ -1744,17 +1722,6 @@ export default function ChatWidget() {
               : flagged
                 ? <Check size={12} strokeWidth={1.5} />
                 : <Flag size={12} strokeWidth={1.5} />}
-          </button>
-          <button
-            className="widget-toolbar-btn"
-            data-tip="Update changelog"
-            onClick={releaseChangelog}
-            disabled={releasing}
-            style={releasing ? { opacity: 0.5 } : undefined}
-          >
-            {releasing
-              ? <Loader2 size={12} strokeWidth={1.5} className="animate-spin" />
-              : <GitCommit size={12} strokeWidth={1.5} />}
           </button>
           <button className="widget-toolbar-btn" data-tip="Copy all" onClick={copyAllChat}>
             <Copy size={12} strokeWidth={1.5} />

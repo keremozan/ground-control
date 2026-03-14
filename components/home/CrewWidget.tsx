@@ -71,7 +71,7 @@ export default function CrewWidget() {
   const [editingJob, setEditingJob] = useState<{ id: string; label: string; seedPrompt: string } | null>(null);
   const [jobOverrides, setJobOverrides] = useState<Record<string, string>>({});
 
-  const CREW_ORDER = ["postman", "clerk", "scholar", "curator", "proctor", "architect", "coach", "doctor", "oracle"];
+  const CREW_ORDER = ["postman", "clerk", "scholar", "scribe", "curator", "proctor", "archivist", "steward", "architect", "engineer", "watcher", "coach", "doctor", "oracle"];
 
   useEffect(() => {
     fetch("/api/characters")

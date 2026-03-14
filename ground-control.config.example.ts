@@ -24,7 +24,7 @@ const config = {
 
   scheduler: {
     skipTrackPattern: "",
-    taskCharacters: ["scholar", "clerk", "architect"] as string[],
+    taskCharacters: ["scholar", "clerk", "architect", "archivist", "steward"] as string[],
     jobs: [
       // ── Postman: scan all sources, classify, route ──
       {
@@ -87,8 +87,8 @@ const config = {
       // ── Self-evolving: watcher + maintenance ──
       {
         id: 'architect-watcher',
-        charName: 'architect',
-        displayName: 'Architect',
+        charName: 'watcher',
+        displayName: 'Watcher',
         seedPrompt: 'Run architect-watcher skill. Read tiny-log.jsonl for errors since last review. Check for failed routes, missing rules, inactive characters, memory overflow. Auto-fix what you can — edit skills, update memory, fix routing. If a pattern repeats 2+ times, fix the root cause. If beyond scope, create a Tana task assigned to architect. After changes: append to CHANGELOG.md and update docs/REFERENCE.md. Truncate processed log entries.',
         description: 'Review system logs, fix errors, write memory lessons',
         cron: '22:00 daily',
@@ -139,8 +139,8 @@ const config = {
       },
       {
         id: 'weekly-calendar-intel',
-        charName: 'coach',
-        displayName: 'Coach',
+        charName: 'steward',
+        displayName: 'Steward',
         seedPrompt: 'Read Google Calendar events for the past 2 weeks. Identify meeting density per day, free blocks, recurring patterns. Update ~/.claude/shared/work-patterns.md Schedule Preferences section. Keep factual, max 10 lines.',
         description: 'Learn schedule preferences from calendar data',
         cron: 'Sunday 20:00',

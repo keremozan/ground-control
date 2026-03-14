@@ -33,10 +33,10 @@ export const TASKS: Record<string, Task> = {
     label: 'Calendar Prep',
     description: "Check calendar for the week ahead",
     category: 'calendar',
-    character: 'scholar',
+    character: 'steward',
     model: 'sonnet',
     maxTurns: 10,
-    prompt: () => buildCharacterPrompt('scholar', 'Run calendar skill. Check Google Calendar for events from today through end of week. Group by day, highlight conflicts or prep needed.'),
+    prompt: () => buildCharacterPrompt('steward', 'Run calendar skill. Check Google Calendar for events from today through end of week. Group by day, highlight conflicts or prep needed.'),
   },
   'scan-whatsapp': {
     label: 'Scan WhatsApp',
@@ -69,10 +69,10 @@ export const TASKS: Record<string, Task> = {
     label: 'Reschedule Overdue',
     description: 'Reschedule all overdue tasks based on calendar + patterns',
     category: 'admin',
-    character: 'clerk',
+    character: 'steward',
     model: 'sonnet',
     maxTurns: 20,
-    prompt: () => buildCharacterPrompt('clerk',
+    prompt: () => buildCharacterPrompt('steward',
       'Reschedule all overdue tasks. Use the clerk-reschedule skill.'
     ),
   },
@@ -82,6 +82,6 @@ export const TASKS: Record<string, Task> = {
 export const ACTION_CHARACTERS: Record<string, string> = {
   'reply': 'postman',
   'task': 'postman',
-  'schedule': 'clerk',
+  'schedule': 'steward',
   'archive': 'postman',
 };
