@@ -222,45 +222,76 @@ function ProjectsTabContent() {
               )}
             </div>
 
-            {/* Row 2: phase timeline bar */}
-            {project.phases.length > 0 && (
-              <div style={{
-                display: "flex", gap: 2, marginTop: 6, marginLeft: 15,
-                height: 18, borderRadius: 3, overflow: "hidden",
-              }}>
-                {project.phases.map((phase, i) => {
-                  const bg = phase.status === "completed" ? "var(--text-3)"
-                    : phase.status === "active" ? "var(--text)"
-                    : "var(--border)";
-                  const fg = phase.status === "active" ? "#fff"
-                    : phase.status === "completed" ? "#fff"
-                    : "var(--text-3)";
-                  return (
-                    <div
-                      key={i}
-                      title={`${phase.name}${phase.taskCount > 0 ? ` (${phase.doneCount}/${phase.taskCount})` : ""}`}
-                      style={{
-                        flex: 1, minWidth: 0,
-                        background: bg,
-                        borderRadius: 3,
-                        display: "flex", alignItems: "center",
-                        padding: "0 5px",
-                        overflow: "hidden",
-                      }}
-                    >
-                      <span style={{
-                        fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 600,
-                        color: fg,
-                        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                        letterSpacing: "0.01em",
-                      }}>
-                        {phase.name}
-                      </span>
+            {/* Row 2: phase timeline with today marker */}
+            {project.phases.length > 0 && (() => {
+              const sMs = project.startDate ? new Date(project.startDate).getTime() : 0;
+              const eMs = project.deadline ? new Date(project.deadline).getTime() : 0;
+              const nowMs = Date.now();
+              const totalMs = eMs - sMs;
+              // Today position as percentage of project duration
+              const todayPct = totalMs > 0 ? Math.max(0, Math.min(100, ((nowMs - sMs) / totalMs) * 100)) : -1;
+
+              return (
+                <div style={{ position: "relative", marginTop: 6, marginLeft: 15 }}>
+                  {/* Phase segments */}
+                  <div style={{
+                    display: "flex", gap: 2,
+                    height: 18, borderRadius: 3, overflow: "hidden",
+                  }}>
+                    {project.phases.map((phase, i) => {
+                      const bg = phase.status === "completed" ? "var(--text-3)"
+                        : phase.status === "active" ? "var(--text)"
+                        : "var(--border)";
+                      const fg = phase.status === "active" ? "#fff"
+                        : phase.status === "completed" ? "#fff"
+                        : "var(--text-3)";
+                      return (
+                        <div
+                          key={i}
+                          title={`${phase.name}${phase.taskCount > 0 ? ` (${phase.doneCount}/${phase.taskCount})` : ""}`}
+                          style={{
+                            flex: 1, minWidth: 0,
+                            background: bg,
+                            borderRadius: 3,
+                            display: "flex", alignItems: "center",
+                            padding: "0 5px",
+                            overflow: "hidden",
+                          }}
+                        >
+                          <span style={{
+                            fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 600,
+                            color: fg,
+                            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                            letterSpacing: "0.01em",
+                          }}>
+                            {phase.name}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {/* Today marker */}
+                  {todayPct >= 0 && todayPct <= 100 && (
+                    <div style={{
+                      position: "absolute",
+                      left: `${todayPct}%`,
+                      top: -2, width: 0, height: 22,
+                      borderLeft: "2px solid var(--blue)",
+                      pointerEvents: "none",
+                      zIndex: 1,
+                    }}>
+                      <div style={{
+                        position: "absolute", top: -5, left: -4,
+                        width: 0, height: 0,
+                        borderLeft: "4px solid transparent",
+                        borderRight: "4px solid transparent",
+                        borderTop: "5px solid var(--blue)",
+                      }} />
                     </div>
-                  );
-                })}
-              </div>
-            )}
+                  )}
+                </div>
+              );
+            })()}
           </div>
         );
       })}
