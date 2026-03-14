@@ -650,16 +650,14 @@ function ChatPanel({
   // Drain message queue when AI finishes
   useEffect(() => {
     if (isLoading || !canSend) return;
-    setMessageQueue(prev => {
-      if (prev.length === 0) return prev;
-      const [next, ...rest] = prev;
-      const currentMessages = messagesRef.current;
-      setMessages(m => [...m, { role: "user", content: next }]);
-      const effectiveModel = modelOverride !== activeChar?.model ? modelOverride : undefined;
-      setTimeout(() => sendMessage(next, undefined, null, currentMessages, effectiveModel), 0);
-      return rest;
-    });
-  }, [isLoading, canSend]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (messageQueue.length === 0) return;
+    const [next, ...rest] = messageQueue;
+    const currentMessages = messagesRef.current;
+    setMessageQueue(rest);
+    setMessages(m => [...m, { role: "user", content: next }]);
+    const effectiveModel = modelOverride !== activeChar?.model ? modelOverride : undefined;
+    sendMessage(next, undefined, null, currentMessages, effectiveModel);
+  }, [isLoading, canSend, messageQueue]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Keep messagesRef in sync
   useEffect(() => { messagesRef.current = messages; }, [messages]);

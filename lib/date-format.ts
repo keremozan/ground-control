@@ -34,12 +34,12 @@ function dayDiff(iso: string): number {
   return Math.round((d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 }
 
-/** Relative date label: Today, Tmrw, day name within 6 days, or "Mar 15" */
+/** Relative date label: Tod, Tom, Yes, day name within 6 days, or "Mar 15" */
 function relativeDate(iso: string): string {
   const diff = dayDiff(iso);
-  if (diff === 0) return "Today";
-  if (diff === 1) return "Tomw";
-  if (diff === -1) return "Yest";
+  if (diff === 0) return "Tod";
+  if (diff === 1) return "Tom";
+  if (diff === -1) return "Yes";
   const d = new Date(iso.length === 10 ? iso + "T00:00:00" : iso);
   if (diff >= -6 && diff <= 6) return DAYS[d.getDay()];
   return formatDisplayDate(iso);
@@ -56,7 +56,7 @@ function relativeDate(iso: string): string {
  */
 export function formatWhen(iso: string, hasTime = true): string {
   if (isToday(iso)) {
-    return hasTime ? formatTime(iso) : "Today";
+    return hasTime ? formatTime(iso) : "Tod";
   }
   const base = relativeDate(iso);
   if (hasTime && iso.length > 10) {
@@ -71,7 +71,7 @@ export function formatWhen(iso: string, hasTime = true): string {
  */
 export function formatCalendarWhen(iso: string, allDay: boolean): string {
   if (isToday(iso)) {
-    return allDay ? "Today" : `Today ${formatTime(iso)}`;
+    return allDay ? "Tod" : `Tod ${formatTime(iso)}`;
   }
   const base = relativeDate(iso);
   return allDay ? base : `${base} ${formatTime(iso)}`;

@@ -56,18 +56,26 @@ Patterns are served via `/api/system/config` and fetched by widgets on mount.
 ## Versioning
 
 Semver with these thresholds:
-- **Patch (1.1.x)**: fixes, refactors, config/skill/memory updates, system maintenance, UI tweaks
+- **Patch (1.1.x)**: fixes, refactors, UI tweaks
 - **Minor (1.x.0)**: new widget, new character, new pipeline stage, new autonomous capability, any user-visible new feature
 - **Major (x.0.0)**: architecture overhaul, breaking config changes
 
-Changelog entries accumulate under the current patch. When a session produces a minor-worthy change, bump to next minor (e.g. 1.1.21 to 1.2.0). Run `zsh scripts/release.sh minor` or `zsh scripts/release.sh patch` to tag, sync package.json, and prepare next version header.
-
 Do NOT manually edit the version in package.json. The release script handles it.
+
+## Changelog rules
+
+Two changelog files, one version number shared between them:
+
+- **CHANGELOG.md** (public, committed to GitHub): Dashboard UI, chat, widgets, user-facing features only. What someone using Ground Control would care about.
+- **CHANGELOG.private.md** (git-ignored): Agent system changes (skills, memory, routing, Tana schema, character configs, watcher fixes). Use `[sys]` label.
+
+**Who writes:** Only the Architect "Release" action writes changelog entries. It reads `git diff` and categorizes entries into the correct file. Scheduled jobs (watcher, maintenance) must NEVER write to either changelog file. They log to `tiny-log.jsonl` and the Architect summarizes at release time.
+
+**When to release:** After a working session that produced commits, click the Architect "Release" button. It will: read the diff since last release, write changelog entries, commit, and optionally tag+push.
 
 ## Git workflow
 
 - GitHub: https://github.com/keremozan/ground-control
-- `ground-control.config.ts`, `mcp-tasks.json`, `docs/plans/`, `data/` are git-ignored
+- `ground-control.config.ts`, `mcp-tasks.json`, `docs/plans/`, `data/`, `CHANGELOG.private.md` are git-ignored
 - Use conventional commits: `feat:`, `fix:`, `refactor:`
-- Release: `zsh scripts/release.sh [patch|minor]` (tags, syncs package.json, prepares next version)
-- Commit the generated CHANGELOG.md and push
+- Release: Architect "Release" button, or manually `zsh scripts/release.sh [patch|minor]`

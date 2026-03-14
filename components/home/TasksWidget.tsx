@@ -77,6 +77,8 @@ interface ProjectPhase {
   status: 'pending' | 'active' | 'completed';
   taskCount: number;
   doneCount: number;
+  startDate: string | null;
+  endDate: string | null;
 }
 
 interface Project {
@@ -198,43 +200,22 @@ function ProjectsTabContent() {
     return { left: `${l}%`, width: `${w}%` };
   };
 
-  // Build rows with status-grouped time zones
+  // Build rows using actual phase dates (phases without dates get no bar)
   type Row =
     | { type: "project"; project: Project; tc: string }
-    | { type: "phase"; project: Project; phase: ProjectPhase; isLast: boolean; startMs: number; endMs: number; tc: string };
+    | { type: "phase"; project: Project; phase: ProjectPhase; isLast: boolean; startMs: number | null; endMs: number | null; tc: string };
   const rows: Row[] = [];
   for (const p of sorted) {
     const tc = getTrackColor(p.name);
     rows.push({ type: "project", project: p, tc });
     if (expanded.has(p.id) && p.phases.length > 0) {
-      const sMs = p.startDate ? new Date(p.startDate).getTime() : winStartMs;
-      const eMs = p.deadline ? new Date(p.deadline).getTime() : winEndMs;
-      const dur = eMs - sMs;
-      // Group phases by status, count groups
-      const nCompleted = p.phases.filter(ph => ph.status === "completed").length;
-      const nActive = p.phases.filter(ph => ph.status === "active").length;
-      const nPending = p.phases.filter(ph => ph.status === "pending").length;
-      const groups = (nCompleted > 0 ? 1 : 0) + (nActive > 0 ? 1 : 0) + (nPending > 0 ? 1 : 0);
-      const groupDur = groups > 0 ? dur / groups : dur;
-      let gi = 0;
-      const completedStart = sMs;
-      const completedEnd = nCompleted > 0 ? sMs + groupDur * (gi + 1) : sMs;
-      if (nCompleted > 0) gi++;
-      const activeStart = nCompleted > 0 ? completedEnd : sMs;
-      const activeEnd = nActive > 0 ? sMs + groupDur * (gi + 1) : activeStart;
-      if (nActive > 0) gi++;
-      const pendingStart = activeEnd;
-      const pendingEnd = eMs;
-
       p.phases.forEach((phase, idx) => {
-        const phStart = phase.status === "completed" ? completedStart
-          : phase.status === "active" ? activeStart : pendingStart;
-        const phEnd = phase.status === "completed" ? completedEnd
-          : phase.status === "active" ? activeEnd : pendingEnd;
+        const phStartMs = phase.startDate ? new Date(phase.startDate).getTime() : null;
+        const phEndMs = phase.endDate ? new Date(phase.endDate).getTime() : null;
         rows.push({
           type: "phase", project: p, phase, tc,
           isLast: idx === p.phases.length - 1,
-          startMs: phStart, endMs: phEnd,
+          startMs: phStartMs, endMs: phEndMs,
         });
       });
     }
@@ -410,7 +391,7 @@ function ProjectsTabContent() {
             }
 
             const { project, phase, isLast, startMs, endMs, tc } = row;
-            const phaseBar = barPct(startMs, endMs);
+            const phaseBar = (startMs != null && endMs != null) ? barPct(startMs, endMs) : null;
 
             const opacity = phase.status === "completed" ? 0.9
               : phase.status === "active" ? 1

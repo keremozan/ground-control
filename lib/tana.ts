@@ -118,6 +118,8 @@ export type TanaProject = {
     status: 'pending' | 'active' | 'completed';
     taskCount: number;
     doneCount: number;
+    startDate: string | null;
+    endDate: string | null;
   }[];
   lastActivity: {
     date: string;
@@ -446,15 +448,60 @@ export async function getTanaProjects(): Promise<TanaProject[]> {
             status = (WS_STATUS_OPTIONS[statusMatch[2]] || 'pending') as 'pending' | 'active' | 'completed';
           }
 
+          // Parse phase dates from **Date**, **timeline**, or plain Timeline fields
+          let phaseStart: string | null = null;
+          let phaseEnd: string | null = null;
+
+          // Helper: convert "Week N" to ISO date (Monday of that week in current year)
+          function weekToDate(weekStr: string, endOfWeek = false): string | null {
+            const wm = weekStr.trim().match(/^[Ww]eek\s+(\d+)$/);
+            if (!wm) return null;
+            const weekNum = parseInt(wm[1], 10);
+            if (weekNum < 1 || weekNum > 53) return null;
+            // ISO week: Jan 4 is always in week 1
+            const year = new Date().getFullYear();
+            const jan4 = new Date(year, 0, 4);
+            const dayOfWeek = jan4.getDay() || 7; // Mon=1..Sun=7
+            const week1Monday = new Date(jan4);
+            week1Monday.setDate(jan4.getDate() - dayOfWeek + 1);
+            const target = new Date(week1Monday);
+            target.setDate(week1Monday.getDate() + (weekNum - 1) * 7 + (endOfWeek ? 6 : 0));
+            const y = target.getFullYear();
+            const m = String(target.getMonth() + 1).padStart(2, '0');
+            const d = String(target.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+          }
+
+          const phaseDateMatch = phaseMd.match(/\*\*(?:Date|timeline)\*\*:\s*(.+?)(?:\s*<!--)/i)
+            || phaseMd.match(/(?:Date|Timeline):\s*(.+?)(?:\s*<!--)/i);
+          if (phaseDateMatch) {
+            const rawTl = phaseDateMatch[1].trim();
+            const tlParts = rawTl.split(/\s*[→\-—]\s*/);
+            if (tlParts.length >= 2) {
+              phaseStart = weekToDate(tlParts[0]) || parseNaturalDate(tlParts[0]);
+              phaseEnd = weekToDate(tlParts[tlParts.length - 1], true) || parseNaturalDate(tlParts[tlParts.length - 1]);
+            } else if (tlParts.length === 1) {
+              // Single value: if it's a week, span the full week
+              const ws = weekToDate(tlParts[0]);
+              const we = weekToDate(tlParts[0], true);
+              if (ws && we) {
+                phaseStart = ws;
+                phaseEnd = we;
+              } else {
+                phaseEnd = parseNaturalDate(tlParts[0]);
+              }
+            }
+          }
+
           // Count task checkboxes (exclude the phase's own checkbox)
           const doneMatches = phaseMd.match(/- \[x\].*#task/g);
           const todoMatches = phaseMd.match(/- \[ \].*#task/g);
           const doneCount = doneMatches ? doneMatches.length : 0;
           const taskCount = doneCount + (todoMatches ? todoMatches.length : 0);
 
-          phases.push({ id: phaseId, name: pName, status, taskCount, doneCount });
+          phases.push({ id: phaseId, name: pName, status, taskCount, doneCount, startDate: phaseStart, endDate: phaseEnd });
         } catch {
-          phases.push({ id: phaseId, name: pName, status: 'pending', taskCount: 0, doneCount: 0 });
+          phases.push({ id: phaseId, name: pName, status: 'pending', taskCount: 0, doneCount: 0, startDate: null, endDate: null });
         }
       }
 

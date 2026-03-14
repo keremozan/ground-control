@@ -373,7 +373,7 @@ export default function InboxWidget() {
                   const crew = patternColor ? iconForColor(patternColor) : null;
                   if (crew) {
                     return (
-                      <span style={{ display: "flex", flexShrink: 0, position: "relative", top: 1, marginRight: 6 }}>
+                      <span style={{ display: "flex", flexShrink: 0, position: "relative", top: 1, marginLeft: 4, marginRight: 6 }}>
                         <crew.Icon size={12} strokeWidth={1.5} style={{ color: crew.color }} />
                       </span>
                     );
@@ -383,7 +383,7 @@ export default function InboxWidget() {
                   if (!s) return null;
                   const AccIcon = s.icon;
                   return (
-                    <span style={{ display: "flex", flexShrink: 0, position: "relative", top: 1, marginRight: 6 }}>
+                    <span style={{ display: "flex", flexShrink: 0, position: "relative", top: 1, marginLeft: 4, marginRight: 6 }}>
                       <AccIcon size={12} strokeWidth={1.5} style={{ color: s.color }} />
                     </span>
                   );

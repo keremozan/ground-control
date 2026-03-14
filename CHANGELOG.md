@@ -1,19 +1,28 @@
 # Changelog
 
-## v1.3.0 — 2026-03-13
+## v1.3.0 — 2026-03-14
+
+### Projects Tab
+- [new] Phase dates parsed from Tana (supports "Week N" and "Week N to Week M" formats)
+- [new] Timeline bars use actual phase dates instead of status-based grouping
+- [fix] Phases without dates show in the list but render no bar
+
+### Dashboard
+- [fix] StatusBar hydration mismatch (server vs client Date)
+- [change] Relative date labels now three letters (Tod, Tom, Yes)
+- [change] Changelog modal filters out internal system sections
+- [change] Changelog cleaned up (public entries only, system entries moved to private file)
+
+### Chat
+- [fix] Queue messages no longer duplicate when sent
+- [fix] Icon and date spacing in inbox widget
 
 ## v1.2.0 — 2026-03-13
 
 ### Projects Tab
 - [new] Projects tab in TasksWidget showing all active projects with phase pipeline bars, health indicators, and last activity
-- [new] /api/tana-projects endpoint fetching project data from Tana (phases, task counts, deadlines, recent logs)
-- [new] Projects grouped by deadline month (March, April, etc.) with "Ongoing" for no-deadline projects
+- [new] Projects grouped by deadline month with "Ongoing" for no-deadline projects
 - [new] Health dots: green (active), amber (approaching deadline or stalling), red (overdue or stalled 14+ days)
-
-### Tana Logging
-- [fix] #log nodes now use descriptive names ("Mar 13: Task summary") instead of generic "Log" title
-- [fix] archiveTask() simplified: creates individual #log nodes per task, no more shared log-per-track pattern
-- [new] maxTurns support per scheduler job (scholar-daily uses 50)
 
 ## v1.1.23 — 2026-03-13
 
@@ -22,365 +31,234 @@
 
 ### Chat
 - [fix] Chat now scrolls to the end when opened or switched to
-
-### System
-- [fix] SUCourse submissions now require explicit user confirmation
-- [fix] Character narration of action steps removed
-- [refactor] Knowledge base queries optimized to reduce unnecessary searches
-
-### Chat
 - [fix] Flag button now shows confirmation feedback with check icon after successful flag
 
-### Chat
-- [fix] Flag button now shows green check on success (flagged state was set but never rendered — button just blinked back to flag icon)
-
 ### Inbox
-- [fix] Go button now works the email directly instead of extracting tasks — default seed is "do the work + log it in Tana", user input overrides if provided
+- [fix] Go button now works the email directly instead of extracting tasks
 
 ## v1.1.22 — 2026-03-12
 
 ### Scheduler
 - [new] Missed-job catch-up: persists lastRunAt per job, dashboard checks on mount and runs overdue jobs automatically
-- [new] Scholar daily research job (09:00 daily) in scheduler
 
 ### Classes
 - [fix] "Check all" now checks all items (prep + post-lesson), not just prep items
 
 ### Chat
 - [fix] Bold text no longer gets underlined
-- [new] Flag button in chat header toolbar — saves active conversation to `flagged-conversations.jsonl` for Architect/Watcher review
-- [fix] `logAction` import missing from LogsWidget (pre-existing bug, caused silent failure in job injection)
+- [new] Flag button in chat header toolbar
 
 ## v1.1.21 — 2026-03-12
 
 ### Chat
-- [fix] Auto-scroll no longer drags you back to input while reading — only scrolls if within 120px of bottom
-- [fix] Images from previous messages are now included when sending history to Claude — past images visible in context
-- [fix] Quick-reply character-switching now requires explicit navigation prefix ("Open in X", "Switch to X", "Ask X"). Previously any button containing a character name triggered a tab switch, breaking action buttons like "Create task for Clerk".
-- [fix] StrictMode abort race: delayed unmount abort by 50ms so simulated remounts don't cancel in-flight triggered requests.
+- [fix] Auto-scroll no longer drags you back to input while reading
+- [fix] Images from previous messages are now included when sending history to Claude
+- [fix] Quick-reply character-switching now requires explicit navigation prefix
+- [fix] StrictMode abort race: delayed unmount abort by 50ms
 
 ## v1.1.20 — 2026-03-12
 
 ### Dashboard
-- [new] Gmail-style right-aligned dates across all widgets (Inbox, Calendar, Tasks, Classes). Dates moved from left temporal column to right of item name.
-- [new] Time-of-day icons in Calendar (Sun, Moon, Sunrise, Sunset) with colored indicators based on event start hour.
-- [fix] Priority dropdown moved from task row to action bar (alongside Archive, Delete, etc.). Removed BACKLOG/ACTIVE status labels from task rows.
-- [fix] Task filter chip borders softened (uses subtle gray border instead of bold dot color).
-- [fix] Chat input bar vertical alignment fixed (model label and send button centered with textarea).
-- [fix] Priority dropdown overflow fixed (was clipped by action bar's overflow:hidden).
+- [new] Gmail-style right-aligned dates across all widgets
+- [new] Time-of-day icons in Calendar with colored indicators
+- [fix] Priority dropdown moved from task row to action bar
+- [fix] Task filter chip borders softened
+- [fix] Chat input bar vertical alignment fixed
+- [fix] Priority dropdown overflow fixed
 
 ## v1.1.19 — 2026-03-12
 
 ### Dashboard
-- [new] Relative dates in temporal column. Today/Tomw/Yest labels, day names within 6 days, "Mar 15" beyond.
-- [new] Character Keywords tab is now interactive. Add/remove keywords directly from the drawer, persisted to config and routing cache cleared on save.
-- [fix] Reschedule button moved from task row inline to action bar (next to Archive), overdue tasks only.
-- [fix] Crew icon routing fixes. Corrected color pattern mappings for Curator (rose), Proctor (fuchsia), Coach (emerald). Added missing patterns: WALC, VFS, visa, airport, z-lib, supercluster.
+- [new] Relative dates in temporal column (Today/Tomw/Yest labels)
+- [new] Character Keywords tab is now interactive (add/remove from drawer)
+- [fix] Reschedule button moved from task row inline to action bar
+- [fix] Crew icon routing fixes
 
 ## v1.1.17 — 2026-03-11
 
 ### Dashboard
-- [new] Fixed-width left temporal column across all panels (Inbox, Tasks, Calendar, Classes). Unified `formatWhen`/`formatCalendarWhen` date formatting. "When" info always in the same place.
-- [new] Priority dropdown hidden by default, appears on task row hover.
-- [new] 30-day cutoff filter for tasks. Far-future due dates no longer clutter the list.
-- [fix] Chat tab sizing increased (9→11px font, taller tabs). Message text bumped to 13px.
-- [fix] Curator color changed from red (#dc2626) to rose (#be185d) to avoid clash with priority/urgency reds.
-- [fix] Added curator (Palette) and proctor (GraduationCap) to char-icons registry.
-
-### Infrastructure
-- [refactor] Removed Google Tasks integration. Tana is the single source of truth for tasks. Deleted `lib/google-tasks.ts`, `lib/task-sync.ts`, sync API route, and setup script.
+- [new] Fixed-width left temporal column across all panels
+- [new] Priority dropdown hidden by default, appears on task row hover
+- [new] 30-day cutoff filter for tasks
+- [fix] Chat tab sizing increased
+- [fix] Curator color changed from red to rose
+- [fix] Added curator and proctor to char-icons registry
 
 ## v1.1.16 — 2026-03-11
 
 ### Dashboard
-- [fix] Unified date format across all panels. Shared `lib/date-format.ts` utility with "Mar 15" base format.
-- [fix] Inbox: "Yesterday" / "6d ago" replaced with "Mar 10". Today's emails keep time with blue dot.
-- [fix] Calendar: "Thu 12" becomes "Thu Mar 12" (month added for clarity at month boundaries).
-- [fix] Tasks: pill badges ("TODAY", "4d", "OVERDUE") replaced with colored dot + colored text system.
-- [fix] Classes: "Thu Mar 12" becomes "Mar 12" (weekday dropped). Dot system uses shared urgency utility.
-- [fix] Crew trigger now fires reliably in StrictMode (dedup ref reset on cleanup).
+- [fix] Unified date format across all panels
+- [fix] Inbox date format simplified to "Mar 10"
+- [fix] Calendar month added for clarity at month boundaries
+- [fix] Tasks: pill badges replaced with colored dot + text system
+- [fix] Classes: weekday dropped, dot system uses shared urgency utility
 
 ## v1.1.15 — 2026-03-11
 
 ### Chat
-- [new] Slash command skill picker. Type `/` in chat input to search and select from all 53 skills. Skills load dynamically from skill files.
-- [new] Injected skills work with any character. Select `/scholar-write` in Architect and it loads the full skill into the prompt context.
-- [fix] Textarea drag resize now works. Custom upward drag handle above the input area (34px to 240px range).
+- [new] Slash command skill picker (type `/` to search 53 skills)
+- [new] Injected skills work with any character
+- [fix] Textarea drag resize now works
 
 ### Proposals
-- [fix] Approve now applies the diff to the skill file (was only removing from list).
-- [new] Auto-apply. Proposals without `needsReview: true` are applied automatically on load. Only flagged proposals surface in the widget.
-- [new] Toast notifications for auto-applied and manually approved proposals.
+- [fix] Approve now applies the diff to the skill file
+- [new] Auto-apply for proposals without `needsReview: true`
+- [new] Toast notifications for auto-applied and manually approved proposals
 
 ### Classes
-- [fix] Class date display uses dot indicator + formatted date instead of "TODAY"/"3d" badges
-- [fix] Date parsing uses local timezone instead of UTC (no more off-by-one day shifts)
-- [fix] Checklist parser skips template container nodes (e.g. "prep tasks" wrapper)
-- [fix] Auto-attach checklist guards against supertag-created containers
+- [fix] Class date display uses dot indicator
+- [fix] Date parsing uses local timezone instead of UTC
+- [fix] Checklist parser skips template container nodes
 
 ## v1.1.14 — 2026-03-08
 
 ### Chat
-- [fix] Concurrent chat limit raised from 2 to 4, tooltips updated
-- [fix] Tab count limit removed from Plus button. Open as many tabs as you want, only concurrent runs are capped at 4.
-- [new] Architect send-to button now opens a context input. Add optional notes before forwarding a conversation.
-- [new] Message queue. Type while AI works, messages auto-fire in order. Dismissible pills show queued messages. Stop button clears the queue.
+- [fix] Concurrent chat limit raised from 2 to 4
+- [fix] Tab count limit removed from Plus button
+- [new] Architect send-to button now opens a context input
+- [new] Message queue (type while AI works, messages auto-fire in order)
 
 ## v1.1.13 — 2026-03-08
 
 ### Chat
-- [fix] Typing in one chat tab and switching to another no longer clears unsubmitted input — tabs stay mounted, input state preserved
-
-### Changelog
-- [new] `CHANGELOG.private.md` (git-ignored) for personal system entries (skills, characters, Tana schema) — use `[sys]` label
-- [new] Dashboard changelog merges public + private entries; `[sys]` items shown with purple dot
-- [new] `release.sh` also prepends next version header to private changelog
+- [fix] Typing in one chat tab and switching to another no longer clears unsubmitted input
 
 ## v1.1.12 — 2026-03-08
 
 ### Scholar
-- [fix] PROSE GATE changed from declaration ("Gate cleared") to enumeration — model must quote each found instance per pattern before outputting
-- [new] Intent-based skill routing for Scholar — first message detected via keyword map, only matching skill loaded (drops ~80% of prompt on focused sessions)
-- [new] Multi-shot revision loop — Scholar drafts silently revised up to ×3 before reaching the user; only final version shown with "(auto-revised ×N)" note
-- [new] `buildRevisionBasePrompt()` in `lib/prompt.ts` — minimal Scholar context (system prompt + modifiers) for revision passes without MCP or full skill set
+- [new] Intent-based skill routing (keyword map, only matching skill loaded)
+- [new] Multi-shot revision loop (up to 3x auto-revision before user sees output)
 
 ## v1.1.11 — 2026-03-07
 
 ### Scholar
-- [new] Auto-critic: Scholar's chat stream is now wrapped with auto-review — detects `[DRAFT-COMPLETE: type]` marker, fires a second `spawnOnce` call against binary criteria in `scholar-text-types.md`, injects verdict before the `done` event
-- [new] `spawnOnce` in `lib/spawn.ts` — minimal single-turn spawn without MCP, used for critic calls (fast, no tool access)
-- [new] Three verdict paths: PASS (0–1 failures, output as-is), REVISE (2–3 failures, targeted fixes), REWRITE (4+ or Criterion 1 fail, suppress draft, new angle, re-evaluate)
+- [new] Auto-critic: detects `[DRAFT-COMPLETE]` marker, fires review against binary criteria
+- [new] Three verdict paths: PASS, REVISE, REWRITE
 
 ## v1.1.10 — 2026-03-07
 
 ### Architect
-- [new] `scripts/release.sh` — tags current CHANGELOG version, syncs package.json, commits, prepares next version header
-- [new] `npm run release [patch|minor]` script added to package.json
-- [new] Architect "Release" action button — autonomous, runs release script from Crew widget
-- [new] "release patch" suggestion chip added to Architect
+- [new] Release action button and release script
+- [new] "release patch" suggestion chip
 
 ## v1.1.9 — 2026-03-07
 
 ### Schedules
-- [new] Pencil button on each recurring job row — click to view and edit the job's seed prompt
-- [new] Edits persist in `data/job-overrides.json` and are used on next run
-- [new] `GET/PATCH /api/schedule/jobs` endpoint for reading and saving job command overrides
-- [new] Edited job button shown with character color tint to indicate an active override
+- [new] Pencil button on job rows to view and edit seed prompts
+- [new] Edits persist in `data/job-overrides.json`
 
 ## v1.1.8 — 2026-03-07
 
 ### Scholar
-- [new] "Concept Scan" autonomous action — links recent day-page notes to matching concept nodes in knowledge base
+- [new] "Concept Scan" autonomous action
 
 ## v1.1.7 — 2026-03-06
 
 ### Chat
-- [fix] Form blocks now render free-text textarea for questions without `:: options` syntax, instead of silently dropping them and showing only Submit
+- [fix] Form blocks now render free-text textarea for questions without options
 
 ## v1.1.6 — 2026-03-05
 
 ### Scholar
-- [new] "Add Publication" pill — type a title, Scholar web-searches, formats APA citation, auto-detects book vs article, fills all fields (author, year, concept, track, status) and creates node in Tana Library
+- [new] "Add Publication" pill with auto-citation formatting
 
 ### Chat
-- [new] Italic (`_text_`), strikethrough (`~~text~~`), blockquote callout (`> text`) rendering
-- [fix] Font loading via `next/font` only — removed duplicate Google Fonts import that broke Bricolage Grotesque
-- [fix] Architect "send to" button uses Wrench icon (not Bug)
-- [new] Resizable textarea in chat input — drag corner to expand, works in all context inputs
+- [new] Italic, strikethrough, blockquote rendering
+- [fix] Font loading fixed
+- [new] Resizable textarea in chat input
 
 ### Tasks
-- [fix] Task dates updated in Tana now reflect immediately — removed stale search-index date filter
+- [fix] Task dates updated in Tana now reflect immediately
 
 ### Logs
-- [new] Scheduled job runs (cron) now appear in the Logs tab — injected from job results file
-
-### Watcher
-- [fix] Log truncation now explicit — watcher clears tiny-log.jsonl after each run so entries aren't re-processed
+- [new] Scheduled job runs now appear in the Logs tab
 
 ## v1.1.5 — 2026-03-04
 
 ### Scheduler
-- [new] macOS crontab installed for all 11 recurring jobs + 15-min one-off task checker
-- [fix] Scheduled jobs now actually fire automatically (previously required manual trigger)
+- [new] macOS crontab installed for all 11 recurring jobs
 
 ## v1.1.4 — 2026-03-04
 
 ### Tasks
-- [fix] Trashed Tana nodes no longer appear in task list — `getTanaTasks()` and `getTanaPhases()` now filter `inTrash: true` nodes
-
-### Postman
-- [fix] WhatsApp scan dedup now ignores trashed nodes — a task in trash no longer blocks creation of a new task for the same item
+- [fix] Trashed Tana nodes no longer appear in task list
 
 ## v1.1.3 — 2026-03-04
 
 ### Dashboard
-- [new] Character-switching quick-replies — clicking a quick-reply that mentions a character opens a new tab with that character and passes conversation context
-- [new] Renameable chat tabs — double-click a tab name to edit inline, persists in localStorage
-- [new] Version badge now reads from CHANGELOG.md dynamically (no more package.json mismatch)
-- [fix] Removed unused Home nav button from status bar
-- [fix] Status bar spacing after Home button removal
+- [new] Character-switching quick-replies
+- [new] Renameable chat tabs
+- [new] Version badge reads from CHANGELOG.md dynamically
 
 ## v1.1.2 — 2026-03-04
 
 ### Dashboard
-- [new] Knowledge files in character drawer are now clickable — fetches content and opens in editor modal
-- [new] Skills tab in character drawer — each skill is clickable, opens editor with Save button
-- [fix] Knowledge/skill file editor now delays mounting until content is fetched (was showing empty on click)
-- [new] Character drawer opens inside widget area (contained mode) instead of full-page overlay
-- [fix] Chat messages with `##` or `---` markers no longer misclassified as "thinking" if content is real prose
+- [new] Knowledge files in character drawer are now clickable
+- [new] Skills tab in character drawer
+- [new] Character drawer opens inside widget area (contained mode)
+- [fix] Chat messages with `##` or `---` no longer misclassified as "thinking"
 
 ## v1.1.1 — 2026-03-04
 
 ### Dashboard
-- [new] "Lesson done →" button appears on today's class card in Classes tab
-- [new] Clicking it checks all remaining prep items in Tana, then opens Proctor in chat with "lesson done, [class name]" pre-filled
-- [new] `/api/class-prep/lesson-done` POST endpoint — reads class node, checks unchecked prep items
-- [new] `checkRemainingPrepItems()` in lib/tana.ts — bulk-checks prep group todos
+- [new] "Lesson done" button on today's class card
+- [new] Clicking it checks all remaining prep items and opens Proctor
 
 ## v1.1.0 — 2026-03-04
 
 ### Dashboard
-- [new] Classes widget — shows upcoming #class nodes (next 14 days) with interactive prep checklists
-- [new] Interactive checkboxes toggle Tana todo nodes via check_node/uncheck_node
-- [new] Progress bar per class session, course pill (VA 204 / VA 315), day-until badge
-- [new] Prep and post-lesson groups collapsible independently
-- [new] Layout: Chat moved from span-2 to single column to make room for Classes
-
-### API
-- [new] `GET /api/class-prep` — fetch upcoming #class nodes with checklists from Tana
-- [new] `POST /api/class-prep/toggle` — toggle a class checklist todo node
-
-### Tana lib
-- [new] `getClassNodes()` — search #class nodes, parse markdown, extract checklist items
-- [new] `toggleClassItem()` — wrap check_node / uncheck_node for class prep todos
-- [new] `classTags` and `classFields` added to tana-schema.ts
+- [new] Classes widget with interactive prep checklists
+- [new] Interactive checkboxes toggle Tana todo nodes
+- [new] Progress bar per class session, course pill, day-until badge
+- [new] Layout: Chat moved to single column to make room for Classes
 
 ## v1.0.11 — 2026-03-03
 
 ### Dashboard
-- [new] character detail drawer — skills, keywords, knowledge, memory accessible from crew cards
-- [new] detail button on crew cards opens character detail drawer
-- [new] schedules tab in crew widget — recurring jobs, pending tasks, run full cycle
-- [new] logs and proposals tabs in crew widget (embedded, no double headers)
-- [new] today/week filter chips in tasks widget alongside priority filters
-- [new] image paste support in chat — paste images, preview thumbnails, send to characters
-- [new] icons on all widget headers (Tasks, Chat, Calendar, Inbox, Crew)
-- [new] scheduled tasks — one-time tasks with datetime, auto-run on mount + every 15min
-- [improved] crew widget header uses tab navigation only, no redundant title
-
-### Scheduled Tasks
-- [new] `POST /api/schedule/tasks` — create a one-time scheduled task
-- [new] `GET /api/schedule/tasks` — list pending tasks
-- [new] `DELETE /api/schedule/tasks?id=` — remove a task
-- [new] `POST /api/schedule/tasks/check` — find and run overdue tasks
-- [new] `lib/scheduled-tasks.ts` — type definitions and file I/O
-
-### Pipeline
-- [removed] pipeline page — all functionality moved to dashboard
+- [new] Character detail drawer (skills, keywords, knowledge, memory)
+- [new] Schedules tab in crew widget
+- [new] Logs and proposals tabs in crew widget
+- [new] Today/week filter chips in tasks widget
+- [new] Image paste support in chat
+- [new] Icons on all widget headers
+- [new] Scheduled tasks with datetime, auto-run on mount
 
 ## v1.0.10 — 2026-03-03
 
 ### Dashboard
-- [improved] move schedules from pipeline sidebar to dashboard page, below crew grid
+- [improved] Schedules moved from pipeline sidebar to dashboard
 
 ## v1.0.9 — 2026-03-03
 
 ### Chat
-- [new] suggestion chips in empty chat state — character-specific tasks shown as clickable pills
-- [new] first-message logging to tiny-log for watcher-driven suggestion mining
-
-### Characters
-- [new] suggestions field added to all 8 character configs (clerk, proctor, scholar, curator, coach, postman, architect, oracle)
+- [new] Suggestion chips in empty chat state
 
 ## v1.0.8 — 2026-03-02
 
 ### Tasks
-- [fix] stop showing in-progress tasks in all priority tabs
-
-### General
-- [fix] sync package.json version from git tag in changelog script
-- [fix] server-side exclusion tracking for deleted/done tasks
+- [fix] In-progress tasks no longer show in all priority tabs
 
 ## v1.0.7 — 2026-03-02
 
-### Sync
-- [fix] prevent done/deleted tasks from reappearing
-
-## v1.0.6 — 2026-03-02
-
-### Sync
-- [fix] cross-platform task sync reliability
-
-### General
-- [fix] changelog script compat with macOS zsh
+### Tasks
+- [fix] Prevent done/deleted tasks from reappearing
 
 ## v1.0.5 — 2026-03-01
 
-### General
-- [new] add Google Tasks sync for Tana tasks
-
-## v1.0.4 — 2026-03-01
-
-### General
-- [new] context-aware action buttons with toggle dot
-- [fix] Miro health check, bug button prompt, chat max-turns, and Miro icon
-- [new] add Miro MCP to service health bar
-- [fix] update dashboard changelog parser for badge format
-
-## v1.0.3 — 2026-02-28
-
-### General
-- [new] use colored badge labels in changelog
-- [fix] add emoji labels to changelog and skip empty unreleased section
-
-## v1.0.2 — 2026-02-28
-
-### General
-- [fix] increase schedule widget text size and raise chat max turns to 50
-- [fix] show date in schedule last-run when not today
-- [new] auto-generate changelog from git tags and commits
-
-## v1.0.1 — 2026-02-28
-
-### General
-- [improved] use hex colors as keys in all pattern configs
-- [fix] restore proctor/curator colors for config-driven patterns
-- [new] config-driven calendar event colors
-- [fix] update clone URL to actual repo
+### Dashboard
+- [new] Context-aware action buttons with toggle dot
+- [new] Miro MCP added to service health bar
 
 ## v1.0.0 — 2026-02-28
 
 ### Chat
-- [new] pulsing avatar indicator while character is thinking
+- [new] Pulsing avatar indicator while character is thinking
+
+### Dashboard
+- [new] Home page with CrewWidget, ChatWidget, TasksWidget, InboxWidget
+- [new] API routes for characters, tasks, dispatch, chat
+- [new] Skills reader, shared knowledge loader, prompt builder
 
 ### Pipeline
-- [new] switch to orthogonal step edges with offset separation
-- [new] rework layout to structured spatial grid matching wireframe
-- [new] rewrite SystemGraph as ReactFlow canvas with spatial layout
-- [new] add SystemConfigDrawer slide-out panel
-- [new] add CharacterNode with full expand/edit functionality
-- [new] add PostmanNode and ScheduleNode components
-- [new] add leaf node components — Source, Output, TanaTag, Group
-- [new] add custom FlowEdge component with character color
-- [new] add dagre layout builder with localStorage position persistence
-- [new] install reactflow + dagre, add shared types
-
-### General
-- v1.0.0 — Initial public release
-- [fix] chat loading indicator not showing on triggered messages
-- [fix] clean up SystemGraph layout + fix ghost chat stopped message
-- [fix] use unique key for schedule items in CharacterNode
-- [fix] restore original TasksWidget with personal tasks
-- [fix] add character colors, rename status bar brand
-- [new] home page assembled with real backend
-- CrewWidget, ChatWidget, TasksWidget, InboxWidget to real APIs
-- home components, chat-store, mock-data, useSSE hook from prototype
-- [new] API routes (characters, tasks, task dispatch, chat, action)
-- [new] task definitions + SSE spawn helper
-- [new] skills reader, shared knowledge loader, prompt builder
-- [new] character singleton loader
-- css, layout, char-icons from prototype
-- next.js 15 project
-- ground-control implementation plan (21 tasks)
-- Add ground-control design doc
-
+- [new] SystemGraph as ReactFlow canvas with spatial layout
+- [new] Character, Postman, and Schedule node components

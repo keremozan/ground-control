@@ -70,6 +70,9 @@ function parseChangelog(raw: string): CLVersion[] {
   return versions;
 }
 
+// Internal sections hidden from the changelog modal (kept in CHANGELOG.md for git record)
+const INTERNAL_SECTIONS = /^(system|scheduler|tana|agent|routing|memory|skills?)$/i;
+
 const TYPE_DOT: Record<string, string> = {
   new: "#22c55e",
   improved: "#3b82f6",
@@ -104,7 +107,7 @@ export default function StatusBar() {
   const [bugText, setBugText] = useState("");
   const [bugSent, setBugSent] = useState(false);
   const [status, setStatus] = useState<Status | null>(null);
-  const [time, setTime] = useState(() => new Date());
+  const [time, setTime] = useState<Date | null>(null);
   const [showHealth, setShowHealth] = useState(false);
   const [retrying, setRetrying] = useState(false);
   const [restarting, setRestarting] = useState(false);
@@ -182,9 +185,8 @@ export default function StatusBar() {
     setTimeout(() => { setShowBug(false); setBugText(""); setBugSent(false); }, 1200);
   };
 
-  const d = time;
-  const dateStr = `${DAY_NAMES[d.getDay()]}  ${d.getDate()} ${MONTH_NAMES[d.getMonth()]}`;
-  const timeStr = d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+  const dateStr = time ? `${DAY_NAMES[time.getDay()]}  ${time.getDate()} ${MONTH_NAMES[time.getMonth()]}` : "";
+  const timeStr = time ? time.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : "";
 
   // Derived health states
   const gmailOk = status ? (status.gmail.personal && status.gmail.school) : null;
@@ -422,7 +424,10 @@ export default function StatusBar() {
             }}>
               Changelog
             </div>
-            {changelog ? changelog.map((ver, vi) => (
+            {changelog ? changelog.map((ver, vi) => {
+              const publicSections = ver.sections.filter(s => !INTERNAL_SECTIONS.test(s.area));
+              if (publicSections.length === 0) return null;
+              return (
               <div key={vi} style={{ marginBottom: vi < changelog.length - 1 ? 20 : 0 }}>
                 <div style={{
                   fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 600,
@@ -431,7 +436,7 @@ export default function StatusBar() {
                 }}>
                   {ver.heading}
                 </div>
-                {ver.sections.map((sec, si) => (
+                {publicSections.map((sec, si) => (
                   <div key={si} style={{ marginBottom: 10 }}>
                     <div style={{
                       fontFamily: "var(--font-mono)", fontSize: 9.5, fontWeight: 600,
@@ -439,7 +444,7 @@ export default function StatusBar() {
                     }}>
                       {sec.area}
                     </div>
-                    {sec.items.map((item, ii) => (
+                    {sec.items.filter(it => it.type !== "sys").map((item, ii) => (
                       <div key={ii} style={{
                         display: "flex", alignItems: "baseline", gap: 6,
                         fontFamily: "var(--font-mono)", fontSize: 10.5,
@@ -457,7 +462,8 @@ export default function StatusBar() {
                   </div>
                 ))}
               </div>
-            )) : (
+              );
+            }) : (
               <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--text-3)" }}>
                 Loading...
               </span>
