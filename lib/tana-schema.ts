@@ -42,10 +42,17 @@ export const TANA = {
   assignedOptions: {
     'NqMuiXnJ8NEg': 'postman',
     '7Xoa3mdCTK1t': 'scholar',
+    'QQkKqejpmGyv': 'proctor',
     'SrqWi1I529WC': 'clerk',
     'cK-0HFGW1odT': 'coach',
+    'oaQx18xu9GD4': 'curator',
     '6mku-XrMqemu': 'architect',
     '5nF1Veyyrh7H': 'oracle',
+    'oPQV0ekG2UyK': 'steward',
+    'tpuD7FytFy9d': 'archivist',
+    'iHDHg7Gmduwt': 'watcher',
+    'Eh1b9d43uuvE': 'engineer',
+    'AtLnbHyZf4R5': 'scribe',
   } as Record<string, string>,
   wsStatusOptions: {
     'DlvHvGV-uj2w': 'pending',

@@ -619,7 +619,7 @@ export default function TasksWidget() {
         widget: "tasks",
         action: "reschedule",
         target: task.name.slice(0, 80),
-        character: "clerk",
+        character: "steward",
       });
       setTimeout(fetchTasks, 3000);
     } catch (err) {

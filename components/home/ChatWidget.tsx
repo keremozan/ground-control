@@ -1712,7 +1712,7 @@ export default function ChatWidget() {
           </button>
           <button
             className="widget-toolbar-btn"
-            data-tip="Flag for Architect review"
+            data-tip="Flag for review"
             onClick={flagConversation}
             disabled={flagging || flagged}
             style={flagged ? { color: "var(--green, #22c55e)", opacity: 1 } : flagging ? { opacity: 0.5 } : undefined}

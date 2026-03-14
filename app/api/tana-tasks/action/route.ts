@@ -89,12 +89,12 @@ export async function POST(req: Request) {
     }
   }
 
-  // --- Reschedule: spawn clerk with reschedule skill ---
+  // --- Reschedule: spawn steward with reschedule skill ---
 
   if (action === 'reschedule') {
     try {
       const today = new Date().toISOString().split('T')[0];
-      const prompt = buildCharacterPrompt('clerk',
+      const prompt = buildCharacterPrompt('steward',
         `Reschedule this single overdue task to a FUTURE date. Today is ${today}. The new due date MUST be after today.\n\nUse the clerk-reschedule skill: check calendar availability for the next 7 days, then set a new due date using set_field_content on field 8EVxOhX0Tnc4.\n\nIMPORTANT: ONLY change the due date. Do NOT change the task status, priority, or any other field.\n\nTask: ${taskName || 'Unknown'}\nTana node ID: ${nodeId}\nTrack: ${track || 'Unknown'}`
       );
       const stream = spawnSSEStream({
@@ -102,7 +102,7 @@ export async function POST(req: Request) {
         model: 'sonnet',
         maxTurns: 15,
         label: `Reschedule: ${taskName || 'Task'}`,
-        characterId: 'clerk',
+        characterId: 'steward',
       });
       return new Response(stream, {
         headers: {

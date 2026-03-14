@@ -1,5 +1,26 @@
 # Changelog
 
+## v1.4.0 — 2026-03-14
+
+### Crew
+- [new] 5 new characters: Scribe (writing), Archivist (data maintenance), Steward (time management), Watcher (monitoring), Engineer (implementation)
+- [new] Inter-character spawning via `/api/spawn` endpoint. Characters can delegate tasks to each other mid-session.
+- [change] Skills migrated to new owners: calendar/scheduling to Steward, CV/exhibition/cleanup/concept-scan to Archivist, batch-ops to Archivist, watcher to Watcher, build to Engineer
+- [change] Scholar quality and style enforcement moved to Scribe (spawned on demand)
+
+### Dashboard
+- [new] Icons and colors for all 5 new characters in crew widget
+- [change] CrewWidget ordering updated for expanded 14-character roster
+- [change] Schedule/calendar task assignments routed to Steward
+- [change] Inbox schedule action defaults to Steward
+
+### Chat
+- [fix] Removed dead changelog button (endpoint was deleted)
+
+### API
+- [new] `POST /api/spawn` for inter-character task delegation with depth limits and permission checks
+- [remove] `POST /api/release` (unused since changelog button removal)
+
 ## v1.3.1 — 2026-03-14
 
 ## v1.3.0 — 2026-03-14
