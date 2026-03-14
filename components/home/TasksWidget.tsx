@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Play, CheckCircle, Archive, Trash2, RefreshCw, Loader2, ChevronRight, X, Send, SkipForward, ExternalLink, ChevronDown, CalendarClock, Plus, ListChecks, BookOpen, FolderKanban } from "lucide-react";
+import { Play, CheckCircle, Archive, Trash2, RefreshCw, Loader2, ChevronRight, ChevronLeft, X, Send, SkipForward, ExternalLink, ChevronDown, CalendarClock, Plus, ListChecks, BookOpen, FolderKanban } from "lucide-react";
 import { ClassesTabContent } from "./ClassesWidget";
 import { charIcon, charColor } from "@/lib/char-icons";
 import { useChatTrigger } from "@/lib/chat-store";
@@ -97,6 +97,7 @@ const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct"
 function ProjectsTabContent() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
+  const [monthOffset, setMonthOffset] = useState(0);
   const timelineRef = useRef<HTMLDivElement>(null);
   const [timelineWidth, setTimelineWidth] = useState(0);
 
@@ -150,18 +151,10 @@ function ProjectsTabContent() {
     return a.deadline.localeCompare(b.deadline);
   });
 
-  // Compute time window: earliest start to latest deadline, clamped to reasonable range
+  // 6-month window: current month -1 to +4, shifted by monthOffset
   const now = new Date();
-  let minMs = now.getTime();
-  let maxMs = now.getTime();
-  for (const p of sorted) {
-    if (p.startDate) minMs = Math.min(minMs, new Date(p.startDate).getTime());
-    if (p.deadline) maxMs = Math.max(maxMs, new Date(p.deadline).getTime());
-  }
-  // Snap to month boundaries
-  const winStart = new Date(new Date(minMs).getFullYear(), new Date(minMs).getMonth(), 1);
-  const winEndDate = new Date(maxMs);
-  const winEnd = new Date(winEndDate.getFullYear(), winEndDate.getMonth() + 1, 0, 23, 59, 59);
+  const winStart = new Date(now.getFullYear(), now.getMonth() + monthOffset - 1, 1);
+  const winEnd = new Date(now.getFullYear(), now.getMonth() + monthOffset + 5, 0, 23, 59, 59);
   const winStartMs = winStart.getTime();
   const winEndMs = winEnd.getTime();
 
@@ -198,8 +191,48 @@ function ProjectsTabContent() {
     }
   }
 
+  // Navigation label
+  const navLabel = `${MONTH_NAMES[winStart.getMonth()]} ${winStart.getFullYear()} \u2013 ${MONTH_NAMES[winEnd.getMonth()]} ${winEnd.getFullYear()}`;
+
   return (
     <div className="widget-body" style={{ padding: 0 }}>
+      {/* Navigation */}
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "4px 8px", borderBottom: "1px solid var(--border)",
+      }}>
+        <button onClick={() => setMonthOffset(o => o - 3)} style={{
+          display: "flex", alignItems: "center", justifyContent: "center",
+          width: 20, height: 20, borderRadius: 3,
+          border: "1px solid var(--border)", background: "var(--surface)",
+          cursor: "pointer", color: "var(--text-2)",
+        }}>
+          <ChevronLeft size={11} strokeWidth={2} />
+        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 600, color: "var(--text-2)" }}>
+            {navLabel}
+          </span>
+          {monthOffset !== 0 && (
+            <button onClick={() => setMonthOffset(0)} style={{
+              fontFamily: "var(--font-mono)", fontSize: 8, padding: "1px 5px", borderRadius: 3,
+              border: "1px solid var(--border)", background: "var(--surface)",
+              cursor: "pointer", color: "var(--blue)",
+            }}>
+              Today
+            </button>
+          )}
+        </div>
+        <button onClick={() => setMonthOffset(o => o + 3)} style={{
+          display: "flex", alignItems: "center", justifyContent: "center",
+          width: 20, height: 20, borderRadius: 3,
+          border: "1px solid var(--border)", background: "var(--surface)",
+          cursor: "pointer", color: "var(--text-2)",
+        }}>
+          <ChevronRight size={11} strokeWidth={2} />
+        </button>
+      </div>
+
       <div style={{ display: "flex", minHeight: 0 }}>
         {/* Left labels */}
         <div style={{ width: LEFT_COL, minWidth: LEFT_COL, flexShrink: 0, borderRight: "1px solid var(--border)" }}>
