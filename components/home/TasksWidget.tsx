@@ -89,46 +89,7 @@ interface Project {
   lastActivity: { date: string; summary: string } | null;
 }
 
-function getHealthColor(project: Project): string {
-  const now = new Date();
-  const dayMs = 86400000;
-
-  // Check deadline
-  let deadlinePassed = false;
-  let deadlineWithin14 = false;
-  if (project.deadline) {
-    const dl = new Date(project.deadline);
-    if (dl < now) deadlinePassed = true;
-    else if (dl.getTime() - now.getTime() < 14 * dayMs) deadlineWithin14 = true;
-  }
-
-  // Check activity staleness
-  let daysSinceActivity: number | null = null;
-  if (project.lastActivity?.date) {
-    const parsed = new Date(project.lastActivity.date + " " + now.getFullYear());
-    // If parsed date is in the future by more than 30 days, it's probably last year
-    if (parsed.getTime() - now.getTime() > 30 * dayMs) {
-      parsed.setFullYear(now.getFullYear() - 1);
-    }
-    daysSinceActivity = Math.floor((now.getTime() - parsed.getTime()) / dayMs);
-  }
-
-  // Red: deadline passed OR no activity in 14+ days
-  if (deadlinePassed) return "#ef4444";
-  if (daysSinceActivity !== null && daysSinceActivity >= 14) return "#ef4444";
-
-  // Amber: deadline within 14 days OR no activity 7-14 days
-  if (deadlineWithin14) return "#f59e0b";
-  if (daysSinceActivity !== null && daysSinceActivity >= 7) return "#f59e0b";
-
-  // Green: recent activity (within 7 days)
-  if (daysSinceActivity !== null && daysSinceActivity < 7) return "#22c55e";
-
-  // Gray: no activity data and no deadline pressure
-  return "#9c9b95";
-}
-
-// Removed: groupByMonth, PhasePipelineBar, PhaseLabels (replaced by Gantt view)
+// Removed: groupByMonth, PhasePipelineBar, PhaseLabels, getHealthColor (replaced by Gantt view)
 
 const ROW_HEIGHT = 56;
 const LEFT_COL = 180;
@@ -300,7 +261,6 @@ function ProjectsTabContent() {
           {/* Project rows */}
           {sorted.map(project => {
             const tc = getTrackColor(project.name);
-            const healthColor = getHealthColor(project);
             const activePhase = project.phases.find(p => p.status === "active");
             const totalTasks = project.phases.reduce((s, p) => s + p.taskCount, 0);
             const doneTasks = project.phases.reduce((s, p) => s + p.doneCount, 0);
@@ -312,7 +272,7 @@ function ProjectsTabContent() {
                 style={{
                   height: ROW_HEIGHT,
                   display: "flex", alignItems: "center", gap: 6,
-                  padding: "0 8px 0 0",
+                  padding: "0 8px 0 8px",
                   borderLeft: `3px solid ${tc}`,
                   borderBottom: "1px solid var(--border)",
                   cursor: "pointer",
@@ -321,10 +281,6 @@ function ProjectsTabContent() {
                 onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = "var(--surface-hover, #f8f8f6)"; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
               >
-                <span style={{
-                  width: 7, height: 7, borderRadius: "50%",
-                  background: healthColor, flexShrink: 0, marginLeft: 8,
-                }} />
                 <div style={{ overflow: "hidden", minWidth: 0 }}>
                   <div style={{
                     fontFamily: "var(--font-body)", fontSize: 11, fontWeight: 600,
