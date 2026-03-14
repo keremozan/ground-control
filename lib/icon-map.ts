@@ -12,6 +12,7 @@ import {
   Clock, Settings, Power, AlertTriangle, FolderCog, ArrowRight,
   Play, CheckCircle, Archive, Lightbulb, Stethoscope, RotateCcw,
   Layers, Network, BookMarked, Eraser,
+  Crosshair, Scale, FlaskConical, BarChart,
   type LucideIcon,
 } from "lucide-react";
 import TanaIcon from "@/components/icons/TanaIcon";
@@ -30,6 +31,7 @@ export const iconMap: Record<string, LucideIcon> = {
   Clock, Settings, Power, AlertTriangle, FolderCog, ArrowRight,
   Play, CheckCircle, Archive, Lightbulb, Stethoscope, RotateCcw,
   Layers, Network, BookMarked, Eraser,
+  Crosshair, Scale, FlaskConical, BarChart,
   Tana: TanaIcon as unknown as LucideIcon,
 };
 

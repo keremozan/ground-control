@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.6.0 — 2026-03-14
+
+### Crew
+- [new] 2 new characters: Prober (question decomposition, Crosshair icon, cyan) and Auditor (validation, Scale icon, emerald)
+- [new] Scholar gains "Investigate" action for running the LCoT reasoning pipeline
+- [new] Curator gains "Investigate" action for art practice reasoning chains
+
+### Dashboard
+- [new] Icons registered: Crosshair, Scale, FlaskConical, BarChart
+- [new] Prober and Auditor in char-icons registry and tana-schema character map
+
 ## v1.5.2 — 2026-03-14
 
 ## v1.5.1 — 2026-03-14
