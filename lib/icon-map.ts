@@ -1,7 +1,7 @@
 import {
   Mail, BookOpen, GraduationCap, Briefcase, Heart, Palette, Wrench, Telescope,
   MessageCircle, Camera, Inbox, Send, RefreshCw,
-  PenLine, Search, FileText, MessageSquare,
+  Pen, PenLine, Search, FileText, MessageSquare,
   Monitor, Hammer, Share2, Users, PenTool,
   HeartPulse, CalendarCheck,
   Building2, Globe, Landmark,
@@ -10,7 +10,7 @@ import {
   Reply, ListChecks, Calendar, CornerUpRight,
   Zap, MailPlus, CalendarPlus, ClipboardList, ScanLine,
   Clock, Settings, Power, AlertTriangle, FolderCog, ArrowRight,
-  Play, CheckCircle, Archive, Lightbulb, Stethoscope,
+  Play, CheckCircle, Archive, Lightbulb, Stethoscope, RotateCcw,
   type LucideIcon,
 } from "lucide-react";
 import TanaIcon from "@/components/icons/TanaIcon";
@@ -18,7 +18,7 @@ import TanaIcon from "@/components/icons/TanaIcon";
 export const iconMap: Record<string, LucideIcon> = {
   Mail, BookOpen, GraduationCap, Briefcase, Heart, Palette, Wrench, Telescope,
   MessageCircle, Camera, Inbox, Send, RefreshCw,
-  PenLine, Search, FileText, MessageSquare,
+  Pen, PenLine, Search, FileText, MessageSquare,
   Monitor, Hammer, Share2, Users, PenTool,
   HeartPulse, CalendarCheck,
   Building2, Globe, Landmark,
@@ -27,7 +27,7 @@ export const iconMap: Record<string, LucideIcon> = {
   Reply, ListChecks, Calendar, CornerUpRight,
   Zap, MailPlus, CalendarPlus, ClipboardList, ScanLine,
   Clock, Settings, Power, AlertTriangle, FolderCog, ArrowRight,
-  Play, CheckCircle, Archive, Lightbulb, Stethoscope,
+  Play, CheckCircle, Archive, Lightbulb, Stethoscope, RotateCcw,
   Tana: TanaIcon as unknown as LucideIcon,
 };
 

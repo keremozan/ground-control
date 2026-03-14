@@ -2,7 +2,7 @@ import {
   Mail, BookOpen, Briefcase,
   Heart, Wrench, Telescope,
   Users, Stethoscope, Palette, GraduationCap,
-  Pen, Eye, Hammer, Archive, Clock,
+  Pen, Eye, Hammer, Archive, Clock, Compass,
   type LucideIcon,
 } from "lucide-react";
 
@@ -23,6 +23,7 @@ export const charColor: Record<string, string> = {
   engineer:  '#374151',  // gray
   archivist: '#92400e',  // brown
   steward:   '#0d9488',  // teal
+  kybernetes:'#4f46e5',  // indigo
   system:    '#64748b',  // gray
 };
 
@@ -41,6 +42,7 @@ export const charIcon: Record<string, LucideIcon> = {
   Engineer:  Hammer,
   Archivist: Archive,
   Steward:   Clock,
+  Kybernetes:Compass,
   Crew:      Users,
 };
 

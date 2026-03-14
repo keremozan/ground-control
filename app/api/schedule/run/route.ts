@@ -37,6 +37,10 @@ Before creating ANY task, you MUST search Tana first to check if it already exis
 5. When in doubt, DO NOT create the task. It is much worse to create duplicates than to miss one task.
 `.trim();
 
+// Dedup guard: tracks in-flight jobs to prevent double-spawn from rapid crontab firing
+const IN_FLIGHT = new Map<string, number>();
+const DEDUP_WINDOW_MS = 10_000;
+
 function readResults(): JobResult[] {
   try {
     return JSON.parse(fs.readFileSync(RESULTS_FILE, 'utf-8'));
@@ -97,10 +101,26 @@ export async function POST(req: Request) {
     return Response.json({ ok: false, error: 'Provide jobId or charName+seedPrompt' }, { status: 400 });
   }
 
+  // ── dedup guard: reject if same jobId started within DEDUP_WINDOW_MS ──
+  const now = Date.now();
+  const lastStarted = IN_FLIGHT.get(jobId);
+  if (lastStarted && now - lastStarted < DEDUP_WINDOW_MS) {
+    return Response.json({ ok: false, error: 'duplicate: job already running' }, { status: 409 });
+  }
+  IN_FLIGHT.set(jobId, now);
+  // clean up stale entries
+  for (const [key, ts] of IN_FLIGHT) {
+    if (now - ts > DEDUP_WINDOW_MS * 2) IN_FLIGHT.delete(key);
+  }
+
   // ── process-tasks: multi-character task processing ──
   const job = body.jobId ? SCHEDULE_JOBS.find(j => j.id === body.jobId) : undefined;
   if (job?.type === 'process-tasks') {
-    return handleProcessTasks(jobId, label, characters);
+    try {
+      return await handleProcessTasks(jobId, label, characters);
+    } finally {
+      IN_FLIGHT.delete(jobId);
+    }
   }
 
   const char = characters[charName];
@@ -136,10 +156,12 @@ export async function POST(req: Request) {
     writeResults([result, ...existing]);
 
     markJobRun(jobId, 'success');
+    IN_FLIGHT.delete(jobId);
 
     return Response.json({ ok: true, result });
   } catch (err) {
     markJobRun(jobId, 'error');
+    IN_FLIGHT.delete(jobId);
     return Response.json({ ok: false, error: String(err) }, { status: 500 });
   }
 }

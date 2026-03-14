@@ -2,6 +2,15 @@
 
 ## v1.5.0 — 2026-03-14
 
+### Scheduler
+- [fix] Backend dedup guard in `/api/schedule/run`: same jobId rejected with 409 within 10s window, prevents double-spawn from rapid crontab firing
+
+### Crew
+- [new] Kybernetes added to crew widget order, char-icons registry (Compass icon, indigo), and tana-schema
+
+### Dashboard
+- [fix] Added `Pen` and `RotateCcw` to icon-map for character action icons
+
 ## v1.4.0 — 2026-03-14
 
 ### Crew
