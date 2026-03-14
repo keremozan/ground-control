@@ -418,9 +418,10 @@ function ProjectsTabContent() {
 
                 const segLeft = dateToPx(clampedStart);
                 const segWidth = dateToPx(clampedEnd) - segLeft;
+                // completed = full color, active = 90% opacity, pending = 25% opacity
                 const bg = phase.status === "completed" ? tc
-                  : phase.status === "active" ? tc + "80"
-                  : "#e5e5e0";
+                  : phase.status === "active" ? tc + "e6"
+                  : tc + "30";
 
                 return { left: segLeft, width: segWidth, color: bg, name: phase.name, isActive: phase.status === "active" };
               }).filter(Boolean) as { left: number; width: number; color: string; name: string; isActive: boolean }[];
@@ -497,8 +498,8 @@ function ProjectsTabContent() {
                           {seg.width > 50 && (
                             <span style={{
                               fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 600,
-                              color: seg.isActive ? "#fff" : (seg.color === "#e5e5e0" ? "var(--text-3)" : "#fff"),
-                              textShadow: seg.color !== "#e5e5e0" ? "0 1px 2px rgba(0,0,0,0.25)" : "none",
+                              color: seg.isActive ? "#fff" : "var(--text-2)",
+                              textShadow: seg.isActive ? "0 1px 2px rgba(0,0,0,0.25)" : "none",
                               overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                               padding: "0 4px", letterSpacing: "0.02em",
                             }}>
@@ -514,7 +515,7 @@ function ProjectsTabContent() {
                       position: "absolute",
                       left: barLeft, top: (ROW_HEIGHT - BAR_H) / 2,
                       width: barWidth, height: BAR_H,
-                      borderRadius: 4, background: tc + "60",
+                      borderRadius: 4, background: tc,
                       display: "flex", alignItems: "center",
                       overflow: "hidden",
                     }} />
