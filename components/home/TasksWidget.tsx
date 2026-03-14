@@ -89,22 +89,29 @@ interface Project {
   lastActivity: { date: string; summary: string } | null;
 }
 
-const LEFT_COL = 150;
-const PHASE_H = 20;
-const HEADER_H = 24;
+const LEFT_COL = 160;
+const ROW_H = 24;
 const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
 function ProjectsTabContent() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [monthOffset, setMonthOffset] = useState(0);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [getTrackColor, setGetTrackColor] = useState<(t: string) => string>(() => () => "#9c9b95");
   const timelineRef = useRef<HTMLDivElement>(null);
   const [timelineWidth, setTimelineWidth] = useState(0);
 
   useEffect(() => {
     setLoading(true);
-    fetch("/api/tana-projects").then(r => r.json()).then(projData => {
+    Promise.all([
+      fetch("/api/tana-projects").then(r => r.json()),
+      fetch("/api/system/config").then(r => r.json()),
+    ]).then(([projData, configData]) => {
       setProjects(projData.projects || []);
+      if (configData.trackColorPatterns) {
+        setGetTrackColor(() => buildTrackColor(configData.trackColorPatterns));
+      }
       setLoading(false);
     }).catch(() => setLoading(false));
   }, []);
@@ -143,6 +150,14 @@ function ProjectsTabContent() {
     }).catch(() => {});
   };
 
+  const toggleExpand = (id: string) => {
+    setExpanded(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
   // Sort by deadline soonest first
   const sorted = [...projects].sort((a, b) => {
     if (!a.deadline && !b.deadline) return 0;
@@ -151,47 +166,53 @@ function ProjectsTabContent() {
     return a.deadline.localeCompare(b.deadline);
   });
 
-  // 6-month window: current month -1 to +4, shifted by monthOffset
+  // 6-month window
   const now = new Date();
   const winStart = new Date(now.getFullYear(), now.getMonth() + monthOffset - 1, 1);
   const winEnd = new Date(now.getFullYear(), now.getMonth() + monthOffset + 5, 0, 23, 59, 59);
   const winStartMs = winStart.getTime();
   const winEndMs = winEnd.getTime();
 
-  // Build months
-  const months: { label: string; startMs: number; endMs: number }[] = [];
+  // Build month columns
+  const months: { label: string; startPct: number; widthPct: number }[] = [];
+  const totalMs = winEndMs - winStartMs;
   const cur = new Date(winStart);
-  while (cur.getTime() <= winEndMs) {
+  while (cur.getTime() < winEndMs) {
     const mEnd = new Date(cur.getFullYear(), cur.getMonth() + 1, 0, 23, 59, 59);
-    months.push({
-      label: MONTH_NAMES[cur.getMonth()],
-      startMs: cur.getTime(),
-      endMs: Math.min(mEnd.getTime(), winEndMs),
-    });
+    const startPct = ((cur.getTime() - winStartMs) / totalMs) * 100;
+    const endPct = ((Math.min(mEnd.getTime(), winEndMs) - winStartMs) / totalMs) * 100;
+    months.push({ label: MONTH_NAMES[cur.getMonth()], startPct, widthPct: endPct - startPct });
     cur.setMonth(cur.getMonth() + 1);
   }
 
-  const dateToPx = (ms: number): number => {
-    if (timelineWidth <= 0 || winEndMs <= winStartMs) return 0;
-    return ((ms - winStartMs) / (winEndMs - winStartMs)) * timelineWidth;
+  const todayPct = ((now.getTime() - winStartMs) / totalMs) * 100;
+  const todayVisible = todayPct >= 0 && todayPct <= 100;
+
+  // Helper: compute bar position as percentage
+  const barPct = (startMs: number, endMs: number): { left: string; width: string } | null => {
+    const s = Math.max(startMs, winStartMs);
+    const e = Math.min(endMs, winEndMs);
+    if (s >= e) return null;
+    const l = ((s - winStartMs) / totalMs) * 100;
+    const w = ((e - s) / totalMs) * 100;
+    return { left: `${l}%`, width: `${w}%` };
   };
 
-  const todayPx = dateToPx(now.getTime());
-  const todayVisible = now.getTime() >= winStartMs && now.getTime() <= winEndMs;
-
-  // Build rows: project headers + phase rows
-  type Row = { type: "project"; project: Project } | { type: "phase"; project: Project; phase: ProjectPhase; idx: number; total: number };
+  // Build rows
+  type Row =
+    | { type: "project"; project: Project; tc: string }
+    | { type: "phase"; project: Project; phase: ProjectPhase; idx: number; total: number; tc: string };
   const rows: Row[] = [];
   for (const p of sorted) {
-    rows.push({ type: "project", project: p });
-    if (p.phases.length > 0) {
+    const tc = getTrackColor(p.name);
+    rows.push({ type: "project", project: p, tc });
+    if (expanded.has(p.id) && p.phases.length > 0) {
       p.phases.forEach((phase, idx) => {
-        rows.push({ type: "phase", project: p, phase, idx, total: p.phases.length });
+        rows.push({ type: "phase", project: p, phase, idx, total: p.phases.length, tc });
       });
     }
   }
 
-  // Navigation label
   const navLabel = `${MONTH_NAMES[winStart.getMonth()]} ${winStart.getFullYear()} \u2013 ${MONTH_NAMES[winEnd.getMonth()]} ${winEnd.getFullYear()}`;
 
   return (
@@ -237,27 +258,37 @@ function ProjectsTabContent() {
         {/* Left labels */}
         <div style={{ width: LEFT_COL, minWidth: LEFT_COL, flexShrink: 0, borderRight: "1px solid var(--border)" }}>
           {/* Month header spacer */}
-          <div style={{ height: HEADER_H, borderBottom: "1px solid var(--border)" }} />
-          {rows.map((row, ri) => {
+          <div style={{ height: ROW_H, borderBottom: "1px solid var(--border)" }} />
+          {rows.map((row) => {
             if (row.type === "project") {
               const p = row.project;
               const totalTasks = p.phases.reduce((s, ph) => s + ph.taskCount, 0);
               const doneTasks = p.phases.reduce((s, ph) => s + ph.doneCount, 0);
+              const isExpanded = expanded.has(p.id);
+              const hasPhases = p.phases.length > 0;
               return (
                 <div
-                  key={`ph-${p.id}`}
-                  onClick={() => handleProjectClick(p.id)}
+                  key={`lh-${p.id}`}
                   style={{
-                    height: HEADER_H,
-                    display: "flex", alignItems: "center", gap: 6,
-                    padding: "0 8px",
+                    height: ROW_H,
+                    display: "flex", alignItems: "center", gap: 4,
+                    padding: "0 6px",
                     borderBottom: "1px solid var(--border)",
                     background: "var(--surface)",
                     cursor: "pointer",
+                    borderLeft: `3px solid ${row.tc}`,
                   }}
+                  onClick={(e) => { e.stopPropagation(); if (hasPhases) toggleExpand(p.id); else handleProjectClick(p.id); }}
                 >
+                  {hasPhases && (
+                    <ChevronRight size={10} strokeWidth={2} style={{
+                      color: "var(--text-3)", flexShrink: 0,
+                      transform: isExpanded ? "rotate(90deg)" : "none",
+                      transition: "transform 0.15s",
+                    }} />
+                  )}
                   <span style={{
-                    fontFamily: "var(--font-body)", fontSize: 11, fontWeight: 700,
+                    fontFamily: "var(--font-body)", fontSize: 10, fontWeight: 700,
                     color: "var(--text)",
                     overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                     flex: 1, minWidth: 0,
@@ -265,22 +296,23 @@ function ProjectsTabContent() {
                     {p.name}
                   </span>
                   {totalTasks > 0 && (
-                    <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "var(--text-3)", flexShrink: 0 }}>
+                    <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, color: "var(--text-3)", flexShrink: 0 }}>
                       {doneTasks}/{totalTasks}
                     </span>
                   )}
                 </div>
               );
             }
-            const { phase } = row;
+            const { phase, idx, total, project } = row;
             return (
               <div
-                key={`pl-${row.project.id}-${row.idx}`}
+                key={`lp-${project.id}-${idx}`}
                 style={{
-                  height: PHASE_H,
+                  height: ROW_H,
                   display: "flex", alignItems: "center",
-                  padding: "0 8px 0 16px",
-                  borderBottom: row.idx === row.total - 1 ? "1px solid var(--border)" : "none",
+                  padding: "0 6px 0 22px",
+                  borderBottom: idx === total - 1 ? "1px solid var(--border)" : "none",
+                  borderLeft: `3px solid transparent`,
                 }}
               >
                 <span style={{
@@ -299,89 +331,87 @@ function ProjectsTabContent() {
         {/* Timeline area */}
         <div ref={timelineRef} style={{ flex: 1, minWidth: 0, position: "relative", overflow: "hidden" }}>
           {/* Month headers */}
-          <div style={{ height: HEADER_H, borderBottom: "1px solid var(--border)", position: "relative" }}>
-            {months.map((m, i) => {
-              const left = dateToPx(m.startMs);
-              const w = dateToPx(m.endMs) - left;
-              return (
-                <div key={i} style={{
-                  position: "absolute", left, width: Math.max(w, 0),
-                  height: HEADER_H, display: "flex", alignItems: "center", justifyContent: "center",
-                  borderRight: "1px solid var(--border)",
+          <div style={{ height: ROW_H, borderBottom: "1px solid var(--border)", position: "relative" }}>
+            {months.map((m, i) => (
+              <div key={i} style={{
+                position: "absolute", left: `${m.startPct}%`, width: `${m.widthPct}%`,
+                height: ROW_H, display: "flex", alignItems: "center", justifyContent: "center",
+                borderRight: "1px solid var(--border)",
+                boxSizing: "border-box",
+              }}>
+                <span style={{
+                  fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 600,
+                  color: "var(--text-3)", letterSpacing: "0.03em",
                 }}>
-                  <span style={{
-                    fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 600,
-                    color: "var(--text-3)", letterSpacing: "0.04em",
-                  }}>
-                    {m.label}
-                  </span>
-                </div>
-              );
-            })}
+                  {m.label}
+                </span>
+              </div>
+            ))}
           </div>
 
           {/* Rows */}
-          {rows.map((row, ri) => {
+          {rows.map((row) => {
             if (row.type === "project") {
+              const p = row.project;
+              const isExpanded = expanded.has(p.id);
+              // When collapsed, show full project bar
+              const projBar = (p.startDate && p.deadline)
+                ? barPct(new Date(p.startDate).getTime(), new Date(p.deadline).getTime())
+                : null;
               return (
-                <div key={`tr-${row.project.id}`} style={{
-                  height: HEADER_H,
+                <div key={`tr-${p.id}`} style={{
+                  height: ROW_H, position: "relative",
                   borderBottom: "1px solid var(--border)",
                   background: "var(--surface)",
-                  position: "relative",
                 }}>
-                  {/* Month grid lines in header */}
+                  {/* Month grid lines */}
                   {months.map((m, i) => (
                     <div key={i} style={{
-                      position: "absolute", left: dateToPx(m.startMs), top: 0, bottom: 0,
-                      width: 1, background: "var(--border)", opacity: 0.5,
+                      position: "absolute", left: `${m.startPct}%`, top: 0, bottom: 0,
+                      width: 1, background: "var(--border)", opacity: 0.4,
                     }} />
                   ))}
+                  {/* Project bar (collapsed only) */}
+                  {!isExpanded && projBar && (
+                    <div style={{
+                      position: "absolute", ...projBar, top: 5, height: ROW_H - 10,
+                      borderRadius: 3, background: row.tc, opacity: 0.7,
+                    }} />
+                  )}
                 </div>
               );
             }
 
-            const { project, phase, idx, total } = row;
+            const { project, phase, idx, total, tc } = row;
             const sMs = project.startDate ? new Date(project.startDate).getTime() : winStartMs;
             const eMs = project.deadline ? new Date(project.deadline).getTime() : winEndMs;
             const dur = eMs - sMs;
-            // Each phase gets equal slice of project duration
-            const phaseStartMs = sMs + (idx / total) * dur;
-            const phaseEndMs = sMs + ((idx + 1) / total) * dur;
-            const clampedStart = Math.max(phaseStartMs, winStartMs);
-            const clampedEnd = Math.min(phaseEndMs, winEndMs);
-            const barLeft = dateToPx(clampedStart);
-            const barWidth = Math.max(dateToPx(clampedEnd) - barLeft, 0);
+            const phaseBar = barPct(sMs + (idx / total) * dur, sMs + ((idx + 1) / total) * dur);
 
-            const bg = phase.status === "completed" ? "var(--text-3)"
-              : phase.status === "active" ? "var(--text)"
-              : "var(--border)";
+            const opacity = phase.status === "completed" ? 0.9
+              : phase.status === "active" ? 1
+              : 0.3;
 
             return (
               <div
                 key={`tr-${project.id}-${idx}`}
                 style={{
-                  height: PHASE_H,
-                  position: "relative",
+                  height: ROW_H, position: "relative",
                   borderBottom: idx === total - 1 ? "1px solid var(--border)" : "none",
                 }}
               >
                 {/* Month grid lines */}
                 {months.map((m, i) => (
                   <div key={i} style={{
-                    position: "absolute", left: dateToPx(m.startMs), top: 0, bottom: 0,
-                    width: 1, background: "var(--border)", opacity: 0.3,
+                    position: "absolute", left: `${m.startPct}%`, top: 0, bottom: 0,
+                    width: 1, background: "var(--border)", opacity: 0.2,
                   }} />
                 ))}
                 {/* Phase bar */}
-                {barWidth > 0 && (
+                {phaseBar && (
                   <div style={{
-                    position: "absolute",
-                    left: barLeft, top: 3,
-                    width: barWidth, height: PHASE_H - 6,
-                    borderRadius: 3,
-                    background: bg,
-                    opacity: phase.status === "pending" ? 0.5 : 1,
+                    position: "absolute", ...phaseBar, top: 4, height: ROW_H - 8,
+                    borderRadius: 3, background: tc, opacity,
                   }} />
                 )}
               </div>
@@ -389,12 +419,11 @@ function ProjectsTabContent() {
           })}
 
           {/* Today line */}
-          {todayVisible && timelineWidth > 0 && (
+          {todayVisible && (
             <div style={{
-              position: "absolute", left: todayPx, top: 0, bottom: 0,
+              position: "absolute", left: `${todayPct}%`, top: 0, bottom: 0,
               width: 2, background: "var(--blue)",
-              pointerEvents: "none", zIndex: 2,
-              opacity: 0.7,
+              pointerEvents: "none", zIndex: 2, opacity: 0.7,
             }} />
           )}
         </div>
