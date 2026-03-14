@@ -99,22 +99,14 @@ const DAY_MARKERS = [1, 8, 15, 22];
 function ProjectsTabContent() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
-  const [getTrackColor, setGetTrackColor] = useState<(t: string) => string>(() => () => "#9c9b95");
   const [monthOffset, setMonthOffset] = useState(0);
   const timelineRef = useRef<HTMLDivElement>(null);
   const [timelineWidth, setTimelineWidth] = useState(0);
 
   useEffect(() => {
     setLoading(true);
-    Promise.all([
-      fetch("/api/tana-projects").then(r => r.json()),
-      fetch("/api/system/config").then(r => r.json()),
-    ]).then(([projData, configData]) => {
-      const projs: Project[] = projData.projects || [];
-      setProjects(projs);
-      if (configData.trackColorPatterns) {
-        setGetTrackColor(() => buildTrackColor(configData.trackColorPatterns));
-      }
+    fetch("/api/tana-projects").then(r => r.json()).then(projData => {
+      setProjects(projData.projects || []);
       setLoading(false);
     }).catch(() => setLoading(false));
   }, []);
@@ -170,7 +162,6 @@ function ProjectsTabContent() {
   const windowEnd = new Date(now.getFullYear(), now.getMonth() + monthOffset + 2, 0, 23, 59, 59);
   const windowStartMs = windowStart.getTime();
   const windowEndMs = windowEnd.getTime();
-  const windowDays = (windowEndMs - windowStartMs) / 86400000;
 
   // Build month columns
   const months: { year: number; month: number; label: string; startMs: number; endMs: number }[] = [];
@@ -260,20 +251,20 @@ function ProjectsTabContent() {
           <div style={{ height: 28, borderBottom: "1px solid var(--border)" }} />
           {/* Project rows */}
           {sorted.map(project => {
-            const tc = getTrackColor(project.name);
-            const activePhase = project.phases.find(p => p.status === "active");
+            const activePhases = project.phases.filter(p => p.status === "active");
             const totalTasks = project.phases.reduce((s, p) => s + p.taskCount, 0);
             const doneTasks = project.phases.reduce((s, p) => s + p.doneCount, 0);
-            const completedPhases = project.phases.filter(p => p.status === "completed").length;
+            const subtitle = activePhases.length > 0
+              ? activePhases.map(p => p.name).join(", ")
+              : "";
             return (
               <div
                 key={project.id}
                 onClick={() => handleProjectClick(project.id)}
                 style={{
                   height: ROW_HEIGHT,
-                  display: "flex", alignItems: "center", gap: 6,
-                  padding: "0 8px 0 8px",
-                  borderLeft: `3px solid ${tc}`,
+                  display: "flex", alignItems: "center",
+                  padding: "0 8px",
                   borderBottom: "1px solid var(--border)",
                   cursor: "pointer",
                   overflow: "hidden",
@@ -290,15 +281,16 @@ function ProjectsTabContent() {
                   }}>
                     {project.name}
                   </div>
-                  <div style={{
-                    fontFamily: "var(--font-mono)", fontSize: 9,
-                    color: "var(--text-3)",
-                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                    lineHeight: "1.3", marginTop: 1,
-                  }}>
-                    {activePhase ? activePhase.name : (completedPhases === project.phases.length && project.phases.length > 0 ? "All phases done" : "")}
-                    {totalTasks > 0 && <span style={{ marginLeft: activePhase ? 4 : 0, opacity: 0.7 }}>{doneTasks}/{totalTasks}</span>}
-                  </div>
+                  {(subtitle || totalTasks > 0) && (
+                    <div style={{
+                      fontFamily: "var(--font-mono)", fontSize: 9,
+                      color: "var(--text-3)",
+                      overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                      lineHeight: "1.3", marginTop: 1,
+                    }}>
+                      {subtitle}{totalTasks > 0 && <span style={{ marginLeft: subtitle ? 4 : 0, opacity: 0.7 }}>{doneTasks}/{totalTasks}</span>}
+                    </div>
+                  )}
                 </div>
               </div>
             );
@@ -335,7 +327,6 @@ function ProjectsTabContent() {
 
           {/* Rows with bars */}
           {sorted.map(project => {
-            const tc = getTrackColor(project.name);
             const hasBar = project.startDate && project.deadline;
 
             let barLeft = 0;
@@ -345,7 +336,6 @@ function ProjectsTabContent() {
             if (hasBar) {
               const sMs = new Date(project.startDate!).getTime();
               const eMs = new Date(project.deadline!).getTime();
-              // Clip to window
               const clampedStart = Math.max(sMs, windowStartMs);
               const clampedEnd = Math.min(eMs, windowEndMs);
               if (clampedStart < clampedEnd) {
@@ -355,35 +345,7 @@ function ProjectsTabContent() {
               }
             }
 
-            // Phase segments within bar
-            let phaseSegments: { left: number; width: number; color: string; name: string; isActive: boolean }[] = [];
-            if (barVisible && hasBar && project.phases.length > 0) {
-              const sMs = new Date(project.startDate!).getTime();
-              const eMs = new Date(project.deadline!).getTime();
-              const totalDuration = eMs - sMs;
-              const phaseCount = project.phases.length;
-              const phaseDuration = totalDuration / phaseCount;
-
-              phaseSegments = project.phases.map((phase, idx) => {
-                const phaseStart = sMs + idx * phaseDuration;
-                const phaseEnd = sMs + (idx + 1) * phaseDuration;
-                const clampedStart = Math.max(phaseStart, windowStartMs);
-                const clampedEnd = Math.min(phaseEnd, windowEndMs);
-
-                if (clampedStart >= clampedEnd) return null;
-
-                const segLeft = dateToPx(clampedStart);
-                const segWidth = dateToPx(clampedEnd) - segLeft;
-                // completed = full color, active = 90% opacity, pending = 25% opacity
-                const bg = phase.status === "completed" ? tc
-                  : phase.status === "active" ? tc + "e6"
-                  : tc + "30";
-
-                return { left: segLeft, width: segWidth, color: bg, name: phase.name, isActive: phase.status === "active" };
-              }).filter(Boolean) as { left: number; width: number; color: string; name: string; isActive: boolean }[];
-            }
-
-            // Deadline marker position
+            // Deadline marker
             let deadlinePx = 0;
             let deadlineVisible = false;
             if (hasBar) {
@@ -394,7 +356,7 @@ function ProjectsTabContent() {
               }
             }
 
-            const BAR_H = 24;
+            const BAR_H = 8;
 
             return (
               <div
@@ -409,82 +371,40 @@ function ProjectsTabContent() {
                 onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = "var(--surface-hover, #f8f8f6)"; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
               >
-                {/* Day marker lines */}
+                {/* Week marker lines */}
                 {timelineWidth > 0 && months.map(m => (
                   DAY_MARKERS.map(d => {
-                    const dayDate = new Date(m.year, m.month, d);
-                    const dayMs = dayDate.getTime();
+                    const dayMs = new Date(m.year, m.month, d).getTime();
                     if (dayMs < windowStartMs || dayMs > windowEndMs) return null;
-                    const x = dateToPx(dayMs);
                     return (
                       <div key={`${m.year}-${m.month}-${d}`} style={{
-                        position: "absolute", left: x, top: 0, bottom: 0,
-                        width: 1, background: "var(--border)", opacity: 0.4,
+                        position: "absolute", left: dateToPx(dayMs), top: 0, bottom: 0,
+                        width: 1, background: "var(--border)", opacity: 0.3,
                         pointerEvents: "none",
                       }} />
                     );
                   })
                 ))}
 
-                {/* Bar */}
+                {/* Simple bar */}
                 {barVisible && (
-                  phaseSegments.length > 0 ? (
-                    // Render phase segments
-                    <div style={{
-                      position: "absolute",
-                      left: barLeft, top: (ROW_HEIGHT - BAR_H) / 2,
-                      width: barWidth, height: BAR_H,
-                      borderRadius: 4, overflow: "hidden",
-                    }}>
-                      {phaseSegments.map((seg, i) => (
-                        <div
-                          key={i}
-                          title={seg.name}
-                          style={{
-                            position: "absolute",
-                            left: seg.left - barLeft,
-                            width: seg.width,
-                            height: BAR_H,
-                            background: seg.color,
-                            display: "flex", alignItems: "center", justifyContent: "center",
-                            overflow: "hidden",
-                            borderRight: i < phaseSegments.length - 1 ? "1px solid rgba(255,255,255,0.3)" : "none",
-                          }}
-                        >
-                          {seg.width > 50 && (
-                            <span style={{
-                              fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 600,
-                              color: seg.isActive ? "#fff" : "var(--text-2)",
-                              textShadow: seg.isActive ? "0 1px 2px rgba(0,0,0,0.25)" : "none",
-                              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                              padding: "0 4px", letterSpacing: "0.02em",
-                            }}>
-                              {seg.name}
-                            </span>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    // Single solid bar (no phases)
-                    <div style={{
-                      position: "absolute",
-                      left: barLeft, top: (ROW_HEIGHT - BAR_H) / 2,
-                      width: barWidth, height: BAR_H,
-                      borderRadius: 4, background: tc,
-                      display: "flex", alignItems: "center",
-                      overflow: "hidden",
-                    }} />
-                  )
+                  <div style={{
+                    position: "absolute",
+                    left: barLeft, top: (ROW_HEIGHT - BAR_H) / 2,
+                    width: barWidth, height: BAR_H,
+                    borderRadius: BAR_H / 2,
+                    background: "var(--text-3)",
+                    opacity: 0.35,
+                  }} />
                 )}
 
-                {/* Deadline diamond marker */}
+                {/* Deadline diamond */}
                 {deadlineVisible && (
                   <div style={{
                     position: "absolute",
-                    left: deadlinePx - 5, top: (ROW_HEIGHT - 10) / 2,
-                    width: 10, height: 10,
-                    background: tc,
+                    left: deadlinePx - 4, top: (ROW_HEIGHT - 8) / 2,
+                    width: 8, height: 8,
+                    background: "var(--text-3)",
                     transform: "rotate(45deg)",
                     borderRadius: 1,
                     zIndex: 1,
