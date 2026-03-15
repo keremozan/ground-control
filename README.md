@@ -15,7 +15,9 @@ Ground Control is a multi-character AI system with a real-time dashboard. You de
 
 The pipeline works like this: **Sources** (Gmail, Tana Inbox) are scanned by **Postman**, who classifies items and routes them to the right **Character**. Characters process their tasks and produce **Outputs** (email drafts, Tana nodes, calendar events). The whole flow is visible in the dashboard.
 
-The system is self-evolving. A nightly watcher reviews logs, identifies recurring errors, updates memory files, and proposes skill edits. A maintenance job checks routing consistency, verifies skill references, and runs type checks. Characters learn from their mistakes and improve over time — without manual intervention.
+The system is self-evolving. A nightly watcher reviews logs, identifies recurring errors, updates memory files, and proposes skill edits. A maintenance job checks routing consistency, verifies skill references, and runs type checks. Characters learn from their mistakes and improve over time.
+
+The system also has a reasoning pipeline inspired by the [LCoT framework](https://arxiv.org/pdf/2510.26854). Instead of storing compressed conclusions, it generates verifiable reasoning chains through independent multi-solver consensus. A Prober decomposes concepts into investigative routes and questions. Parallel solver agents (with separate contexts) produce independent derivations. An Auditor validates consensus and stores verified chains in Tana. Inverse search retrieves all chains converging on a concept, surfacing cross-domain connections.
 
 ## Features
 
@@ -45,6 +47,14 @@ The system is self-evolving. A nightly watcher reviews logs, identifies recurrin
 - Auto-fixes routing, skills, and memory when patterns repeat
 - Maintenance checks memory hygiene, skill references, type safety
 - Characters write behavioral lessons to their own memory files
+
+**Reasoning Pipeline (LCoT)**
+- Prober decomposes concepts into routes (diverse angles, domains, difficulty levels)
+- Parallel solver agents produce independent reasoning chains in isolated contexts
+- Auditor validates multi-solver consensus with 4 verification tiers (hard endpoint, convergence, explicit uncertainty, practice coherence)
+- Verified chains stored in Tana with full provenance (question, route, endpoint, confidence, solver model)
+- Inverse search retrieves all verified chains converging on any concept, grouped by domain
+- Pipeline integrates with inquiries (#inquiry nodes as research containers)
 
 ## Requirements
 
@@ -84,12 +94,13 @@ This generates `ground-control.config.ts` (git-ignored) with your settings. See 
 ```
 ~/.claude/
   characters/
-    core/              # domain workers (postman, scholar, clerk, coach)
-    meta/              # system maintainers (architect, oracle)
+    core/              # domain workers (postman, scholar, scribe, proctor, clerk, coach, curator, prober)
+    meta/              # system maintainers (architect, oracle, auditor, watcher, engineer)
     stationed/         # project-specific characters
   skills/
-    {name}/SKILL.md    # skill definitions
-  shared/              # knowledge files (routing table, contacts, etc.)
+    {name}/SKILL.md    # skill definitions (~55 skills)
+  shared/              # knowledge files (routing table, contacts, tana-ids, etc.)
+  rules/               # system manifest
   logs/tiny-log.jsonl  # action log
 
 ground-control/
@@ -138,11 +149,17 @@ Each character is a JSON config with:
 | Character | Tier | Domain | Role |
 |---|---|---|---|
 | Postman | core | communications | Scan inputs, classify, route, deliver |
-| Scholar | core | research | Research, writing, thesis work |
+| Scholar | core | research | Research, writing, thesis, orchestrates reasoning pipeline |
+| Scribe | core | writing | Prose production, chain-scaffolded synthesis |
+| Proctor | core | teaching | Course materials, SUCourse, TA ops |
 | Clerk | core | administration | Admin tasks, procedures, forms |
 | Coach | core | wellbeing | Personal check-ins, work/life balance |
+| Curator | core | art | Galleries, exhibitions, art practice reasoning |
+| Prober | core | decomposition | Decomposes concepts into routes and verifiable questions |
 | Architect | meta | systems | System maintenance, code, self-evolution |
 | Oracle | meta | strategy | Strategic advisory, cross-domain analysis |
+| Auditor | meta | validation | Multi-solver consensus, knowledge quality scoring |
+| Watcher | meta | monitoring | Log analysis, error detection, behavioral lessons |
 
 **Adding a new character:** Drop a JSON file in `~/.claude/characters/core/` (or `meta/`, `stationed/`). The dashboard picks it up automatically — no code changes needed.
 
