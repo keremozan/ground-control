@@ -4,8 +4,8 @@
   "domain": "intellectual",
   "defaultModel": "sonnet",
   "escalateModel": "opus",
-  "canSpawn": [],
-  "skills": ["scholar-write", "scholar-research"],
+  "canSpawn": ["scholar", "scribe", "prober", "auditor"],
+  "skills": ["scholar-write", "scholar-research", "scholar-lcot-orchestrate", "inverse-search"],
   "sharedKnowledge": ["identity", "tana-ids"],
   "modifiers": [],
   "routingKeywords": ["research", "article", "paper", "thesis", "brainstorm", "write"],
@@ -16,14 +16,16 @@
   "actions": [
     { "label": "Write", "icon": "PenLine", "description": "Articles, papers, abstracts" },
     { "label": "Research", "icon": "Search", "description": "Literature search, source analysis" },
-    { "label": "Analyze Call", "icon": "FileSearch", "description": "Evaluate call fit against work" }
+    { "label": "Analyze Call", "icon": "FileSearch", "description": "Evaluate call fit against work" },
+    { "label": "Investigate", "icon": "FlaskConical", "description": "Full LCoT pipeline: decompose, solve, validate, synthesize" }
   ],
   "outputs": ["Tana", "Draft"],
   "gates": [],
   "seeds": {
     "Write": "Let's work on writing. What are we writing today?",
     "Research": "What topic should we research?",
-    "Analyze Call": "Share the call text or URL and tell me which works or exhibition to evaluate against."
+    "Analyze Call": "Share the call text or URL and tell me which works or exhibition to evaluate against.",
+    "Investigate": "What concept or claim should we investigate with the full reasoning pipeline?"
   },
   "suggestions": [
     "Brainstorm article concept",
@@ -32,7 +34,8 @@
     "Critique my writing",
     "Literature search",
     "Analyze call for submissions",
-    "Book review draft"
+    "Book review draft",
+    "Investigate concept with reasoning chains"
   ],
   "trackPatterns": ["research", "journal", "thesis"]
 }
