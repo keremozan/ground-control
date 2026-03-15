@@ -296,7 +296,7 @@ function ProjectsTabContent() {
                     }} />
                   )}
                   <span style={{
-                    fontFamily: "var(--font-body)", fontSize: 10, fontWeight: 700,
+                    fontFamily: "var(--font-body)", fontSize: 11, fontWeight: 600,
                     color: "var(--text)",
                     overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                     flex: 1, minWidth: 0,
@@ -981,7 +981,7 @@ export default function TasksWidget() {
         })}
       </div>
 
-      <div className="widget-body" style={{ padding: "8px 0" }}>
+      <div className="widget-body" style={{ padding: 0 }}>
         {loading && allTasks.length === 0 && (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: 20, gap: 8 }}>
             <Loader2 size={14} strokeWidth={1.5} style={{ color: "var(--text-3)", animation: "spin 1s linear infinite" }} />
@@ -1004,7 +1004,7 @@ export default function TasksWidget() {
 
           return (
             <div key={track} style={{
-              paddingLeft: 16, paddingRight: 0,
+              paddingLeft: 0, paddingRight: 0,
               paddingTop: i > 0 ? 10 : 0,
               paddingBottom: i < tracks.length - 1 ? 10 : 0,
               borderBottom: i < tracks.length - 1 ? "1px solid var(--border)" : "none",
@@ -1014,7 +1014,7 @@ export default function TasksWidget() {
                   onClick={() => toggleTrack(track)}
                   style={{
                     display: "flex", alignItems: "center", gap: 6,
-                    padding: "5px 16px 5px 0", cursor: "pointer",
+                    padding: "5px 14px", cursor: "pointer",
                     userSelect: "none",
                   }}
                 >
@@ -1062,7 +1062,7 @@ export default function TasksWidget() {
                         <div style={{
                           fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 600,
                           color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.06em",
-                          padding: "6px 16px 2px 16px", opacity: 0.7,
+                          padding: "6px 14px 2px 28px", opacity: 0.7,
                         }}>
                           {group.name}
                         </div>
@@ -1074,16 +1074,16 @@ export default function TasksWidget() {
                   const priorityDot = taskPriority === "high" ? "#ef4444" : taskPriority === "medium" ? "#f59e0b" : "#9ca3af";
 
                   return (
-                    <div key={task.id}>
+                    <div key={task.id} style={{ borderTop: "1px solid var(--border)" }}>
                       <div
                         className="item-row"
                         style={{
                           opacity: isBusy ? 0.6 : 1,
                         }}
                       >
-                        <div style={{ display: "flex", alignItems: "center", padding: "4px 16px 4px 16px", gap: 0, cursor: "pointer" }}>
+                        <div style={{ display: "flex", alignItems: "center", padding: "8px 14px", gap: 8, cursor: "pointer" }}>
                           {/* When column */}
-                          <span style={{ width: 72, flexShrink: 0, display: "flex", alignItems: "center", gap: 4 }}>
+                          <span style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 4 }}>
                             {task.dueDate ? (() => {
                               const urgency = dueBadge(task.dueDate);
                               return (
@@ -1102,23 +1102,24 @@ export default function TasksWidget() {
                             const Icon = key ? charIcon[key] : null;
                             const color = task.assigned ? charColor[task.assigned] || "var(--text-3)" : "var(--text-3)";
                             return Icon ? (
-                              <span data-tip={key} style={{ display: "flex", flexShrink: 0, marginRight: 6 }}>
+                              <span data-tip={key} style={{ display: "flex", flexShrink: 0 }}>
                                 <Icon size={12} strokeWidth={1.5} style={{ color }} />
                               </span>
                             ) : null;
                           })()}
-                          <span style={{
-                            fontFamily: "var(--font-body)", fontSize: 12, fontWeight: 500, color: "var(--text)",
-                            flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                          }}>
-                            {task.name}
-                          </span>
-                          {isBusy && (
-                            <Loader2 size={10} strokeWidth={1.5} style={{ color: "var(--text-3)", animation: "spin 1s linear infinite", flexShrink: 0 }} />
-                          )}
-                        </div>
-
-                        <div className="item-actions" style={{ padding: "0 16px 4px 34px" }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                              <span style={{
+                                fontFamily: "var(--font-body)", fontSize: 12, fontWeight: 500, color: "var(--text)",
+                                flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                              }}>
+                                {task.name}
+                              </span>
+                              {isBusy && (
+                                <Loader2 size={10} strokeWidth={1.5} style={{ color: "var(--text-3)", animation: "spin 1s linear infinite", flexShrink: 0 }} />
+                              )}
+                            </div>
+                            <div className="item-actions" style={{ padding: "4px 0 0 0" }}>
                           {itemActions.flatMap(({ icon: ActionIcon, label, colorClass }) => {
                             const btn = (
                               <button
@@ -1188,6 +1189,8 @@ export default function TasksWidget() {
                                 ))}
                               </div>
                             )}
+                          </div>
+                            </div>
                           </div>
                         </div>
                       </div>

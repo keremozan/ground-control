@@ -231,7 +231,7 @@ function WeekView({
           return (
             <div key={i} style={{ flex: 1, textAlign: "center", padding: "2px 0 3px" }}>
               <span style={{
-                fontFamily: "var(--font-mono)", fontSize: 7, fontWeight: 500,
+                fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 500,
                 color: isTd ? "var(--blue)" : "var(--text-3)",
                 textTransform: "uppercase", letterSpacing: "0.04em", display: "block",
               }}>{DAY_LABELS[i]}</span>
@@ -258,13 +258,13 @@ function WeekView({
             width: 36, flexShrink: 0, display: "flex", alignItems: "center",
             justifyContent: "flex-end", paddingRight: 4,
           }}>
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: 7, color: "var(--text-3)" }}>ALL</span>
+            <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, color: "var(--text-3)" }}>ALL</span>
           </div>
           {days.map((_, i) => (
             <div key={i} style={{ flex: 1, padding: "0 1px" }}>
               {allDayByDay[i].map(e => (
                 <div key={e.id} title={e.summary} style={{
-                  fontSize: 7, fontFamily: "var(--font-mono)", padding: "1px 3px", borderRadius: 2,
+                  fontSize: 8, fontFamily: "var(--font-mono)", padding: "1px 3px", borderRadius: 2,
                   background: eventColor(e.summary) + "20",
                   borderLeft: `2px solid ${eventColor(e.summary)}`,
                   color: "var(--text-2)", overflow: "hidden", textOverflow: "ellipsis",
@@ -351,12 +351,12 @@ function WeekView({
                         }}
                       >
                         <div style={{
-                          fontFamily: "var(--font-mono)", fontSize: 7.5, fontWeight: 500,
+                          fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 500,
                           color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis",
                           whiteSpace: "nowrap", lineHeight: 1.3,
                         }}>{e.summary}</div>
                         {e.heightPx > 26 && (
-                          <div style={{ fontFamily: "var(--font-mono)", fontSize: 7, color: "var(--text-3)" }}>
+                          <div style={{ fontFamily: "var(--font-mono)", fontSize: 8, color: "var(--text-3)" }}>
                             {formatTime(e.start, false)}
                           </div>
                         )}
@@ -486,7 +486,7 @@ function MonthView({
                           <div style={{ display: "flex", flexDirection: "column", gap: 1, paddingTop: 1 }}>
                             {dayEvents.slice(0, MAX_BARS).map(e => (
                               <div key={e.id} title={`${formatTime(e.start, e.allDay)} ${e.summary}`} style={{
-                                fontSize: 7, fontFamily: "var(--font-mono)", lineHeight: 1.4,
+                                fontSize: 8, fontFamily: "var(--font-mono)", lineHeight: 1.4,
                                 padding: "0 2px",
                                 borderLeft: `2px solid ${eventColor(e.summary)}`,
                                 borderRadius: "0 1px 1px 0",
@@ -499,7 +499,7 @@ function MonthView({
                             ))}
                             {dayEvents.length > MAX_BARS && (
                               <span style={{
-                                fontFamily: "var(--font-mono)", fontSize: 7,
+                                fontFamily: "var(--font-mono)", fontSize: 8,
                                 color: "var(--text-3)", textAlign: "center",
                               }}>
                                 +{dayEvents.length - MAX_BARS}
@@ -846,7 +846,7 @@ export default function CalendarWidget() {
                 sectionIndex++;
                 return (
                   <div style={{
-                    padding: "6px 16px 4px",
+                    padding: "6px 14px 4px",
                     ...(isFirst ? {} : { borderTop: "1px solid var(--border)" }),
                   }}>
                     <span style={{
@@ -865,10 +865,10 @@ export default function CalendarWidget() {
                 <div key={event.id} className="item-row" style={{
                   borderTop: isFirst ? undefined : "1px solid var(--border)",
                   background: isNowSection ? "var(--blue-bg, rgba(59,130,246,0.06))" : undefined,
-                  padding: "0 10px 0 16px",
+                  padding: "8px 14px",
                 }}>
-                  <div style={{ display: "flex", alignItems: "flex-start", gap: 0 }}>
-                    <span style={{ width: 72, flexShrink: 0, display: "flex", alignItems: "center", gap: 3, marginTop: 10 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 3 }}>
                       {(() => { const td = timeOfDayIcon(event.start, event.allDay); return <td.Icon size={10} strokeWidth={1.5} style={{ color: td.color }} />; })()}
                       <span style={{
                         fontFamily: "var(--font-mono)", fontSize: 10,
@@ -878,9 +878,9 @@ export default function CalendarWidget() {
                         {formatCalendarWhen(event.start, event.allDay)}
                       </span>
                     </span>
-                    {(() => { const c = iconForColor(eventColor(event.summary)); return c ? <c.Icon size={12} strokeWidth={1.5} style={{ color: c.color, flexShrink: 0, marginTop: 12, marginRight: 6 }} /> : null; })()}
+                    {(() => { const c = iconForColor(eventColor(event.summary)); return c ? <c.Icon size={12} strokeWidth={1.5} style={{ color: c.color, flexShrink: 0 }} /> : null; })()}
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ padding: "9px 0 2px 0", cursor: "pointer" }}>
+                      <div style={{ cursor: "pointer" }}>
                         <span style={{
                           fontFamily: "var(--font-body)", fontSize: 12, fontWeight: 500, color: "var(--text)",
                           overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "block",
@@ -891,30 +891,30 @@ export default function CalendarWidget() {
                       {event.location && (
                         <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
                           <MapPin size={9} strokeWidth={1.5} style={{ color: "var(--text-3)", flexShrink: 0 }} />
-                          <span style={{ fontFamily: "var(--font-body)", fontSize: 10, color: "var(--text-3)" }}>
+                          <span style={{ fontFamily: "var(--font-body)", fontSize: 11, color: "var(--text-3)" }}>
                             {event.location}
                           </span>
                         </div>
                       )}
+                      <div className="item-actions" style={{ padding: "4px 0 0 0" }}>
+                        {itemActions.map(({ icon: ActionIcon, label, colorClass }) => (
+                          <button
+                            key={label}
+                            className={`item-action-btn ${colorClass}`}
+                            data-tip={label}
+                            onClick={() => {
+                              if (label === "Open" && event.htmlLink) {
+                                window.open(event.htmlLink, "_blank");
+                              } else if (label !== "Open") {
+                                runCalAction(label.toLowerCase(), event);
+                              }
+                            }}
+                          >
+                            <ActionIcon size={12} strokeWidth={1.5} />
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                  <div className="item-actions" style={{ padding: "2px 0 6px 18px" }}>
-                    {itemActions.map(({ icon: ActionIcon, label, colorClass }) => (
-                      <button
-                        key={label}
-                        className={`item-action-btn ${colorClass}`}
-                        data-tip={label}
-                        onClick={() => {
-                          if (label === "Open" && event.htmlLink) {
-                            window.open(event.htmlLink, "_blank");
-                          } else if (label !== "Open") {
-                            runCalAction(label.toLowerCase(), event);
-                          }
-                        }}
-                      >
-                        <ActionIcon size={12} strokeWidth={1.5} />
-                      </button>
-                    ))}
                   </div>
                 </div>
               );

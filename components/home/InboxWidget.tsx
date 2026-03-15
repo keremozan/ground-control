@@ -354,12 +354,12 @@ export default function InboxWidget() {
                 opacity: isBusy ? 0.6 : 1,
               }}
             >
-              <div style={{ display: "flex", padding: "9px 10px 6px 16px", gap: 0, cursor: "pointer", alignItems: "flex-start" }}>
+              <div style={{ display: "flex", padding: "8px 14px", gap: 8, cursor: "pointer", alignItems: "flex-start" }}>
                 {/* When column */}
                 {(() => {
                   const urgency = getDateUrgency(email.date, "past");
                   return (
-                    <span style={{ width: 72, flexShrink: 0, display: "flex", alignItems: "center", gap: 4 }}>
+                    <span style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 4 }}>
                       <span style={{ width: 4, height: 4, borderRadius: "50%", background: urgency.dot ? urgency.color : "transparent", flexShrink: 0 }} />
                       <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: urgency.color, whiteSpace: "nowrap" }}>
                         {formatWhen(email.date, true)}
@@ -373,7 +373,7 @@ export default function InboxWidget() {
                   const crew = patternColor ? iconForColor(patternColor) : null;
                   if (crew) {
                     return (
-                      <span style={{ display: "flex", flexShrink: 0, marginLeft: 4, marginRight: 6, marginTop: 1 }}>
+                      <span style={{ display: "flex", flexShrink: 0, marginTop: 1 }}>
                         <crew.Icon size={12} strokeWidth={1.5} style={{ color: crew.color }} />
                       </span>
                     );
@@ -383,7 +383,7 @@ export default function InboxWidget() {
                   if (!s) return null;
                   const AccIcon = s.icon;
                   return (
-                    <span style={{ display: "flex", flexShrink: 0, position: "relative", top: 1, marginLeft: 4, marginRight: 6 }}>
+                    <span style={{ display: "flex", flexShrink: 0, position: "relative", top: 1 }}>
                       <AccIcon size={12} strokeWidth={1.5} style={{ color: s.color }} />
                     </span>
                   );
@@ -439,6 +439,37 @@ export default function InboxWidget() {
                       })}
                     </div>
                   )}
+
+                  <div className="item-actions" style={{ padding: "4px 0 0 0" }}>
+                    {itemActions.map(({ icon: ActionIcon, label, colorClass }) => (
+                      <button
+                        key={label}
+                        className={`item-action-btn ${colorClass}`}
+                        data-tip={label}
+                        disabled={isBusy}
+                        onClick={() => handleAction(label, email)}
+                        style={{ cursor: isBusy ? "not-allowed" : "pointer" }}
+                      >
+                        <ActionIcon size={12} strokeWidth={1.5} />
+                      </button>
+                    ))}
+                    <div style={{ flex: 1 }} />
+                    <button
+                      className="item-action-btn"
+                      data-tip="Send to Postman"
+                      disabled={isBusy}
+                      onClick={() => runDirectAction("postman", email)}
+                      style={{
+                        display: "flex", alignItems: "center", gap: 3,
+                        fontFamily: "var(--font-mono)", fontSize: 9,
+                        width: "auto", padding: "0 5px",
+                        cursor: isBusy ? "not-allowed" : "pointer",
+                      }}
+                    >
+                      <CornerUpRight size={9} strokeWidth={1.5} />
+                      Postman
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -610,36 +641,6 @@ export default function InboxWidget() {
                 </div>
               )}
 
-              <div className="item-actions" style={{ padding: "0 10px 6px 34px" }}>
-                {itemActions.map(({ icon: ActionIcon, label, colorClass }) => (
-                  <button
-                    key={label}
-                    className={`item-action-btn ${colorClass}`}
-                    data-tip={label}
-                    disabled={isBusy}
-                    onClick={() => handleAction(label, email)}
-                    style={{ cursor: isBusy ? "not-allowed" : "pointer" }}
-                  >
-                    <ActionIcon size={12} strokeWidth={1.5} />
-                  </button>
-                ))}
-                <div style={{ flex: 1 }} />
-                <button
-                  className="item-action-btn"
-                  data-tip="Send to Postman"
-                  disabled={isBusy}
-                  onClick={() => runDirectAction("postman", email)}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 3,
-                    fontFamily: "var(--font-mono)", fontSize: 9,
-                    width: "auto", padding: "0 5px",
-                    cursor: isBusy ? "not-allowed" : "pointer",
-                  }}
-                >
-                  <CornerUpRight size={9} strokeWidth={1.5} />
-                  Postman
-                </button>
-              </div>
             </div>
           );
         })}

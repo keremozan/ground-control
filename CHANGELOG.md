@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.6.2 — 2026-03-15
+
+### Dashboard
+- [fix] Action buttons now align with text content in Inbox, Calendar, and Tasks widgets
+- [fix] Standardized row padding (8px 14px) and gap (8px) across all list widgets
+- [fix] Removed fixed-width date columns for consistent spacing
+- [fix] Minimum font size raised to 8px across Calendar week/month views
+
 ## v1.6.1 — 2026-03-15
 
 ### Crew
