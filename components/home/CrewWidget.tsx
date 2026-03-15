@@ -29,6 +29,7 @@ type CharacterInfo = {
   icon: string;
   color: string;
   domain?: string;
+  groups?: string[];
   actions?: ActionInfo[];
   seeds?: Record<string, string>;
   skills?: string[];
@@ -85,14 +86,15 @@ export default function CrewWidget() {
   const [recentLogs, setRecentLogs] = useState<ActionLogEntry[]>(() => getLog());
   useEffect(() => subscribeLog(() => setRecentLogs([...getLog()])), []);
 
-  const CREW_ORDER = ["postman", "clerk", "scholar", "scribe", "curator", "proctor", "archivist", "steward", "architect", "engineer", "watcher", "kybernetes", "coach", "doctor", "oracle"];
-  const CREW_CATEGORIES = [
-    { label: "Comms", ids: ["postman"] },
-    { label: "Knowledge", ids: ["scholar", "scribe"] },
-    { label: "Ops", ids: ["clerk", "proctor", "curator", "archivist", "steward"] },
-    { label: "Meta", ids: ["architect", "engineer", "watcher", "kybernetes"] },
-    { label: "Personal", ids: ["coach", "doctor", "oracle"] },
+  const CREW_ORDER = ["scholar", "curator", "proctor", "coach", "postman", "clerk", "steward", "archivist", "scribe", "doctor", "prober", "auditor", "architect", "engineer", "watcher", "kybernetes", "oracle"];
+  const CREW_FILTERS: { label: string; ids: string[] }[] = [
+    { label: "Research", ids: ["scholar", "scribe", "prober", "auditor", "curator"] },
+    { label: "Teaching", ids: ["proctor", "scribe"] },
+    { label: "Admin", ids: ["clerk", "steward", "archivist", "postman"] },
+    { label: "Personal", ids: ["coach", "doctor"] },
+    { label: "System", ids: ["architect", "engineer", "watcher", "kybernetes", "oracle"] },
   ];
+  const [crewFilter, setCrewFilter] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/characters")
@@ -513,63 +515,79 @@ export default function CrewWidget() {
       <div className="widget-body" style={{ padding: activeTab === "crew" ? "6px 10px 8px" : 0 }}>
         {activeTab === "crew" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {/* Roster */}
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
-              {characters.map(char => {
-                const Icon = resolveIcon(char.icon);
-                const isSelected = selectedChar?.id === char.id;
-                const charBusy = [...runningActions].some(k => k.startsWith(`${char.name}:`));
-                const hasRecentLog = recentLogs.some(e => e.character?.toLowerCase() === char.name.toLowerCase());
-                return (
-                  <button
-                    key={char.id}
-                    onClick={() => selectChar(char.id)}
-                    style={{
-                      width: "calc(25% - 3px)",
-                      height: 28,
-                      display: "flex", alignItems: "center", gap: 5,
-                      padding: "0 7px 0 6px",
-                      border: `1px solid ${isSelected ? char.color + "55" : "var(--border)"}`,
-                      borderRadius: 5,
-                      background: isSelected ? char.color + "0e" : "transparent",
-                      cursor: "pointer",
-                      transition: "all 0.12s",
-                      flexShrink: 0,
-                      overflow: "hidden",
-                    }}
-                  >
-                    <div style={{
-                      width: 14, height: 14, borderRadius: 3, flexShrink: 0,
-                      background: char.color + "14",
-                      border: `1px solid ${char.color}22`,
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                    }}>
-                      {charBusy
-                        ? <Loader2 size={8} strokeWidth={2} style={{ color: char.color, animation: "spin 1s linear infinite" }} />
-                        : <Icon size={8} strokeWidth={1.5} style={{ color: char.color }} />
-                      }
-                    </div>
-                    <span style={{
-                      fontFamily: "var(--font-mono)", fontSize: 9,
-                      color: isSelected ? char.color : "var(--text-2)",
-                      overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                      flex: 1,
-                    }}>
-                      {char.name}
-                    </span>
-                    {(charBusy || hasRecentLog) && (
-                      <span style={{
-                        width: 4, height: 4, borderRadius: "50%", flexShrink: 0,
-                        background: char.color,
-                        opacity: charBusy ? 1 : 0.3,
-                        animation: charBusy ? "pulse-crew 1.5s ease-in-out infinite" : undefined,
-                        transition: "all 0.2s",
-                      }} />
-                    )}
-                  </button>
-                );
-              })}
+            {/* Filter pills */}
+            <div style={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
+              <button
+                onClick={() => setCrewFilter(null)}
+                style={{
+                  fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 500,
+                  color: crewFilter === null ? "var(--text)" : "var(--text-3)",
+                  background: crewFilter === null ? "var(--bg-2)" : "transparent",
+                  border: `1px solid ${crewFilter === null ? "var(--border)" : "transparent"}`,
+                  borderRadius: 3, padding: "1px 6px", cursor: "pointer",
+                  textTransform: "uppercase", letterSpacing: "0.05em",
+                }}
+              >All</button>
+              {CREW_FILTERS.map(f => (
+                <button
+                  key={f.label}
+                  onClick={() => setCrewFilter(crewFilter === f.label ? null : f.label)}
+                  style={{
+                    fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 500,
+                    color: crewFilter === f.label ? "var(--text)" : "var(--text-3)",
+                    background: crewFilter === f.label ? "var(--bg-2)" : "transparent",
+                    border: `1px solid ${crewFilter === f.label ? "var(--border)" : "transparent"}`,
+                    borderRadius: 3, padding: "1px 6px", cursor: "pointer",
+                    textTransform: "uppercase", letterSpacing: "0.05em",
+                  }}
+                >{f.label}</button>
+              ))}
             </div>
+            {/* Roster */}
+            {(() => {
+              const activeFilter = CREW_FILTERS.find(f => f.label === crewFilter);
+              const filtered = activeFilter
+                ? characters.filter(c => activeFilter.ids.includes(c.id))
+                : characters;
+              return (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 2 }}>
+                  {filtered.map(char => {
+                      const Icon = resolveIcon(char.icon);
+                      const isSelected = selectedChar?.id === char.id;
+                      const charBusy = [...runningActions].some(k => k.startsWith(`${char.name}:`));
+                      const hasRecentLog = recentLogs.some(e => e.character?.toLowerCase() === char.name.toLowerCase());
+                      return (
+                        <button
+                          key={char.id}
+                          onClick={() => selectChar(char.id)}
+                          style={{
+                            display: "flex", alignItems: "center", gap: 4,
+                            padding: "3px 5px",
+                            border: `1px solid ${isSelected ? char.color + "55" : "var(--border)"}`,
+                            borderRadius: 4,
+                            background: isSelected ? char.color + "0e" : "transparent",
+                            cursor: "pointer",
+                            transition: "all 0.12s",
+                            overflow: "hidden",
+                          }}
+                        >
+                          {charBusy
+                            ? <Loader2 size={9} strokeWidth={2} style={{ color: char.color, animation: "spin 1s linear infinite", flexShrink: 0 }} />
+                            : <Icon size={9} strokeWidth={1.5} style={{ color: char.color, flexShrink: 0, opacity: (charBusy || hasRecentLog) ? 1 : 0.5 }} />
+                          }
+                          <span style={{
+                            fontFamily: "var(--font-mono)", fontSize: 9,
+                            color: isSelected ? char.color : "var(--text-2)",
+                            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                          }}>
+                            {char.name}
+                          </span>
+                        </button>
+                      );
+                    })}
+                </div>
+              );
+            })()}
 
             {/* Focus panel */}
             {selectedChar && (() => {
@@ -587,33 +605,28 @@ export default function CrewWidget() {
                 }}>
                   {/* Character header */}
                   <div style={{
-                    display: "flex", alignItems: "center", gap: 10,
-                    padding: "9px 12px",
-                    background: selectedChar.color + "08",
-                    borderBottom: actions.length > 0 ? `1px solid ${selectedChar.color}18` : "none",
+                    display: "flex", alignItems: "center", gap: 8,
+                    padding: "6px 10px",
+                    background: selectedChar.color + "06",
+                    borderBottom: actions.length > 0 ? `1px solid ${selectedChar.color}15` : "none",
                   }}>
-                    <div style={{
-                      width: 36, height: 36, borderRadius: 8, flexShrink: 0,
-                      background: selectedChar.color + "18",
-                      border: `1px solid ${selectedChar.color}30`,
-                      display: "flex", alignItems: "center", justifyContent: "center",
+                    <SelectedIcon size={13} strokeWidth={1.5} style={{
+                      color: selectedChar.color, flexShrink: 0,
                       animation: isSelectedBusy ? "pulse-crew 1.5s ease-in-out infinite" : undefined,
-                    }}>
-                      <SelectedIcon size={16} strokeWidth={1.5} style={{ color: selectedChar.color }} />
-                    </div>
+                    }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{
-                        fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: 500,
-                        color: "var(--text)", lineHeight: 1.2,
+                      <span style={{
+                        fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 600,
+                        color: "var(--text)",
                       }}>
                         {selectedChar.name}
-                      </div>
-                      <div style={{
-                        fontFamily: "var(--font-body)", fontSize: 10,
-                        color: "var(--text-3)", textTransform: "capitalize", marginTop: 1,
+                      </span>
+                      <span style={{
+                        fontFamily: "var(--font-mono)", fontSize: 9,
+                        color: "var(--text-3)", marginLeft: 6,
                       }}>
                         {selectedChar.domain || selectedChar.tier}
-                      </div>
+                      </span>
                     </div>
                     <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
                       <button
@@ -652,12 +665,12 @@ export default function CrewWidget() {
 
                   {/* Actions */}
                   {actions.length > 0 && (
-                    <div style={{ padding: "9px 12px" }}>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <div style={{ padding: "6px 10px" }}>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                         {groupActionsByPrefix(actions).map((group, gi) => (
                             <div key={gi}>
                               {gi > 0 && (
-                                <div style={{ height: 1, background: "var(--border)", margin: "2px 0 5px", opacity: 0.7 }} />
+                                <div style={{ height: 1, background: "var(--border)", margin: "1px 0 3px", opacity: 0.5 }} />
                               )}
                               <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
                                 {group.map((action) => {
@@ -669,53 +682,47 @@ export default function CrewWidget() {
                                   const isRunning = runningActions.has(`${selectedChar.name}:${action.label}`);
                                   const ctxKey = `${selectedChar.name}:${action.label}`;
                                   const isCtxOn = !isAuto && !isDirect && !isAutoInput && contextOn.has(ctxKey);
+                                  const showCtx = !isAuto && !isDirect && !isAutoInput;
                                   return (
-                                    <span key={action.label} style={{ display: "inline-flex", alignItems: "center", gap: 0 }}>
-                                      <button
-                                        className="item-action-btn"
-                                        data-tip={action.description || action.label}
-                                        disabled={isRunning}
-                                        onClick={isDirect
-                                          ? () => runEndpoint(selectedChar.name, action.label, action.endpoint!)
-                                          : seedPrompt
-                                            ? isAuto
-                                              ? () => runAutonomous(selectedChar.name, action.label, seedPrompt)
-                                              : () => fireAction(selectedChar.name, action, seedPrompt)
-                                            : undefined
-                                        }
-                                        style={{
-                                          width: "auto", height: 26, gap: 5, padding: "0 9px 0 7px",
-                                          opacity: isRunning ? 0.5 : 1,
-                                          color: selectedChar.color,
-                                          borderRadius: 4, fontSize: 10,
-                                          border: `1px solid ${selectedChar.color}28`,
-                                          background: selectedChar.color + "08",
-                                        }}
-                                      >
-                                        {isRunning
-                                          ? <Loader2 size={11} strokeWidth={1.5} style={{ animation: "spin 1s linear infinite" }} />
-                                          : <AIcon size={11} strokeWidth={1.5} />
-                                        }
-                                        <span style={{ fontFamily: "var(--font-mono)", fontSize: 10 }}>{action.label}</span>
-                                      </button>
-                                      {!isAuto && !isDirect && !isAutoInput && (
+                                    <button
+                                      key={action.label}
+                                      className="item-action-btn"
+                                      data-tip={action.description || action.label}
+                                      disabled={isRunning}
+                                      onClick={isDirect
+                                        ? () => runEndpoint(selectedChar.name, action.label, action.endpoint!)
+                                        : seedPrompt
+                                          ? isAuto
+                                            ? () => runAutonomous(selectedChar.name, action.label, seedPrompt)
+                                            : () => fireAction(selectedChar.name, action, seedPrompt)
+                                          : undefined
+                                      }
+                                      style={{
+                                        width: "auto", height: 22, gap: 4, padding: "0 7px 0 5px",
+                                        opacity: isRunning ? 0.5 : 1,
+                                        color: selectedChar.color,
+                                        borderRadius: 3, fontSize: 9,
+                                        border: `1px solid ${selectedChar.color}22`,
+                                        background: selectedChar.color + "06",
+                                      }}
+                                    >
+                                      {isRunning
+                                        ? <Loader2 size={10} strokeWidth={1.5} style={{ animation: "spin 1s linear infinite" }} />
+                                        : <AIcon size={10} strokeWidth={1.5} />
+                                      }
+                                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 9 }}>{action.label}</span>
+                                      {showCtx && (
                                         <span
-                                          data-tip={isCtxOn ? "Context on" : "Context off"}
-                                          onClick={() => toggleContext(selectedChar.name, action.label)}
+                                          onClick={(e) => { e.stopPropagation(); toggleContext(selectedChar.name, action.label); }}
                                           style={{
-                                            display: "inline-flex", alignItems: "center", justifyContent: "center",
-                                            width: 14, height: 14, cursor: "pointer", flexShrink: 0,
-                                          }}
-                                        >
-                                          <span style={{
-                                            width: 5, height: 5, borderRadius: "50%",
+                                            width: 4, height: 4, borderRadius: "50%", flexShrink: 0, marginLeft: 1,
                                             background: isCtxOn ? selectedChar.color : "var(--text-3)",
-                                            opacity: isCtxOn ? 1 : 0.25,
+                                            opacity: isCtxOn ? 1 : 0.2,
                                             transition: "all 0.15s",
-                                          }} />
-                                        </span>
+                                          }}
+                                        />
                                       )}
-                                    </span>
+                                    </button>
                                   );
                                 })}
                               </div>
@@ -772,8 +779,8 @@ export default function CrewWidget() {
                   {/* Jobs & Recent */}
                   {(charJobs.length > 0 || charLogs.length > 0) && (
                     <div style={{
-                      borderTop: `1px solid ${selectedChar.color}18`,
-                      display: "flex", flexDirection: "column", padding: "8px 12px", gap: 6,
+                      borderTop: `1px solid ${selectedChar.color}12`,
+                      display: "flex", flexDirection: "column", padding: "6px 10px", gap: 4,
                     }}>
                         {charJobs.length > 0 && (
                           <div>
