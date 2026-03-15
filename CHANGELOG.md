@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.6.1 — 2026-03-15
+
+### Crew
+- [new] Filter labels on crew widget: All, Research, Teaching, Admin, Personal, System
+- [improved] Characters can appear in multiple filters (e.g. Scribe in Research + Teaching)
+- [improved] Crew order by interaction frequency (work characters first)
+- [new] Scholar "Solve" action: run solvers + Auditor on existing routes/questions
+- [new] LCoT pipeline supports step-by-step mode (decompose, solve, synthesize independently)
+
+### Dashboard
+- [improved] Updated screenshots
+
 ## v1.6.0 — 2026-03-14
 
 ### Crew
