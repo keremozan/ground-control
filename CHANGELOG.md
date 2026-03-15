@@ -7,6 +7,10 @@
 - [new] Scholar gains "Investigate" action for running the LCoT reasoning pipeline
 - [new] Curator gains "Investigate" action for art practice reasoning chains
 
+### Examples
+- [new] Prober and Auditor example character configs in `examples/characters/`
+- [improved] Scholar example updated with LCoT pipeline integration (canSpawn, Investigate action, lcot-orchestrate skill)
+
 ### Dashboard
 - [new] Icons registered: Crosshair, Scale, FlaskConical, BarChart
 - [new] Prober and Auditor in char-icons registry and tana-schema character map

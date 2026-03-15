@@ -144,7 +144,7 @@ Each character is a JSON config with:
 }
 ```
 
-**Example characters included:**
+**Characters in the full system:**
 
 | Character | Tier | Domain | Role |
 |---|---|---|---|
@@ -161,7 +161,9 @@ Each character is a JSON config with:
 | Auditor | meta | validation | Multi-solver consensus, knowledge quality scoring |
 | Watcher | meta | monitoring | Log analysis, error detection, behavioral lessons |
 
-**Adding a new character:** Drop a JSON file in `~/.claude/characters/core/` (or `meta/`, `stationed/`). The dashboard picks it up automatically — no code changes needed.
+8 example configs ship in `examples/characters/` (postman, scholar, clerk, coach, architect, oracle, prober, auditor). Use these as templates for your own characters.
+
+**Adding a new character:** Drop a JSON file in `~/.claude/characters/core/` (or `meta/`, `stationed/`). The dashboard picks it up automatically -- no code changes needed.
 
 ## Scheduled Jobs
 
