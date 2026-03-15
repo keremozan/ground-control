@@ -7,6 +7,7 @@
 - [fix] Standardized row padding (8px 14px) and gap (8px) across all list widgets
 - [fix] Removed fixed-width date columns for consistent spacing
 - [fix] Minimum font size raised to 8px across Calendar week/month views
+- [new] Design direction mockups added to docs/mockups/ (warm control, dense colorful, refined, clean)
 
 ## v1.6.1 — 2026-03-15
 

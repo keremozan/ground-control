@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Direction B: Dense & Colorful</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #f0efe9;
+    --bg-2: #e5e3db;
+    --surface: #faf9f6;
+    --surface-2: #f4f3ed;
+    --text: #1a1a18;
+    --text-2: #52524d;
+    --text-3: #8a8983;
+    --border: #d8d6cd;
+    --border-2: #c2bfb5;
+    --red: #dc2626;
+    --red-bg: #fef2f2;
+    --green: #16a34a;
+    --green-bg: #f0fdf4;
+    --amber: #d97706;
+    --amber-bg: #fffbeb;
+    --blue: #2563eb;
+    --blue-bg: #eff6ff;
+    --purple: #7c3aed;
+    --teal: #0d9488;
+    --font-display: 'Bricolage Grotesque', sans-serif;
+    --font-body: 'IBM Plex Sans', sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+  }
+
+  body {
+    background: var(--bg);
+    font-family: var(--font-body);
+    color: var(--text);
+    padding: 10px;
+    min-height: 100vh;
+  }
+
+  .label {
+    position: fixed; top: 0; left: 0; right: 0;
+    background: linear-gradient(135deg, #4f46e5, #7c3aed); color: white;
+    font-family: var(--font-mono); font-size: 11px; font-weight: 500;
+    padding: 8px 16px; text-align: center; z-index: 100;
+    letter-spacing: 0.05em;
+  }
+  .label span { opacity: 0.7; margin-left: 12px; }
+
+  /* --- STATUS STRIP --- */
+  .status-strip {
+    margin-top: 32px;
+    display: flex; align-items: center;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 6px 12px;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+  .status-strip .logo {
+    font-family: var(--font-display); font-size: 14px; font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .status-divider {
+    width: 1px; height: 16px; background: var(--border);
+  }
+  .status-chip {
+    font-family: var(--font-mono); font-size: 9px; font-weight: 500;
+    padding: 2px 8px; border-radius: 3px;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .status-chip .dot {
+    width: 5px; height: 5px; border-radius: 50%;
+  }
+  .status-chip-ok { background: #f0fdf4; color: #16a34a; }
+  .status-chip-ok .dot { background: #22c55e; box-shadow: 0 0 4px #22c55e88; }
+  .status-chip-warn { background: #fffbeb; color: #d97706; }
+  .status-chip-warn .dot { background: #f59e0b; box-shadow: 0 0 4px #f59e0b88; }
+  .status-chip-info { background: #eff6ff; color: #2563eb; }
+  .status-time {
+    font-family: var(--font-mono); font-size: 10px; color: var(--text-3);
+    margin-left: auto;
+  }
+
+  /* --- GRID --- */
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 6px;
+  }
+
+  /* --- WIDGET --- */
+  .widget {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+
+  /* Widget header with colored accent stripe */
+  .widget-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 7px 12px;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+  }
+  .widget-header::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--header-accent, var(--border));
+  }
+  .widget-header-left {
+    display: flex; align-items: center; gap: 6px;
+  }
+  .widget-header-icon {
+    width: 18px; height: 18px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 3px; font-size: 10px;
+    color: white;
+    background: var(--header-accent, #94a3b8);
+  }
+  .widget-title {
+    font-family: var(--font-mono); font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .widget-count {
+    font-family: var(--font-mono); font-size: 10px; font-weight: 600;
+    color: white; background: var(--header-accent, #94a3b8);
+    padding: 0 5px; border-radius: 3px; line-height: 16px;
+  }
+  .widget-header-right {
+    display: flex; align-items: center; gap: 2px;
+  }
+  .widget-btn {
+    width: 22px; height: 20px; border-radius: 2px; border: none;
+    background: transparent; color: var(--text-3); cursor: pointer;
+    font-size: 11px; display: flex; align-items: center; justify-content: center;
+  }
+  .widget-btn:hover { background: var(--bg); color: var(--text); }
+
+  /* --- TABS (compact) --- */
+  .tab-bar {
+    display: flex; gap: 0; background: var(--bg);
+    border-bottom: 1px solid var(--border);
+  }
+  .tab {
+    font-family: var(--font-mono); font-size: 9px; font-weight: 500;
+    color: var(--text-3); background: none; border: none; cursor: pointer;
+    padding: 5px 10px;
+    border-bottom: 2px solid transparent;
+    transition: color 0.1s;
+    text-transform: uppercase; letter-spacing: 0.03em;
+  }
+  .tab:hover { color: var(--text-2); background: var(--surface-2); }
+  .tab.active {
+    color: var(--text);
+    background: var(--surface);
+    border-bottom-color: var(--header-accent, var(--text));
+    font-weight: 600;
+  }
+  .tab .count {
+    font-size: 8px; font-weight: 600;
+    color: white; background: var(--header-accent, #94a3b8);
+    padding: 0 3px; border-radius: 2px;
+    margin-left: 3px; line-height: 12px;
+    display: inline-block; vertical-align: middle;
+  }
+
+  /* --- ITEM ROW (dense) --- */
+  .widget-body { flex: 1; overflow-y: auto; }
+  .item-row {
+    display: flex; align-items: center;
+    padding: 5px 10px;
+    border-bottom: 1px solid color-mix(in srgb, var(--border), transparent 50%);
+    cursor: pointer;
+    transition: background 0.08s;
+    gap: 6px;
+    min-height: 32px;
+  }
+  .item-row:hover { background: var(--surface-2); }
+  .item-row:last-child { border-bottom: none; }
+
+  /* Category stripe */
+  .cat-stripe {
+    width: 3px; align-self: stretch;
+    border-radius: 1px; flex-shrink: 0;
+  }
+
+  /* Priority/urgency indicator */
+  .urgency {
+    width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+  }
+  .urgency-critical { background: #ef4444; box-shadow: 0 0 4px #ef444488; animation: pulse 2s infinite; }
+  .urgency-high { background: #f59e0b; box-shadow: 0 0 3px #f59e0b66; }
+  .urgency-medium { background: #3b82f6; }
+  .urgency-low { background: #94a3b8; }
+  .urgency-done { background: #22c55e; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+  /* Time/meta column */
+  .col-time {
+    width: 44px; flex-shrink: 0;
+    font-family: var(--font-mono); font-size: 10px; color: var(--text-3);
+    text-align: right;
+  }
+  .col-time.urgent { color: var(--red); font-weight: 600; }
+  .col-time.warn { color: var(--amber); font-weight: 500; }
+
+  /* Content */
+  .col-content { flex: 1; min-width: 0; }
+  .row-title {
+    font-family: var(--font-body); font-size: 11.5px; font-weight: 500;
+    color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    line-height: 1.2;
+  }
+  .row-sub {
+    font-family: var(--font-body); font-size: 10px; color: var(--text-2);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    line-height: 1.2; margin-top: 1px;
+  }
+
+  /* Tags row */
+  .tags { display: flex; gap: 3px; margin-top: 2px; flex-wrap: wrap; }
+
+  /* --- PILL/TAG (compact) --- */
+  .tag {
+    font-family: var(--font-mono); font-size: 7px; font-weight: 600;
+    padding: 1px 5px; border-radius: 2px;
+    text-transform: uppercase; letter-spacing: 0.05em;
+    line-height: 13px; display: inline-block;
+  }
+  .tag-red { background: #fecaca; color: #b91c1c; }
+  .tag-amber { background: #fed7aa; color: #c2410c; }
+  .tag-blue { background: #bfdbfe; color: #1d4ed8; }
+  .tag-green { background: #bbf7d0; color: #15803d; }
+  .tag-purple { background: #e9d5ff; color: #6d28d9; }
+  .tag-teal { background: #99f6e4; color: #0f766e; }
+  .tag-gray { background: var(--bg-2); color: var(--text-3); }
+  .tag-pink { background: #fce7f3; color: #be185d; }
+  .tag-indigo { background: #c7d2fe; color: #4338ca; }
+  .tag-orange { background: #ffedd5; color: #ea580c; }
+
+  /* --- CHARACTER BADGE --- */
+  .char {
+    width: 20px; height: 20px; border-radius: 3px;
+    font-family: var(--font-mono); font-size: 9px; font-weight: 600;
+    color: white; display: inline-flex; align-items: center; justify-content: center;
+    flex-shrink: 0; letter-spacing: -0.02em;
+  }
+  .char-lg { width: 26px; height: 26px; font-size: 11px; border-radius: 4px; }
+
+  /* --- SECTION DIVIDER --- */
+  .section-div {
+    font-family: var(--font-mono); font-size: 8px; font-weight: 600;
+    color: var(--text-3); text-transform: uppercase; letter-spacing: 0.06em;
+    padding: 6px 10px 3px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .section-div::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+
+  /* --- CREW ROSTER (dense list) --- */
+  .crew-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 4px 10px;
+    border-bottom: 1px solid color-mix(in srgb, var(--border), transparent 50%);
+    cursor: pointer; transition: background 0.08s;
+  }
+  .crew-row:hover { background: var(--surface-2); }
+  .crew-name {
+    font-family: var(--font-body); font-size: 11px; font-weight: 500;
+    flex: 1;
+  }
+  .crew-role {
+    font-family: var(--font-mono); font-size: 8px; color: var(--text-3);
+    text-transform: uppercase; letter-spacing: 0.03em;
+  }
+  .crew-status {
+    font-family: var(--font-mono); font-size: 9px;
+    padding: 1px 6px; border-radius: 2px;
+  }
+  .crew-idle { background: var(--bg); color: var(--text-3); }
+  .crew-busy { background: #dbeafe; color: #2563eb; }
+  .crew-action-count {
+    font-family: var(--font-mono); font-size: 8px; color: var(--text-3);
+    background: var(--bg); padding: 0 4px; border-radius: 2px; line-height: 14px;
+  }
+
+  /* --- CHAT PANEL (dark) --- */
+  .chat-panel {
+    background: #19171a; border: 1px solid #2a2730; border-radius: 5px;
+    grid-row: span 2; display: flex; flex-direction: column;
+  }
+  .chat-panel .widget-header {
+    background: #1f1d22; border-bottom: 1px solid #2a2730;
+    padding: 6px 12px;
+  }
+  .chat-panel .widget-header::before { background: #7c3aed; }
+  .chat-panel .widget-title { color: #e2e0e5; }
+
+  .char-select {
+    display: flex; gap: 3px; padding: 5px 12px;
+    background: #1f1d22; border-bottom: 1px solid #2a2730;
+    overflow-x: auto;
+  }
+  .char-select-btn {
+    border: none; background: transparent; cursor: pointer;
+    padding: 2px 4px; border-radius: 3px;
+    transition: background 0.1s;
+  }
+  .char-select-btn:hover { background: #2a2730; }
+  .char-select-btn.active { background: #2a2730; }
+
+  .chat-body { flex: 1; padding: 10px 12px; overflow-y: auto; }
+  .msg { margin-bottom: 8px; }
+  .msg-user {
+    background: #2563eb; color: white;
+    border-radius: 8px 8px 2px 8px; padding: 6px 10px;
+    font-size: 12px; line-height: 1.5; max-width: 80%;
+    margin-left: auto; display: block; width: fit-content;
+  }
+  .msg-asst {
+    color: #a09ca6; border-left: 2px solid #3a3740;
+    padding: 3px 0 3px 10px; font-size: 11.5px; line-height: 1.55;
+    max-width: 90%;
+  }
+  .msg-meta {
+    font-family: var(--font-mono); font-size: 8px; color: #5a5660;
+    margin-top: 2px;
+  }
+
+  .chat-input-area {
+    padding: 8px 12px; border-top: 1px solid #2a2730;
+    display: flex; gap: 6px;
+  }
+  .chat-input {
+    flex: 1; background: #252328; border: 1px solid #333038;
+    border-radius: 4px; padding: 6px 10px;
+    font-family: var(--font-body); font-size: 12px; color: #d4d2d8;
+    outline: none;
+  }
+  .chat-send {
+    background: #7c3aed; color: white; border: none;
+    border-radius: 4px; padding: 0 12px;
+    font-family: var(--font-mono); font-size: 9px; font-weight: 600;
+    cursor: pointer; letter-spacing: 0.03em;
+  }
+
+  /* --- VIEW TOGGLE --- */
+  .view-toggle {
+    display: flex; border: 1px solid var(--border); border-radius: 3px; overflow: hidden;
+  }
+  .view-btn {
+    font-family: var(--font-mono); font-size: 8px; font-weight: 600;
+    color: var(--text-3); background: var(--surface); border: none;
+    border-right: 1px solid var(--border);
+    padding: 2px 7px; cursor: pointer;
+    text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .view-btn:last-child { border-right: none; }
+  .view-btn:hover { color: var(--text-2); }
+  .view-btn.active {
+    color: white; background: var(--header-accent, #64748b);
+  }
+
+  /* --- PROGRESS BAR --- */
+  .prog {
+    height: 3px; background: var(--border); border-radius: 2px; overflow: hidden;
+    flex: 1;
+  }
+  .prog-fill { height: 100%; border-radius: 2px; }
+
+  /* --- LOCATION/TIME DETAIL --- */
+  .detail {
+    font-family: var(--font-mono); font-size: 9px; color: var(--text-3);
+    display: flex; gap: 6px; align-items: center;
+  }
+
+  /* Hover actions (floating) */
+  .hover-actions {
+    display: none; align-items: center; gap: 1px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 3px; padding: 1px; box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  }
+  .item-row:hover .hover-actions { display: flex; }
+  .item-row { position: relative; }
+  .ha-btn {
+    width: 20px; height: 18px; border: none; background: transparent;
+    border-radius: 2px; color: var(--text-3); cursor: pointer;
+    font-size: 10px; display: flex; align-items: center; justify-content: center;
+  }
+  .ha-btn:hover { background: var(--bg); color: var(--text); }
+
+  /* --- CALENDAR MINI WEEK --- */
+  .week-strip {
+    display: flex; padding: 4px 10px; gap: 2px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+  }
+  .week-day {
+    flex: 1; text-align: center;
+    font-family: var(--font-mono); font-size: 8px; color: var(--text-3);
+    padding: 2px 0;
+  }
+  .week-day.today {
+    color: var(--blue); font-weight: 600;
+    background: var(--blue-bg); border-radius: 3px;
+  }
+  .week-day .day-num {
+    font-size: 11px; font-weight: 500; color: var(--text-2);
+    display: block; margin-top: 1px;
+  }
+  .week-day.today .day-num { color: var(--blue); }
+  .week-day-dots {
+    display: flex; gap: 2px; justify-content: center; margin-top: 2px;
+  }
+  .day-dot {
+    width: 3px; height: 3px; border-radius: 50%;
+  }
+</style>
+</head>
+<body>
+
+<div class="label">DIRECTION B: DENSE & COLORFUL <span>More data, more color, tighter grid, organized through structure</span></div>
+
+<!-- Status strip -->
+<div class="status-strip">
+  <div class="logo">Ground Control</div>
+  <div class="status-divider"></div>
+  <div class="status-chip status-chip-ok"><span class="dot"></span> 8 agents</div>
+  <div class="status-chip status-chip-warn"><span class="dot"></span> 3 tasks due</div>
+  <div class="status-chip status-chip-info">v1.5.2</div>
+  <div class="status-divider"></div>
+  <div style="display: flex; gap: 2px;">
+    <div class="char" style="background: #4f46e5;">Po</div>
+    <div class="char" style="background: #7c3aed;">Sc</div>
+    <div class="char" style="background: #0891b2;">Pr</div>
+    <div class="char" style="background: #059669;">Cl</div>
+    <div class="char" style="background: #dc2626;">Cu</div>
+    <div class="char" style="background: #ca8a04;">Co</div>
+    <div class="char" style="background: #475569;">Ar</div>
+    <div class="char" style="background: #6366f1;">En</div>
+  </div>
+  <div class="status-time">Fri 14 Mar 2026 / 15:42</div>
+</div>
+
+<div class="grid">
+
+  <!-- === INBOX === -->
+  <div class="widget" style="--header-accent: #f59e0b;">
+    <div class="widget-header">
+      <div class="widget-header-left">
+        <div class="widget-header-icon">&#9993;</div>
+        <div class="widget-title">Inbox</div>
+        <div class="widget-count">4</div>
+      </div>
+      <div class="widget-header-right">
+        <div class="view-toggle">
+          <button class="view-btn active">All</button>
+          <button class="view-btn">Unread</button>
+          <button class="view-btn">Flagged</button>
+        </div>
+        <button class="widget-btn">&#x21bb;</button>
+      </div>
+    </div>
+    <div class="widget-body">
+      <div class="item-row">
+        <div class="cat-stripe" style="background: #ef4444;"></div>
+        <div class="urgency urgency-critical"></div>
+        <div class="col-time urgent">2h</div>
+        <div class="col-content">
+          <div class="row-title">BAGEM Office</div>
+          <div class="row-sub">Course evaluation deadline reminder</div>
+          <div class="tags">
+            <span class="tag tag-red">urgent</span>
+            <span class="tag tag-teal">admin</span>
+          </div>
+        </div>
+        <div class="char" style="background: #059669;">Cl</div>
+        <div class="hover-actions">
+          <button class="ha-btn">&#8617;</button>
+          <button class="ha-btn">&#9745;</button>
+          <button class="ha-btn">&#128193;</button>
+        </div>
+      </div>
+
+      <div class="item-row">
+        <div class="cat-stripe" style="background: #f59e0b;"></div>
+        <div class="urgency urgency-high"></div>
+        <div class="col-time warn">5h</div>
+        <div class="col-content">
+          <div class="row-title">Murat Germen</div>
+          <div class="row-sub">Re: Exhibition catalog proof review</div>
+          <div class="tags">
+            <span class="tag tag-amber">to respond</span>
+            <span class="tag tag-purple">curator</span>
+          </div>
+        </div>
+        <div class="char" style="background: #dc2626;">Cu</div>
+      </div>
+
+      <div class="item-row">
+        <div class="cat-stripe" style="background: #3b82f6;"></div>
+        <div class="urgency urgency-medium"></div>
+        <div class="col-time">1d</div>
+        <div class="col-content">
+          <div class="row-title">Ars Electronica</div>
+          <div class="row-sub">Submission confirmation: Contamination</div>
+          <div class="tags">
+            <span class="tag tag-blue">info</span>
+            <span class="tag tag-pink">art</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="item-row">
+        <div class="cat-stripe" style="background: #94a3b8;"></div>
+        <div class="urgency urgency-low"></div>
+        <div class="col-time">2d</div>
+        <div class="col-content">
+          <div class="row-title">GitHub</div>
+          <div class="row-sub">[ground-control] PR #47 merged</div>
+          <div class="tags">
+            <span class="tag tag-gray">notification</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="item-row">
+        <div class="cat-stripe" style="background: #f59e0b;"></div>
+        <div class="urgency urgency-high"></div>
+        <div class="col-time warn">3d</div>
+        <div class="col-content">
+          <div class="row-title">Student (VA 315)</div>
+          <div class="row-sub">Question about midterm project scope</div>
+          <div class="tags">
+            <span class="tag tag-amber">to respond</span>
+            <span class="tag tag-indigo">teaching</span>
+          </div>
+        </div>
+        <div class="char" style="background: #0891b2;">Pr</div>
+      </div>
+
+      <div class="item-row">
+        <div class="cat-stripe" style="background: #22c55e;"></div>
+        <div class="urgency urgency-done"></div>
+        <div class="col-time" style="opacity: 0.5;">4d</div>
+        <div class="col-content">
+          <div class="row-title" style="opacity: 0.5; text-decoration: line-through;">Sabanci HR</div>
+          <div class="row-sub" style="opacity: 0.4;">Payroll confirmation March</div>
+          <div class="tags">
+            <span class="tag tag-green">done</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- === CALENDAR === -->
+  <div class="widget" style="--header-accent: #2563eb;">
+    <div class="widget-header">
+      <div class="widget-header-left">
+        <div class="widget-header-icon">&#128197;</div>
+        <div class="widget-title">Calendar</div>
+        <div class="widget-count">5</div>
+      </div>
+      <div class="widget-header-right">
+        <div class="view-toggle">
+          <button class="view-btn active">List</button>
+          <button class="view-btn">Week</button>
+          <button class="view-btn">Month</button>
+        </div>
+        <button class="widget-btn">+</button>
+        <button class="widget-btn">&#x21bb;</button>
+      </div>
+    </div>
+
+    <!-- Mini week strip -->
+    <div class="week-strip">
+      <div class="week-day"><span>MON</span><span class="day-num">10</span></div>
+      <div class="week-day"><span>TUE</span><span class="day-num">11</span></div>
+      <div class="week-day"><span>WED</span><span class="day-num">12</span></div>
+      <div class="week-day"><span>THU</span><span class="day-num">13</span></div>
+      <div class="week-day today">
+        <span>FRI</span><span class="day-num">14</span>
+        <div class="week-day-dots">
+          <div class="day-dot" style="background: #7c3aed;"></div>
+          <div class="day-dot" style="background: #0d9488;"></div>
+          <div class="day-dot" style="background: #2563eb;"></div>
+        </div>
+      </div>
+      <div class="week-day"><span>SAT</span><span class="day-num">15</span></div>
+      <div class="week-day"><span>SUN</span><span class="day-num">16</span></div>
+    </div>
+
+    <div class="widget-body">
+      <div class="section-div">Today</div>
+
+      <div class="item-row">
+        <div class="cat-stripe" style="background: #7c3aed;"></div>
+        <div class="col-time" style="width: 36px;">09:30</div>
+        <div class="col-content">
+          <div class="row-title">VA 204 Studio</div>
+          <div class="detail">FASS G060 / 3h / <span class="tag tag-purple" style="margin-left: 2px;">teaching</span></div>
+        </div>
+      </div>
+
+      <div class="item-row">
+        <div class="cat-stripe" style="background: #0d9488;"></div>
+        <div class="col-time" style="width: 36px;">14:00</div>
+        <div class="col-content">
+          <div class="row-title">Department Meeting</div>
+          <div class="detail">FASS 2034 / 1h / <span class="tag tag-teal" style="margin-left: 2px;">meeting</span></div>
+        </div>
+      </div>
+
+      <div class="item-row">
+        <div class="cat-stripe" style="background: #2563eb;"></div>
+        <div class="col-time" style="width: 36px;">16:00</div>
+        <div class="col-content">
+          <div class="row-title">Thesis Defense: Zeynep A.</div>
+          <div class="detail">FASS 1097 / 1.5h / <span class="tag tag-blue" style="margin-left: 2px;">academic</span></div>
+        </div>
+      </div>
+
+      <div class="section-div">Tomorrow</div>
+
+      <div class="item-row">
+        <div class="cat-stripe" style="background: #7c3aed;"></div>
+        <div class="col-time" style="width: 36px;">10:00</div>
+        <div class="col-content">
+          <div class="row-title">VA 315 Seminar</div>
+          <div class="detail">FASS G060 / 2h / <span class="tag tag-purple" style="margin-left: 2px;">teaching</span></div>
+        </div>
+      </div>
+
+      <div class="item-row" style="background: #fffbeb;">
+        <div class="cat-stripe" style="background: #f59e0b;"></div>
+        <div class="col-time warn" style="width: 36px;">23:59</div>
+        <div class="col-content">
+          <div class="row-title" style="color: var(--amber); font-weight: 600;">Ars Electronica Final Submission</div>
+          <div class="detail" style="color: var(--amber);">&#9888; Deadline</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- === CHAT PANEL (dark, 2-row span) === -->
+  <div class="chat-panel">
+    <div class="widget-header" style="--header-accent: #7c3aed;">
+      <div class="widget-header-left">
+        <div class="widget-header-icon" style="background: #7c3aed;">&#9993;</div>
+        <div class="widget-title" style="color: #e2e0e5;">Chat</div>
+      </div>
+    </div>
+    <div class="char-select">
+      <button class="char-select-btn active">
+        <div class="char" style="background: #4f46e5;">Po</div>
+      </button>
+      <button class="char-select-btn">
+        <div class="char" style="background: #7c3aed;">Sc</div>
+      </button>
+      <button class="char-select-btn">
+        <div class="char" style="background: #0891b2;">Pr</div>
+      </button>
+      <button class="char-select-btn">
+        <div class="char" style="background: #059669;">Cl</div>
+      </button>
+      <button class="char-select-btn">
+        <div class="char" style="background: #dc2626;">Cu</div>
+      </button>
+      <button class="char-select-btn">
+        <div class="char" style="background: #475569;">Ar</div>
+      </button>
+    </div>
+    <div class="chat-body" style="flex: 1;">
+      <div class="msg"><div class="msg-user">Check my inbox for anything urgent</div></div>
+      <div class="msg">
+        <div class="msg-asst">Found 2 items needing attention. BAGEM course evaluation deadline (today). Murat's catalog proof review (waiting 2 days). Both flagged in your inbox.</div>
+        <div class="msg-meta">Postman / 2 min ago</div>
+      </div>
+      <div class="msg"><div class="msg-user">Draft a reply to Murat, say I'll review by Monday</div></div>
+      <div class="msg">
+        <div class="msg-asst">Draft saved to Gmail. Confirming review by Monday March 17th, noting color accuracy and text placement focus.</div>
+        <div class="msg-meta">Postman / just now</div>
+      </div>
+    </div>
+    <div class="chat-input-area">
+      <input class="chat-input" placeholder="Ask Postman..." />
+      <button class="chat-send">SEND</button>
+    </div>
+  </div>
+
+  <!-- === TASKS === -->
+  <div class="widget" style="--header-accent: #16a34a;">
+    <div class="widget-header">
+      <div class="widget-header-left">
+        <div class="widget-header-icon">&#9745;</div>
+        <div class="widget-title">Tasks</div>
+        <div class="widget-count">8</div>
+      </div>
+      <div class="widget-header-right">
+        <button class="widget-btn">+</button>
+        <button class="widget-btn">&#x21bb;</button>
+      </div>
+    </div>
+    <div class="tab-bar" style="--header-accent: #16a34a;">
+      <button class="tab active">Tasks<span class="count">8</span></button>
+      <button class="tab">Projects</button>
+      <button class="tab">Classes<span class="count">2</span></button>
+    </div>
+    <div class="widget-body">
+      <div class="section-div">Due Today</div>
+
+      <div class="item-row">
+        <div class="cat-stripe" style="background: #0d9488;"></div>
+        <div class="urgency urgency-critical"></div>
+        <div class="col-time urgent">now</div>
+        <div class="col-content">
+          <div class="row-title">Submit course evaluations</div>
+          <div class="tags">
+            <span class="tag tag-teal">admin</span>
+          </div>
+        </div>
+        <div class="char" style="background: #059669;">Cl</div>
+      </div>
+
+      <div class="item-row">
+        <div class="cat-stripe" style="background: #7c3aed;"></div>
+        <div class="urgency urgency-high"></div>
+        <div class="col-time warn">today</div>
+        <div class="col-content">
+          <div class="row-title">Review thesis: Zeynep A. jury report</div>
+          <div class="tags">
+            <span class="tag tag-purple">academic</span>
+          </div>
+        </div>
+        <div class="char" style="background: #7c3aed;">Sc</div>
+      </div>
+
+      <div class="item-row">
+        <div class="cat-stripe" style="background: #0891b2;"></div>
+        <div class="urgency urgency-high"></div>
+        <div class="col-time warn">today</div>
+        <div class="col-content">
+          <div class="row-title">Prep VA 315 Week 8 materials</div>
+          <div class="tags">
+            <span class="tag tag-indigo">teaching</span>
+          </div>
+        </div>
+        <div class="char" style="background: #0891b2;">Pr</div>
+      </div>
+
+      <div class="section-div">This Week</div>
+
+      <div class="item-row">
+        <div class="cat-stripe" style="background: #dc2626;"></div>
+        <div class="urgency urgency-medium"></div>
+        <div class="col-time">Mon</div>
+        <div class="col-content">
+          <div class="row-title">Finalize Ars Electronica submission</div>
+          <div class="tags">
+            <span class="tag tag-pink">art</span>
+          </div>
+        </div>
+        <div class="char" style="background: #dc2626;">Cu</div>
+      </div>
+
+      <div class="item-row">
+        <div class="cat-stripe" style="background: #6366f1;"></div>
+        <div class="urgency urgency-low"></div>
+        <div class="col-time">Wed</div>
+        <div class="col-content">
+          <div class="row-title">Ground Control: add batch operations</div>
+          <div class="tags">
+            <span class="tag tag-indigo">system</span>
+          </div>
+        </div>
+        <div class="char" style="background: #6366f1;">En</div>
+      </div>
+
+      <div class="item-row">
+        <div class="cat-stripe" style="background: #059669;"></div>
+        <div class="urgency urgency-low"></div>
+        <div class="col-time">Thu</div>
+        <div class="col-content">
+          <div class="row-title">Advisory meeting prep: Spring advising</div>
+          <div class="tags">
+            <span class="tag tag-teal">admin</span>
+          </div>
+        </div>
+        <div class="char" style="background: #059669;">Cl</div>
+      </div>
+
+      <div class="item-row">
+        <div class="cat-stripe" style="background: #ca8a04;"></div>
+        <div class="urgency urgency-low"></div>
+        <div class="col-time">Fri</div>
+        <div class="col-content">
+          <div class="row-title">Weekly personal review</div>
+          <div class="tags">
+            <span class="tag tag-orange">wellbeing</span>
+          </div>
+        </div>
+        <div class="char" style="background: #ca8a04;">Co</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- === CREW === -->
+  <div class="widget" style="--header-accent: #4f46e5;">
+    <div class="widget-header">
+      <div class="widget-header-left">
+        <div class="widget-header-icon">&#9881;</div>
+        <div class="widget-title">Crew</div>
+        <div class="widget-count">8</div>
+      </div>
+      <div class="widget-header-right">
+        <button class="widget-btn">&#x21bb;</button>
+      </div>
+    </div>
+    <div class="tab-bar" style="--header-accent: #4f46e5;">
+      <button class="tab active">Roster</button>
+      <button class="tab">Jobs<span class="count">5</span></button>
+      <button class="tab">Logs<span class="count">12</span></button>
+      <button class="tab">Proposals</button>
+    </div>
+    <div class="widget-body">
+      <div class="section-div">Core</div>
+
+      <div class="crew-row">
+        <div class="char" style="background: #4f46e5;">Po</div>
+        <div class="crew-name">Postman</div>
+        <div class="crew-role">Input</div>
+        <div class="crew-action-count">5 actions</div>
+        <div class="crew-status crew-idle">idle</div>
+      </div>
+      <div class="crew-row">
+        <div class="char" style="background: #7c3aed;">Sc</div>
+        <div class="crew-name">Scholar</div>
+        <div class="crew-role">Research</div>
+        <div class="crew-action-count">4 actions</div>
+        <div class="crew-status crew-idle">idle</div>
+      </div>
+      <div class="crew-row">
+        <div class="char" style="background: #0891b2;">Pr</div>
+        <div class="crew-name">Proctor</div>
+        <div class="crew-role">Teaching</div>
+        <div class="crew-action-count">6 actions</div>
+        <div class="crew-status crew-busy">busy</div>
+      </div>
+      <div class="crew-row">
+        <div class="char" style="background: #059669;">Cl</div>
+        <div class="crew-name">Clerk</div>
+        <div class="crew-role">Admin</div>
+        <div class="crew-action-count">5 actions</div>
+        <div class="crew-status crew-idle">idle</div>
+      </div>
+      <div class="crew-row">
+        <div class="char" style="background: #dc2626;">Cu</div>
+        <div class="crew-name">Curator</div>
+        <div class="crew-role">Art</div>
+        <div class="crew-action-count">3 actions</div>
+        <div class="crew-status crew-idle">idle</div>
+      </div>
+      <div class="crew-row">
+        <div class="char" style="background: #ca8a04;">Co</div>
+        <div class="crew-name">Coach</div>
+        <div class="crew-role">Wellbeing</div>
+        <div class="crew-action-count">2 actions</div>
+        <div class="crew-status crew-idle">idle</div>
+      </div>
+
+      <div class="section-div">Meta</div>
+
+      <div class="crew-row">
+        <div class="char" style="background: #475569;">Ar</div>
+        <div class="crew-name">Architect</div>
+        <div class="crew-role">System</div>
+        <div class="crew-action-count">4 actions</div>
+        <div class="crew-status crew-idle">idle</div>
+      </div>
+      <div class="crew-row">
+        <div class="char" style="background: #6366f1;">En</div>
+        <div class="crew-name">Engineer</div>
+        <div class="crew-role">Code</div>
+        <div class="crew-action-count">3 actions</div>
+        <div class="crew-status crew-busy">busy</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

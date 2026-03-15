@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Direction A: Warm Control Panel</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #f4f3ef;
+    --bg-2: #eae8e3;
+    --surface: #ffffff;
+    --surface-2: #f9f8f6;
+    --text: #1c1c1c;
+    --text-2: #5c5c57;
+    --text-3: #9c9b95;
+    --border: #dddbd4;
+    --border-2: #c8c5bc;
+    --red: #c93c2a;
+    --red-bg: #fdf2f0;
+    --green: #2a7d4f;
+    --green-bg: #f0faf4;
+    --amber: #a16207;
+    --amber-bg: #fefbf0;
+    --blue: #2563eb;
+    --blue-bg: #eff4ff;
+    --font-display: 'Bricolage Grotesque', sans-serif;
+    --font-body: 'IBM Plex Sans', sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+  }
+
+  body {
+    background: var(--bg);
+    font-family: var(--font-body);
+    color: var(--text);
+    padding: 16px;
+    min-height: 100vh;
+  }
+
+  .label {
+    position: fixed; top: 0; left: 0; right: 0;
+    background: var(--text); color: white;
+    font-family: var(--font-mono); font-size: 11px; font-weight: 500;
+    padding: 8px 16px; text-align: center; z-index: 100;
+    letter-spacing: 0.05em;
+  }
+  .label span { opacity: 0.5; margin-left: 12px; }
+
+  /* --- STATUS BAR --- */
+  .status-bar {
+    margin-top: 32px;
+    display: flex; align-items: center; gap: 16px;
+    padding: 8px 0 16px;
+  }
+  .status-bar .logo {
+    font-family: var(--font-display); font-size: 15px; font-weight: 700;
+    color: var(--text); letter-spacing: -0.02em;
+  }
+  .status-bar .meta {
+    font-family: var(--font-mono); font-size: 10px; color: var(--text-3);
+    display: flex; gap: 12px;
+  }
+  .status-bar .led {
+    width: 6px; height: 6px; border-radius: 50%; display: inline-block;
+    margin-right: 4px; vertical-align: middle;
+  }
+  .led-green { background: #4ade80; box-shadow: 0 0 4px #4ade8066; }
+  .led-amber { background: #fbbf24; box-shadow: 0 0 4px #fbbf2466; }
+
+  /* --- GRID --- */
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+  }
+
+  /* --- WIDGET --- */
+  .widget {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .widget-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .widget-header-left {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .widget-header-icon {
+    width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;
+    font-size: 13px; color: var(--text-2);
+  }
+  .widget-title {
+    font-family: var(--font-display); font-size: 13px; font-weight: 600;
+  }
+  .widget-meta {
+    font-family: var(--font-mono); font-size: 10px; color: var(--text-3);
+    margin-left: 4px;
+  }
+  .widget-header-right {
+    display: flex; align-items: center; gap: 2px;
+  }
+  .widget-btn {
+    width: 26px; height: 24px; border-radius: 3px; border: none;
+    background: transparent; color: var(--text-3); cursor: pointer;
+    font-size: 12px; display: flex; align-items: center; justify-content: center;
+  }
+  .widget-btn:hover { background: var(--bg); color: var(--text); }
+
+  /* --- TABS --- */
+  .tab-bar {
+    display: flex; gap: 0; border-bottom: 1px solid var(--border);
+    padding: 0 14px;
+  }
+  .tab {
+    font-family: var(--font-mono); font-size: 10px; font-weight: 500;
+    color: var(--text-3); background: none; border: none; cursor: pointer;
+    padding: 8px 10px 7px;
+    border-bottom: 2px solid transparent;
+    transition: color 0.12s;
+  }
+  .tab:hover { color: var(--text-2); }
+  .tab.active {
+    color: var(--text);
+    border-bottom-color: var(--text);
+    font-weight: 600;
+  }
+  .tab .badge {
+    font-size: 8px; font-weight: 600;
+    background: var(--bg-2); color: var(--text-3);
+    padding: 0 4px; border-radius: 3px;
+    margin-left: 4px; line-height: 14px;
+    display: inline-block; vertical-align: middle;
+  }
+
+  /* --- ITEM ROW --- */
+  .widget-body { flex: 1; overflow-y: auto; }
+  .item-row {
+    display: flex; align-items: flex-start;
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.1s;
+    position: relative;
+  }
+  .item-row:hover { background: var(--surface-2); }
+  .item-row:last-child { border-bottom: none; }
+
+  /* Left color bar */
+  .item-bar {
+    width: 3px; align-self: stretch;
+    border-radius: 2px; flex-shrink: 0;
+    margin-right: 10px;
+  }
+
+  /* Meta column (time/date) */
+  .item-meta {
+    width: 64px; flex-shrink: 0;
+    display: flex; align-items: center; gap: 4px;
+    font-family: var(--font-mono); font-size: 10px; color: var(--text-3);
+  }
+  .item-dot {
+    width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0;
+  }
+
+  /* Content area */
+  .item-content { flex: 1; min-width: 0; }
+  .item-title {
+    font-family: var(--font-body); font-size: 12px; font-weight: 500;
+    color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    line-height: 1.3;
+  }
+  .item-sub {
+    font-family: var(--font-body); font-size: 11px; color: var(--text-2);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    margin-top: 1px;
+  }
+  .item-labels {
+    display: flex; gap: 4px; margin-top: 3px; flex-wrap: wrap;
+  }
+
+  /* --- PILLS / LABELS --- */
+  .pill {
+    font-family: var(--font-mono); font-size: 8px; font-weight: 600;
+    padding: 1px 6px; border-radius: 2px;
+    text-transform: uppercase; letter-spacing: 0.04em;
+    line-height: 15px; display: inline-block;
+  }
+  .pill-amber { background: #fef3c7; color: #b45309; }
+  .pill-red { background: #fee2e2; color: #dc2626; }
+  .pill-blue { background: #dbeafe; color: #2563eb; }
+  .pill-green { background: #dcfce7; color: #16a34a; }
+  .pill-purple { background: #f3e8ff; color: #7c3aed; }
+  .pill-gray { background: var(--bg-2); color: var(--text-3); }
+  .pill-teal { background: #ccfbf1; color: #0d9488; }
+
+  /* --- STATUS DOT --- */
+  .dot-red { background: #ef4444; box-shadow: 0 0 3px #ef444466; }
+  .dot-amber { background: #f59e0b; box-shadow: 0 0 3px #f59e0b66; }
+  .dot-blue { background: #3b82f6; }
+  .dot-green { background: #22c55e; }
+  .dot-gray { background: #94a3b8; }
+
+  /* --- CHARACTER BADGE --- */
+  .char-badge {
+    width: 22px; height: 22px; border-radius: 3px;
+    font-family: var(--font-mono); font-size: 11px; font-weight: 500;
+    color: white; display: inline-flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .char-badge-lg {
+    width: 28px; height: 28px; font-size: 13px; border-radius: 4px;
+  }
+
+  /* --- SPECIFIC WIDGET OVERRIDES --- */
+
+  /* Calendar list items */
+  .cal-time-icon {
+    font-size: 10px; margin-right: 2px;
+  }
+
+  /* Task track label */
+  .track-label {
+    font-family: var(--font-mono); font-size: 8px; font-weight: 600;
+    padding: 1px 5px; border-radius: 2px;
+    text-transform: uppercase; letter-spacing: 0.03em;
+    display: inline-block;
+  }
+
+  /* Crew character grid */
+  .crew-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 6px; padding: 10px 14px;
+  }
+  .crew-card {
+    border: 1px solid var(--border); border-radius: 5px;
+    padding: 8px 10px;
+    display: flex; align-items: center; gap: 8px;
+    cursor: pointer; transition: background 0.1s, box-shadow 0.15s;
+  }
+  .crew-card:hover {
+    background: var(--surface-2);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  }
+  .crew-card-info {
+    flex: 1; min-width: 0;
+  }
+  .crew-card-name {
+    font-family: var(--font-body); font-size: 11px; font-weight: 500;
+  }
+  .crew-card-role {
+    font-family: var(--font-mono); font-size: 8px; color: var(--text-3);
+    text-transform: uppercase; letter-spacing: 0.03em;
+  }
+  .crew-card-status {
+    font-family: var(--font-mono); font-size: 9px; color: var(--text-3);
+  }
+
+  /* Chat panel (dark) */
+  .chat-panel {
+    background: #1c1917; border: 1px solid #2e2b28; border-radius: 6px;
+    grid-row: span 2;
+  }
+  .chat-header {
+    padding: 10px 14px; border-bottom: 1px solid #2e2b28;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .chat-title {
+    font-family: var(--font-display); font-size: 13px; font-weight: 600;
+    color: #d4d4d4;
+  }
+  .chat-body { padding: 12px 14px; flex: 1; }
+  .chat-msg {
+    margin-bottom: 10px; display: flex; gap: 8px;
+  }
+  .chat-bubble-user {
+    background: #eff4ff; color: var(--text);
+    border-radius: 10px 10px 3px 10px; padding: 7px 11px;
+    font-size: 13px; line-height: 1.55; margin-left: auto; max-width: 80%;
+  }
+  .chat-bubble-asst {
+    color: #a8a29e; border-left: 2px solid #3e3a36;
+    padding: 2px 0 2px 10px; font-size: 12.5px; line-height: 1.6;
+    max-width: 85%;
+  }
+  .chat-input {
+    padding: 10px 14px; border-top: 1px solid #2e2b28;
+    display: flex; gap: 8px; align-items: center;
+  }
+  .chat-input-box {
+    flex: 1; background: #252220; border: 1px solid #333;
+    border-radius: 6px; padding: 8px 12px;
+    font-family: var(--font-body); font-size: 13px; color: #d4d4d4;
+  }
+
+  /* View toggle group */
+  .view-toggle {
+    display: flex; background: var(--bg); border-radius: 4px; padding: 1px; gap: 1px;
+  }
+  .view-btn {
+    font-family: var(--font-mono); font-size: 9px; font-weight: 500;
+    color: var(--text-3); background: transparent; border: none;
+    padding: 3px 8px; border-radius: 3px; cursor: pointer;
+  }
+  .view-btn.active {
+    color: var(--text); background: var(--surface);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+  }
+
+  /* Section heading inside widget */
+  .section-label {
+    font-family: var(--font-mono); font-size: 9px; font-weight: 600;
+    color: var(--text-3); text-transform: uppercase; letter-spacing: 0.05em;
+    padding: 8px 14px 4px;
+  }
+
+  /* Hover action buttons */
+  .item-actions {
+    display: none; position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+    gap: 1px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 4px; padding: 2px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+  .item-row:hover .item-actions { display: flex; }
+  .action-btn {
+    width: 24px; height: 22px; border: none; background: transparent;
+    border-radius: 3px; color: var(--text-3); cursor: pointer;
+    font-size: 11px; display: flex; align-items: center; justify-content: center;
+  }
+  .action-btn:hover { background: var(--bg); color: var(--text); }
+
+  /* Progress bar */
+  .progress-bar {
+    height: 3px; background: var(--border); border-radius: 2px; overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%; border-radius: 2px; transition: width 0.2s ease;
+  }
+
+  /* Description text */
+  .desc {
+    padding: 16px 20px;
+    font-family: var(--font-body); font-size: 12px; color: var(--text-2);
+    line-height: 1.6; max-width: 500px;
+    border-bottom: 1px solid var(--border);
+  }
+  .desc strong { color: var(--text); }
+</style>
+</head>
+<body>
+
+<div class="label">DIRECTION A: WARM CONTROL PANEL <span>Consistent hierarchy, systematic color, same density</span></div>
+
+<div class="status-bar">
+  <div class="logo">Ground Control</div>
+  <div class="meta">
+    <span><span class="led led-green"></span> All systems nominal</span>
+    <span>v1.5.2</span>
+    <span>14 Mar 2026, Fri</span>
+  </div>
+</div>
+
+<div class="grid">
+
+  <!-- === INBOX === -->
+  <div class="widget">
+    <div class="widget-header">
+      <div class="widget-header-left">
+        <div class="widget-header-icon">&#9993;</div>
+        <div class="widget-title">Inbox</div>
+        <div class="widget-meta">4 unread</div>
+      </div>
+      <div class="widget-header-right">
+        <button class="widget-btn">&#x21bb;</button>
+      </div>
+    </div>
+    <div class="widget-body">
+      <div class="item-row">
+        <div class="item-bar" style="background: #f59e0b;"></div>
+        <div class="item-meta">
+          <div class="item-dot dot-amber"></div>
+          <span>2h</span>
+        </div>
+        <div class="item-content">
+          <div class="item-title">Murat Germen</div>
+          <div class="item-sub">Re: Exhibition catalog proof review</div>
+          <div class="item-labels">
+            <span class="pill pill-amber">to respond</span>
+            <span class="pill pill-purple">curator</span>
+          </div>
+        </div>
+        <div class="item-actions">
+          <button class="action-btn">&#8617;</button>
+          <button class="action-btn">&#9745;</button>
+          <button class="action-btn">&#128193;</button>
+        </div>
+      </div>
+
+      <div class="item-row">
+        <div class="item-bar" style="background: #ef4444;"></div>
+        <div class="item-meta">
+          <div class="item-dot dot-red"></div>
+          <span>5h</span>
+        </div>
+        <div class="item-content">
+          <div class="item-title">BAGEM Office</div>
+          <div class="item-sub">Course evaluation deadline reminder</div>
+          <div class="item-labels">
+            <span class="pill pill-red">urgent</span>
+            <span class="pill pill-teal">admin</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="item-row">
+        <div class="item-bar" style="background: #3b82f6;"></div>
+        <div class="item-meta">
+          <div class="item-dot dot-blue"></div>
+          <span>1d</span>
+        </div>
+        <div class="item-content">
+          <div class="item-title">Ars Electronica</div>
+          <div class="item-sub">Submission confirmation: Contamination</div>
+          <div class="item-labels">
+            <span class="pill pill-blue">info</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="item-row">
+        <div class="item-bar" style="background: #94a3b8;"></div>
+        <div class="item-meta">
+          <div class="item-dot dot-gray"></div>
+          <span>2d</span>
+        </div>
+        <div class="item-content">
+          <div class="item-title">GitHub</div>
+          <div class="item-sub">[ground-control] PR #47 merged</div>
+          <div class="item-labels">
+            <span class="pill pill-gray">notification</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="item-row">
+        <div class="item-bar" style="background: #f59e0b;"></div>
+        <div class="item-meta">
+          <div class="item-dot dot-amber"></div>
+          <span>3d</span>
+        </div>
+        <div class="item-content">
+          <div class="item-title">Student (VA 315)</div>
+          <div class="item-sub">Question about midterm project scope</div>
+          <div class="item-labels">
+            <span class="pill pill-amber">to respond</span>
+            <span class="pill pill-gray">teaching</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- === CALENDAR === -->
+  <div class="widget">
+    <div class="widget-header">
+      <div class="widget-header-left">
+        <div class="widget-header-icon">&#128197;</div>
+        <div class="widget-title">Calendar</div>
+        <div class="widget-meta">Today</div>
+      </div>
+      <div class="widget-header-right">
+        <div class="view-toggle">
+          <button class="view-btn active">LIST</button>
+          <button class="view-btn">WEEK</button>
+          <button class="view-btn">MONTH</button>
+        </div>
+        <button class="widget-btn">+</button>
+        <button class="widget-btn">&#x21bb;</button>
+      </div>
+    </div>
+    <div class="widget-body">
+      <div class="section-label">Today, Mar 14</div>
+
+      <div class="item-row">
+        <div class="item-bar" style="background: #7c3aed;"></div>
+        <div class="item-meta">
+          <span>09:30</span>
+        </div>
+        <div class="item-content">
+          <div class="item-title">VA 204 Studio</div>
+          <div class="item-sub" style="font-family: var(--font-mono); font-size: 10px;">FASS G060 / 3h</div>
+        </div>
+        <span class="pill pill-purple" style="align-self: center;">teaching</span>
+      </div>
+
+      <div class="item-row">
+        <div class="item-bar" style="background: #0d9488;"></div>
+        <div class="item-meta">
+          <span>14:00</span>
+        </div>
+        <div class="item-content">
+          <div class="item-title">Department Meeting</div>
+          <div class="item-sub" style="font-family: var(--font-mono); font-size: 10px;">FASS 2034 / 1h</div>
+        </div>
+        <span class="pill pill-teal" style="align-self: center;">meeting</span>
+      </div>
+
+      <div class="item-row">
+        <div class="item-bar" style="background: #2563eb;"></div>
+        <div class="item-meta">
+          <span>16:00</span>
+        </div>
+        <div class="item-content">
+          <div class="item-title">Thesis Defense: Zeynep A.</div>
+          <div class="item-sub" style="font-family: var(--font-mono); font-size: 10px;">FASS 1097 / 1.5h</div>
+        </div>
+        <span class="pill pill-blue" style="align-self: center;">academic</span>
+      </div>
+
+      <div class="section-label">Tomorrow, Mar 15</div>
+
+      <div class="item-row">
+        <div class="item-bar" style="background: #7c3aed;"></div>
+        <div class="item-meta">
+          <span>10:00</span>
+        </div>
+        <div class="item-content">
+          <div class="item-title">VA 315 Seminar</div>
+          <div class="item-sub" style="font-family: var(--font-mono); font-size: 10px;">FASS G060 / 2h</div>
+        </div>
+        <span class="pill pill-purple" style="align-self: center;">teaching</span>
+      </div>
+
+      <div class="item-row">
+        <div class="item-bar" style="background: #f59e0b;"></div>
+        <div class="item-meta">
+          <span style="color: var(--amber);">&#9888;</span>
+          <span>23:59</span>
+        </div>
+        <div class="item-content">
+          <div class="item-title" style="color: var(--amber);">Ars Electronica Final Submission</div>
+          <div class="item-sub" style="font-family: var(--font-mono); font-size: 10px;">Deadline</div>
+        </div>
+        <span class="pill pill-amber" style="align-self: center;">deadline</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- === CHAT (dark panel, spans 2 rows) === -->
+  <div class="chat-panel" style="display: flex; flex-direction: column;">
+    <div class="chat-header">
+      <div class="char-badge char-badge-lg" style="background: #4f46e5;">Po</div>
+      <div>
+        <div class="chat-title">Postman</div>
+        <div style="font-family: var(--font-mono); font-size: 9px; color: #78716c;">sonnet / idle</div>
+      </div>
+      <div style="margin-left: auto; display: flex; gap: 4px;">
+        <div class="char-badge" style="background: #7c3aed; opacity: 0.5;">Sc</div>
+        <div class="char-badge" style="background: #0891b2; opacity: 0.5;">Pr</div>
+        <div class="char-badge" style="background: #059669; opacity: 0.5;">Cl</div>
+        <div class="char-badge" style="background: #dc2626; opacity: 0.5;">Ar</div>
+      </div>
+    </div>
+    <div class="chat-body" style="flex: 1;">
+      <div class="chat-msg">
+        <div class="chat-bubble-user">Check my inbox for anything urgent</div>
+      </div>
+      <div class="chat-msg">
+        <div class="chat-bubble-asst">Found 2 items needing attention: BAGEM course evaluation deadline (today), and Murat's catalog proof review (waiting 2 days). I've flagged both in your inbox. The BAGEM one is time-sensitive.</div>
+      </div>
+      <div class="chat-msg">
+        <div class="chat-bubble-user">Draft a reply to Murat, say I'll review by Monday</div>
+      </div>
+      <div class="chat-msg">
+        <div class="chat-bubble-asst">Draft saved to Gmail. Subject: "Re: Exhibition catalog proof review". Confirming review by Monday March 17th, noting you'll focus on color accuracy and text placement.</div>
+      </div>
+    </div>
+    <div class="chat-input">
+      <div class="chat-input-box" contenteditable="true" style="min-height: 20px; outline: none;">Ask Postman...</div>
+    </div>
+  </div>
+
+  <!-- === TASKS === -->
+  <div class="widget">
+    <div class="widget-header">
+      <div class="widget-header-left">
+        <div class="widget-header-icon">&#9745;</div>
+        <div class="widget-title">Tasks</div>
+        <div class="widget-meta">3 due today</div>
+      </div>
+      <div class="widget-header-right">
+        <button class="widget-btn">+</button>
+        <button class="widget-btn">&#x21bb;</button>
+      </div>
+    </div>
+    <div class="tab-bar">
+      <button class="tab active">Tasks<span class="badge">8</span></button>
+      <button class="tab">Projects</button>
+      <button class="tab">Classes</button>
+    </div>
+    <div class="widget-body">
+      <div class="section-label">Due Today</div>
+
+      <div class="item-row">
+        <div class="item-bar" style="background: #ef4444;"></div>
+        <div class="item-meta">
+          <div class="item-dot dot-red"></div>
+          <span style="color: var(--red);">today</span>
+        </div>
+        <div class="item-content">
+          <div class="item-title">Submit course evaluations</div>
+          <div class="item-labels">
+            <span class="track-label" style="background: #0d948818; color: #0d9488;">admin</span>
+          </div>
+        </div>
+        <div class="char-badge" style="background: #059669; align-self: center;">Cl</div>
+      </div>
+
+      <div class="item-row">
+        <div class="item-bar" style="background: #f59e0b;"></div>
+        <div class="item-meta">
+          <div class="item-dot dot-amber"></div>
+          <span style="color: var(--amber);">today</span>
+        </div>
+        <div class="item-content">
+          <div class="item-title">Review thesis: Zeynep A. jury report</div>
+          <div class="item-labels">
+            <span class="track-label" style="background: #7c3aed18; color: #7c3aed;">academic</span>
+          </div>
+        </div>
+        <div class="char-badge" style="background: #7c3aed; align-self: center;">Sc</div>
+      </div>
+
+      <div class="item-row">
+        <div class="item-bar" style="background: #f59e0b;"></div>
+        <div class="item-meta">
+          <div class="item-dot dot-amber"></div>
+          <span style="color: var(--amber);">today</span>
+        </div>
+        <div class="item-content">
+          <div class="item-title">Prep VA 315 Week 8 materials</div>
+          <div class="item-labels">
+            <span class="track-label" style="background: #0891b218; color: #0891b2;">teaching</span>
+          </div>
+        </div>
+        <div class="char-badge" style="background: #0891b2; align-self: center;">Pr</div>
+      </div>
+
+      <div class="section-label">This Week</div>
+
+      <div class="item-row">
+        <div class="item-bar" style="background: #3b82f6;"></div>
+        <div class="item-meta">
+          <div class="item-dot dot-blue"></div>
+          <span>Mon</span>
+        </div>
+        <div class="item-content">
+          <div class="item-title">Finalize Ars Electronica submission</div>
+          <div class="item-labels">
+            <span class="track-label" style="background: #dc262618; color: #dc2626;">art</span>
+          </div>
+        </div>
+        <div class="char-badge" style="background: #dc2626; align-self: center;">Cu</div>
+      </div>
+
+      <div class="item-row">
+        <div class="item-bar" style="background: #94a3b8;"></div>
+        <div class="item-meta">
+          <div class="item-dot dot-gray"></div>
+          <span>Wed</span>
+        </div>
+        <div class="item-content">
+          <div class="item-title">Ground Control: add batch operations</div>
+          <div class="item-labels">
+            <span class="track-label" style="background: #4f46e518; color: #4f46e5;">system</span>
+          </div>
+        </div>
+        <div class="char-badge" style="background: #4f46e5; align-self: center;">En</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- === CREW === -->
+  <div class="widget">
+    <div class="widget-header">
+      <div class="widget-header-left">
+        <div class="widget-header-icon">&#9881;</div>
+        <div class="widget-title">Crew</div>
+        <div class="widget-meta">8 active</div>
+      </div>
+      <div class="widget-header-right">
+        <button class="widget-btn">&#x21bb;</button>
+      </div>
+    </div>
+    <div class="tab-bar">
+      <button class="tab active">Crew</button>
+      <button class="tab">Schedules<span class="badge">5</span></button>
+      <button class="tab">Logs<span class="badge">12</span></button>
+      <button class="tab">Proposals</button>
+    </div>
+    <div class="widget-body">
+      <div class="section-label">Core</div>
+      <div class="crew-grid">
+        <div class="crew-card">
+          <div class="char-badge char-badge-lg" style="background: #4f46e5;">Po</div>
+          <div class="crew-card-info">
+            <div class="crew-card-name">Postman</div>
+            <div class="crew-card-role">Input scanning</div>
+          </div>
+          <div class="crew-card-status">
+            <div class="item-dot dot-green" style="display: inline-block; width: 5px; height: 5px;"></div>
+          </div>
+        </div>
+        <div class="crew-card">
+          <div class="char-badge char-badge-lg" style="background: #7c3aed;">Sc</div>
+          <div class="crew-card-info">
+            <div class="crew-card-name">Scholar</div>
+            <div class="crew-card-role">Research</div>
+          </div>
+          <div class="crew-card-status">
+            <div class="item-dot dot-green" style="display: inline-block; width: 5px; height: 5px;"></div>
+          </div>
+        </div>
+        <div class="crew-card">
+          <div class="char-badge char-badge-lg" style="background: #0891b2;">Pr</div>
+          <div class="crew-card-info">
+            <div class="crew-card-name">Proctor</div>
+            <div class="crew-card-role">Teaching</div>
+          </div>
+          <div class="crew-card-status">
+            <div class="item-dot dot-amber" style="display: inline-block; width: 5px; height: 5px;"></div>
+          </div>
+        </div>
+        <div class="crew-card">
+          <div class="char-badge char-badge-lg" style="background: #059669;">Cl</div>
+          <div class="crew-card-info">
+            <div class="crew-card-name">Clerk</div>
+            <div class="crew-card-role">Admin</div>
+          </div>
+          <div class="crew-card-status">
+            <div class="item-dot dot-green" style="display: inline-block; width: 5px; height: 5px;"></div>
+          </div>
+        </div>
+        <div class="crew-card">
+          <div class="char-badge char-badge-lg" style="background: #dc2626;">Cu</div>
+          <div class="crew-card-info">
+            <div class="crew-card-name">Curator</div>
+            <div class="crew-card-role">Art practice</div>
+          </div>
+          <div class="crew-card-status">
+            <div class="item-dot dot-green" style="display: inline-block; width: 5px; height: 5px;"></div>
+          </div>
+        </div>
+        <div class="crew-card">
+          <div class="char-badge char-badge-lg" style="background: #ca8a04;">Co</div>
+          <div class="crew-card-info">
+            <div class="crew-card-name">Coach</div>
+            <div class="crew-card-role">Wellbeing</div>
+          </div>
+          <div class="crew-card-status">
+            <div class="item-dot dot-gray" style="display: inline-block; width: 5px; height: 5px;"></div>
+          </div>
+        </div>
+      </div>
+      <div class="section-label">Meta</div>
+      <div class="crew-grid">
+        <div class="crew-card">
+          <div class="char-badge char-badge-lg" style="background: #475569;">Ar</div>
+          <div class="crew-card-info">
+            <div class="crew-card-name">Architect</div>
+            <div class="crew-card-role">System design</div>
+          </div>
+          <div class="crew-card-status">
+            <div class="item-dot dot-green" style="display: inline-block; width: 5px; height: 5px;"></div>
+          </div>
+        </div>
+        <div class="crew-card">
+          <div class="char-badge char-badge-lg" style="background: #6366f1;">En</div>
+          <div class="crew-card-info">
+            <div class="crew-card-name">Engineer</div>
+            <div class="crew-card-role">Code</div>
+          </div>
+          <div class="crew-card-status">
+            <div class="item-dot dot-green" style="display: inline-block; width: 5px; height: 5px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

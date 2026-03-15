@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Direction B2: Refined Dense</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #f0efe9;
+    --bg-2: #e6e4dc;
+    --surface: #faf9f6;
+    --surface-2: #f4f3ed;
+    --text: #1a1a18;
+    --text-2: #5c5a54;
+    --text-3: #95938b;
+    --border: #dbd9d0;
+    --border-2: #c8c5ba;
+    --font-display: 'Bricolage Grotesque', sans-serif;
+    --font-body: 'IBM Plex Sans', sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+  }
+
+  body {
+    background: var(--bg);
+    font-family: var(--font-body);
+    color: var(--text);
+    height: 100vh;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    padding: 8px;
+    gap: 6px;
+  }
+
+  /* ========= STATUS BAR ========= */
+  .status-bar {
+    display: flex; align-items: center;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 5px 12px;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  .logo {
+    font-family: var(--font-display); font-size: 14px; font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .divider { width: 1px; height: 14px; background: var(--border); }
+  .status-chip {
+    font-family: var(--font-mono); font-size: 9px; font-weight: 500;
+    padding: 2px 7px; border-radius: 3px;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .chip-ok { background: #ecfdf5; color: #047857; }
+  .chip-warn { background: #fffbeb; color: #b45309; }
+  .chip-info { background: #f0f4ff; color: #4338ca; }
+  .chip-dot { width: 4px; height: 4px; border-radius: 50%; }
+  .chip-dot-green { background: #10b981; }
+  .chip-dot-amber { background: #f59e0b; }
+
+  .agent-strip {
+    display: flex; gap: 3px; margin-left: 4px;
+  }
+  .agent-icon {
+    width: 20px; height: 20px; border-radius: 3px;
+    display: flex; align-items: center; justify-content: center;
+    color: white; flex-shrink: 0;
+  }
+  .agent-icon i { width: 12px; height: 12px; }
+
+  .status-time {
+    font-family: var(--font-mono); font-size: 10px; color: var(--text-3);
+    margin-left: auto;
+  }
+
+  /* ========= MAIN GRID ========= */
+  .main-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 6px;
+    min-height: 0;
+  }
+
+  /* ========= WIDGET ========= */
+  .widget {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    overflow: hidden;
+    display: flex; flex-direction: column;
+    min-height: 0;
+  }
+  .widget-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 7px 12px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    position: relative;
+  }
+  .widget-header::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0;
+    height: 2px; background: var(--accent, var(--border));
+  }
+  .wh-left { display: flex; align-items: center; gap: 6px; }
+  .wh-icon {
+    width: 18px; height: 18px; border-radius: 3px;
+    display: flex; align-items: center; justify-content: center;
+    color: white; background: var(--accent, #94a3b8);
+  }
+  .wh-icon i { width: 11px; height: 11px; }
+  .wh-title {
+    font-family: var(--font-mono); font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .wh-count {
+    font-family: var(--font-mono); font-size: 9px; font-weight: 600;
+    color: var(--accent, #94a3b8); background: color-mix(in srgb, var(--accent, #94a3b8), transparent 88%);
+    padding: 0 5px; border-radius: 3px; line-height: 16px;
+  }
+  .wh-right { display: flex; align-items: center; gap: 2px; }
+  .w-btn {
+    width: 22px; height: 20px; border-radius: 2px; border: none;
+    background: transparent; color: var(--text-3); cursor: pointer;
+    font-size: 11px; display: flex; align-items: center; justify-content: center;
+  }
+  .w-btn:hover { background: var(--bg); color: var(--text); }
+  .w-btn i { width: 12px; height: 12px; }
+
+  /* ========= TABS ========= */
+  .tabs {
+    display: flex; gap: 0; background: var(--bg);
+    border-bottom: 1px solid var(--border); flex-shrink: 0;
+  }
+  .tab {
+    font-family: var(--font-mono); font-size: 9px; font-weight: 500;
+    color: var(--text-3); background: none; border: none; cursor: pointer;
+    padding: 5px 10px; border-bottom: 2px solid transparent;
+    text-transform: uppercase; letter-spacing: 0.03em;
+    transition: color 0.1s;
+  }
+  .tab:hover { color: var(--text-2); background: var(--surface-2); }
+  .tab.on {
+    color: var(--text); background: var(--surface);
+    border-bottom-color: var(--accent, var(--text));
+    font-weight: 600;
+  }
+  .tab-ct {
+    font-size: 7px; font-weight: 600; color: white;
+    background: var(--accent, #94a3b8);
+    padding: 0 3px; border-radius: 2px; margin-left: 3px;
+    line-height: 11px; display: inline-block; vertical-align: middle;
+  }
+
+  /* ========= VIEW TOGGLE ========= */
+  .vtog {
+    display: flex; border: 1px solid var(--border); border-radius: 3px; overflow: hidden;
+  }
+  .vb {
+    font-family: var(--font-mono); font-size: 8px; font-weight: 600;
+    color: var(--text-3); background: var(--surface); border: none;
+    border-right: 1px solid var(--border); padding: 2px 7px; cursor: pointer;
+    text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .vb:last-child { border-right: none; }
+  .vb:hover { color: var(--text-2); }
+  .vb.on { color: white; background: var(--accent, #64748b); }
+
+  /* ========= SECTION DIVIDER ========= */
+  .sec {
+    font-family: var(--font-mono); font-size: 8px; font-weight: 600;
+    color: var(--text-3); text-transform: uppercase; letter-spacing: 0.06em;
+    padding: 6px 10px 3px; background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 6px;
+    flex-shrink: 0;
+  }
+  .sec::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  /* ========= ITEM ROW ========= */
+  .wbody { flex: 1; overflow-y: auto; }
+  .row {
+    display: flex; align-items: center;
+    padding: 5px 10px; gap: 6px;
+    border-bottom: 1px solid color-mix(in srgb, var(--border), transparent 50%);
+    cursor: pointer; transition: background 0.08s;
+    position: relative; min-height: 30px;
+  }
+  .row:hover { background: var(--surface-2); }
+  .row:last-child { border-bottom: none; }
+
+  .bar { width: 3px; align-self: stretch; border-radius: 1px; flex-shrink: 0; }
+  .urg { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+  .urg-crit { background: #ef4444; box-shadow: 0 0 3px #ef444466; animation: pulse 2s infinite; }
+  .urg-high { background: #d97706; }
+  .urg-med { background: #6366f1; }
+  .urg-low { background: #a3a09a; }
+  .urg-done { background: #10b981; }
+  @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.35} }
+
+  .col-t {
+    width: 40px; flex-shrink: 0; text-align: right;
+    font-family: var(--font-mono); font-size: 10px; color: var(--text-3);
+  }
+  .col-t.urg { color: #b91c1c; font-weight: 600; width: auto; }
+  .col-t.warn { color: #b45309; font-weight: 500; }
+
+  .col-c { flex: 1; min-width: 0; }
+  .r-title {
+    font-family: var(--font-body); font-size: 11.5px; font-weight: 500;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    line-height: 1.25;
+  }
+  .r-sub {
+    font-family: var(--font-body); font-size: 10px; color: var(--text-2);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    margin-top: 1px;
+  }
+  .r-detail {
+    font-family: var(--font-mono); font-size: 9px; color: var(--text-3);
+    margin-top: 1px;
+  }
+
+  .tags { display: flex; gap: 3px; margin-top: 2px; }
+  .t {
+    font-family: var(--font-mono); font-size: 7px; font-weight: 600;
+    padding: 1px 5px; border-radius: 2px;
+    text-transform: uppercase; letter-spacing: 0.04em; line-height: 13px;
+  }
+  /* Muted tag palette */
+  .t-red { background: #fde8e8; color: #c0392b; }
+  .t-amber { background: #fef3cd; color: #b45309; }
+  .t-blue { background: #e8f0fe; color: #3b5998; }
+  .t-green { background: #e6f4ea; color: #1e7e34; }
+  .t-purple { background: #f0e6ff; color: #6b21a8; }
+  .t-teal { background: #e0f7f5; color: #0d7377; }
+  .t-gray { background: var(--bg-2); color: var(--text-3); }
+  .t-indigo { background: #e8eaf6; color: #3949ab; }
+
+  /* Character icon badge */
+  .ch {
+    width: 20px; height: 20px; border-radius: 3px;
+    display: inline-flex; align-items: center; justify-content: center;
+    flex-shrink: 0; color: white;
+  }
+  .ch i { width: 12px; height: 12px; }
+  .ch-lg { width: 24px; height: 24px; border-radius: 4px; }
+  .ch-lg i { width: 14px; height: 14px; }
+
+  /* ========= CREW ROWS ========= */
+  .crew-r {
+    display: flex; align-items: center; gap: 8px;
+    padding: 5px 10px;
+    border-bottom: 1px solid color-mix(in srgb, var(--border), transparent 50%);
+    cursor: pointer; transition: background 0.08s;
+  }
+  .crew-r:hover { background: var(--surface-2); }
+  .crew-n { font-family: var(--font-body); font-size: 11px; font-weight: 500; flex: 1; }
+  .crew-role { font-family: var(--font-mono); font-size: 8px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.03em; }
+  .crew-acts { font-family: var(--font-mono); font-size: 8px; color: var(--text-3); background: var(--bg); padding: 0 4px; border-radius: 2px; line-height: 14px; }
+  .crew-st {
+    font-family: var(--font-mono); font-size: 8px; font-weight: 500;
+    padding: 1px 6px; border-radius: 2px;
+  }
+  .st-idle { background: var(--bg); color: var(--text-3); }
+  .st-busy { background: #e8f0fe; color: #3b5998; }
+
+  /* ========= MINI WEEK STRIP ========= */
+  .week {
+    display: flex; padding: 4px 10px; gap: 2px;
+    background: var(--bg); border-bottom: 1px solid var(--border); flex-shrink: 0;
+  }
+  .wd {
+    flex: 1; text-align: center;
+    font-family: var(--font-mono); font-size: 8px; color: var(--text-3);
+    padding: 2px 0;
+  }
+  .wd-num { font-size: 11px; font-weight: 500; color: var(--text-2); display: block; margin-top: 1px; }
+  .wd.today { color: #3b5998; font-weight: 600; background: #e8f0fe; border-radius: 3px; }
+  .wd.today .wd-num { color: #3b5998; }
+  .wd-dots { display: flex; gap: 2px; justify-content: center; margin-top: 2px; }
+  .dd { width: 3px; height: 3px; border-radius: 50%; }
+
+  /* ========= CHAT BAR (bottom, warm theme) ========= */
+  .chat-bar {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    flex-shrink: 0;
+    display: flex; flex-direction: column;
+    max-height: 220px;
+    position: relative;
+  }
+  .chat-bar::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0;
+    height: 2px; background: #6366f1; border-radius: 5px 5px 0 0;
+  }
+  .chat-top {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .chat-label {
+    font-family: var(--font-mono); font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .chat-agents {
+    display: flex; gap: 3px; margin-left: 4px;
+  }
+  .chat-agent-btn {
+    border: none; background: transparent; cursor: pointer;
+    padding: 2px; border-radius: 3px; transition: background 0.1s;
+  }
+  .chat-agent-btn:hover { background: var(--bg); }
+  .chat-agent-btn.active { background: var(--bg-2); }
+
+  .chat-msgs {
+    flex: 1; overflow-y: auto;
+    padding: 8px 12px;
+    display: flex; gap: 8px;
+  }
+  /* Horizontal message layout for the bar */
+  .chat-thread {
+    flex: 1; display: flex; flex-direction: column; gap: 6px;
+    min-width: 0;
+  }
+  .cm { display: flex; gap: 6px; align-items: flex-start; }
+  .cm-user {
+    margin-left: auto;
+  }
+  .cm-user .cm-bubble {
+    background: #e8f0fe; color: var(--text);
+    border-radius: 8px 8px 2px 8px; padding: 5px 10px;
+    font-size: 12px; line-height: 1.45;
+  }
+  .cm-asst .cm-bubble {
+    color: var(--text-2);
+    border-left: 2px solid var(--border-2);
+    padding: 3px 0 3px 10px;
+    font-size: 11.5px; line-height: 1.5;
+  }
+  .cm-meta {
+    font-family: var(--font-mono); font-size: 8px; color: var(--text-3);
+    margin-top: 1px;
+  }
+
+  .chat-input-row {
+    display: flex; gap: 6px; padding: 6px 12px;
+    border-top: 1px solid var(--border);
+    align-items: center;
+  }
+  .chat-in {
+    flex: 1; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 4px; padding: 6px 10px;
+    font-family: var(--font-body); font-size: 12px; color: var(--text);
+    outline: none;
+  }
+  .chat-in:focus { border-color: var(--border-2); }
+  .chat-in::placeholder { color: var(--text-3); }
+  .chat-send {
+    background: #6366f1; color: white; border: none;
+    border-radius: 4px; padding: 6px 14px;
+    font-family: var(--font-mono); font-size: 9px; font-weight: 600;
+    cursor: pointer; letter-spacing: 0.03em;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .chat-send:hover { background: #4f46e5; }
+  .chat-send i { width: 12px; height: 12px; }
+
+  /* ========= HOVER ACTIONS ========= */
+  .ha {
+    display: none; align-items: center; gap: 1px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 3px; padding: 1px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+    z-index: 2;
+  }
+  .row:hover .ha { display: flex; }
+  .hab {
+    width: 20px; height: 18px; border: none; background: transparent;
+    border-radius: 2px; color: var(--text-3); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .hab:hover { background: var(--bg); color: var(--text); }
+  .hab i { width: 11px; height: 11px; }
+
+  /* Deadline row highlight */
+  .row-deadline { background: #fffdf5; }
+  .row-deadline:hover { background: #fefbeb; }
+</style>
+</head>
+<body>
+
+<!-- ========= STATUS BAR ========= -->
+<div class="status-bar">
+  <div class="logo">Ground Control</div>
+  <div class="divider"></div>
+  <div class="status-chip chip-ok"><span class="chip-dot chip-dot-green"></span> 8 agents</div>
+  <div class="status-chip chip-warn"><span class="chip-dot chip-dot-amber"></span> 3 due today</div>
+  <div class="status-chip chip-info">v1.5.2</div>
+  <div class="divider"></div>
+  <div class="agent-strip">
+    <div class="agent-icon" style="background:#4f46e5;"><i data-lucide="mail"></i></div>
+    <div class="agent-icon" style="background:#7c3aed;"><i data-lucide="book-open"></i></div>
+    <div class="agent-icon" style="background:#0891b2;"><i data-lucide="graduation-cap"></i></div>
+    <div class="agent-icon" style="background:#059669;"><i data-lucide="clipboard-list"></i></div>
+    <div class="agent-icon" style="background:#c2410c;"><i data-lucide="palette"></i></div>
+    <div class="agent-icon" style="background:#a16207;"><i data-lucide="heart"></i></div>
+    <div class="agent-icon" style="background:#475569;"><i data-lucide="settings"></i></div>
+    <div class="agent-icon" style="background:#6366f1;"><i data-lucide="wrench"></i></div>
+  </div>
+  <div class="status-time">Fri 14 Mar 2026 / 15:42</div>
+</div>
+
+<!-- ========= MAIN GRID ========= -->
+<div class="main-grid">
+
+  <!-- === INBOX === -->
+  <div class="widget" style="--accent: #d97706;">
+    <div class="widget-header">
+      <div class="wh-left">
+        <div class="wh-icon"><i data-lucide="inbox"></i></div>
+        <div class="wh-title">Inbox</div>
+        <div class="wh-count">4</div>
+      </div>
+      <div class="wh-right">
+        <button class="w-btn"><i data-lucide="refresh-cw"></i></button>
+      </div>
+    </div>
+    <div class="wbody">
+      <div class="row">
+        <div class="bar" style="background:#c0392b;"></div>
+        <div class="urg urg-crit"></div>
+        <div class="col-t urg">2h</div>
+        <div class="col-c">
+          <div class="r-title">BAGEM Office</div>
+          <div class="r-sub">Course evaluation deadline reminder</div>
+          <div class="tags"><span class="t t-red">urgent</span><span class="t t-teal">admin</span></div>
+        </div>
+        <div class="ch" style="background:#059669;"><i data-lucide="clipboard-list"></i></div>
+        <div class="ha">
+          <button class="hab"><i data-lucide="reply"></i></button>
+          <button class="hab"><i data-lucide="check-square"></i></button>
+          <button class="hab"><i data-lucide="archive"></i></button>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="bar" style="background:#b45309;"></div>
+        <div class="urg urg-high"></div>
+        <div class="col-t warn">5h</div>
+        <div class="col-c">
+          <div class="r-title">Murat Germen</div>
+          <div class="r-sub">Re: Exhibition catalog proof review</div>
+          <div class="tags"><span class="t t-amber">to respond</span><span class="t t-purple">art</span></div>
+        </div>
+        <div class="ch" style="background:#c2410c;"><i data-lucide="palette"></i></div>
+      </div>
+
+      <div class="row">
+        <div class="bar" style="background:#3949ab;"></div>
+        <div class="urg urg-med"></div>
+        <div class="col-t">1d</div>
+        <div class="col-c">
+          <div class="r-title">Ars Electronica</div>
+          <div class="r-sub">Submission confirmation: Contamination</div>
+          <div class="tags"><span class="t t-blue">info</span></div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="bar" style="background:#a3a09a;"></div>
+        <div class="urg urg-low"></div>
+        <div class="col-t">2d</div>
+        <div class="col-c">
+          <div class="r-title">GitHub</div>
+          <div class="r-sub">[ground-control] PR #47 merged</div>
+          <div class="tags"><span class="t t-gray">notification</span></div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="bar" style="background:#b45309;"></div>
+        <div class="urg urg-high"></div>
+        <div class="col-t warn">3d</div>
+        <div class="col-c">
+          <div class="r-title">Student (VA 315)</div>
+          <div class="r-sub">Question about midterm project scope</div>
+          <div class="tags"><span class="t t-amber">to respond</span><span class="t t-indigo">teaching</span></div>
+        </div>
+        <div class="ch" style="background:#0891b2;"><i data-lucide="graduation-cap"></i></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- === CALENDAR === -->
+  <div class="widget" style="--accent: #3949ab;">
+    <div class="widget-header">
+      <div class="wh-left">
+        <div class="wh-icon"><i data-lucide="calendar"></i></div>
+        <div class="wh-title">Calendar</div>
+        <div class="wh-count">5</div>
+      </div>
+      <div class="wh-right">
+        <div class="vtog">
+          <button class="vb on">List</button>
+          <button class="vb">Week</button>
+          <button class="vb">Month</button>
+        </div>
+        <button class="w-btn"><i data-lucide="plus"></i></button>
+        <button class="w-btn"><i data-lucide="refresh-cw"></i></button>
+      </div>
+    </div>
+    <div class="week">
+      <div class="wd"><span>MON</span><span class="wd-num">10</span></div>
+      <div class="wd"><span>TUE</span><span class="wd-num">11</span></div>
+      <div class="wd"><span>WED</span><span class="wd-num">12</span></div>
+      <div class="wd"><span>THU</span><span class="wd-num">13</span></div>
+      <div class="wd today"><span>FRI</span><span class="wd-num">14</span>
+        <div class="wd-dots">
+          <div class="dd" style="background:#6b21a8;"></div>
+          <div class="dd" style="background:#0d7377;"></div>
+          <div class="dd" style="background:#3949ab;"></div>
+        </div>
+      </div>
+      <div class="wd"><span>SAT</span><span class="wd-num">15</span></div>
+      <div class="wd"><span>SUN</span><span class="wd-num">16</span></div>
+    </div>
+    <div class="wbody">
+      <div class="sec">Today</div>
+      <div class="row">
+        <div class="bar" style="background:#6b21a8;"></div>
+        <div class="col-t" style="width:36px;">09:30</div>
+        <div class="col-c">
+          <div class="r-title">VA 204 Studio</div>
+          <div class="r-detail">FASS G060 / 3h</div>
+        </div>
+        <span class="t t-purple">teaching</span>
+      </div>
+      <div class="row">
+        <div class="bar" style="background:#0d7377;"></div>
+        <div class="col-t" style="width:36px;">14:00</div>
+        <div class="col-c">
+          <div class="r-title">Department Meeting</div>
+          <div class="r-detail">FASS 2034 / 1h</div>
+        </div>
+        <span class="t t-teal">meeting</span>
+      </div>
+      <div class="row">
+        <div class="bar" style="background:#3949ab;"></div>
+        <div class="col-t" style="width:36px;">16:00</div>
+        <div class="col-c">
+          <div class="r-title">Thesis Defense: Zeynep A.</div>
+          <div class="r-detail">FASS 1097 / 1.5h</div>
+        </div>
+        <span class="t t-blue">academic</span>
+      </div>
+      <div class="sec">Tomorrow</div>
+      <div class="row">
+        <div class="bar" style="background:#6b21a8;"></div>
+        <div class="col-t" style="width:36px;">10:00</div>
+        <div class="col-c">
+          <div class="r-title">VA 315 Seminar</div>
+          <div class="r-detail">FASS G060 / 2h</div>
+        </div>
+        <span class="t t-purple">teaching</span>
+      </div>
+      <div class="row row-deadline">
+        <div class="bar" style="background:#b45309;"></div>
+        <div class="col-t warn" style="width:36px;">23:59</div>
+        <div class="col-c">
+          <div class="r-title" style="color:#b45309; font-weight:600;">Ars Electronica Final Submission</div>
+          <div class="r-detail" style="color:#b45309;">Deadline</div>
+        </div>
+        <span class="t t-amber">deadline</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- === TASKS === -->
+  <div class="widget" style="--accent: #047857;">
+    <div class="widget-header">
+      <div class="wh-left">
+        <div class="wh-icon"><i data-lucide="check-square"></i></div>
+        <div class="wh-title">Tasks</div>
+        <div class="wh-count">8</div>
+      </div>
+      <div class="wh-right">
+        <button class="w-btn"><i data-lucide="plus"></i></button>
+        <button class="w-btn"><i data-lucide="refresh-cw"></i></button>
+      </div>
+    </div>
+    <div class="tabs" style="--accent: #047857;">
+      <button class="tab on">Tasks<span class="tab-ct">8</span></button>
+      <button class="tab">Projects</button>
+      <button class="tab">Classes<span class="tab-ct">2</span></button>
+    </div>
+    <div class="wbody">
+      <div class="sec">Due Today</div>
+      <div class="row">
+        <div class="bar" style="background:#0d7377;"></div>
+        <div class="urg urg-crit"></div>
+        <div class="col-t urg">now</div>
+        <div class="col-c">
+          <div class="r-title">Submit course evaluations</div>
+          <div class="tags"><span class="t t-teal">admin</span></div>
+        </div>
+        <div class="ch" style="background:#059669;"><i data-lucide="clipboard-list"></i></div>
+      </div>
+      <div class="row">
+        <div class="bar" style="background:#6b21a8;"></div>
+        <div class="urg urg-high"></div>
+        <div class="col-t warn">today</div>
+        <div class="col-c">
+          <div class="r-title">Review thesis: Zeynep A. jury report</div>
+          <div class="tags"><span class="t t-purple">academic</span></div>
+        </div>
+        <div class="ch" style="background:#7c3aed;"><i data-lucide="book-open"></i></div>
+      </div>
+      <div class="row">
+        <div class="bar" style="background:#0891b2;"></div>
+        <div class="urg urg-high"></div>
+        <div class="col-t warn">today</div>
+        <div class="col-c">
+          <div class="r-title">Prep VA 315 Week 8 materials</div>
+          <div class="tags"><span class="t t-indigo">teaching</span></div>
+        </div>
+        <div class="ch" style="background:#0891b2;"><i data-lucide="graduation-cap"></i></div>
+      </div>
+      <div class="sec">This Week</div>
+      <div class="row">
+        <div class="bar" style="background:#c2410c;"></div>
+        <div class="urg urg-med"></div>
+        <div class="col-t">Mon</div>
+        <div class="col-c">
+          <div class="r-title">Finalize Ars Electronica submission</div>
+          <div class="tags"><span class="t t-amber">art</span></div>
+        </div>
+        <div class="ch" style="background:#c2410c;"><i data-lucide="palette"></i></div>
+      </div>
+      <div class="row">
+        <div class="bar" style="background:#6366f1;"></div>
+        <div class="urg urg-low"></div>
+        <div class="col-t">Wed</div>
+        <div class="col-c">
+          <div class="r-title">Ground Control: batch operations</div>
+          <div class="tags"><span class="t t-indigo">system</span></div>
+        </div>
+        <div class="ch" style="background:#6366f1;"><i data-lucide="wrench"></i></div>
+      </div>
+      <div class="row">
+        <div class="bar" style="background:#a16207;"></div>
+        <div class="urg urg-low"></div>
+        <div class="col-t">Fri</div>
+        <div class="col-c">
+          <div class="r-title">Weekly personal review</div>
+          <div class="tags"><span class="t t-amber">wellbeing</span></div>
+        </div>
+        <div class="ch" style="background:#a16207;"><i data-lucide="heart"></i></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- === CREW (spans bottom row, all 3 cols) === -->
+  <div class="widget" style="--accent: #4f46e5; grid-column: span 3;">
+    <div class="widget-header">
+      <div class="wh-left">
+        <div class="wh-icon"><i data-lucide="users"></i></div>
+        <div class="wh-title">Crew</div>
+        <div class="wh-count">8</div>
+      </div>
+      <div class="wh-right">
+        <button class="w-btn"><i data-lucide="refresh-cw"></i></button>
+      </div>
+    </div>
+    <div class="tabs" style="--accent: #4f46e5;">
+      <button class="tab on">Roster</button>
+      <button class="tab">Schedules<span class="tab-ct">5</span></button>
+      <button class="tab">Logs<span class="tab-ct">12</span></button>
+      <button class="tab">Proposals</button>
+    </div>
+    <div class="wbody" style="display: flex; overflow-x: auto; gap: 0;">
+      <!-- Compact horizontal crew roster -->
+      <div style="flex: 1; min-width: 0; border-right: 1px solid var(--border);">
+        <div class="sec">Core</div>
+        <div class="crew-r">
+          <div class="ch" style="background:#4f46e5;"><i data-lucide="mail"></i></div>
+          <div class="crew-n">Postman</div>
+          <div class="crew-role">Input Scanning</div>
+          <div class="crew-acts">5 actions</div>
+          <div class="crew-st st-idle">idle</div>
+        </div>
+        <div class="crew-r">
+          <div class="ch" style="background:#7c3aed;"><i data-lucide="book-open"></i></div>
+          <div class="crew-n">Scholar</div>
+          <div class="crew-role">Research</div>
+          <div class="crew-acts">4 actions</div>
+          <div class="crew-st st-idle">idle</div>
+        </div>
+        <div class="crew-r">
+          <div class="ch" style="background:#0891b2;"><i data-lucide="graduation-cap"></i></div>
+          <div class="crew-n">Proctor</div>
+          <div class="crew-role">Teaching</div>
+          <div class="crew-acts">6 actions</div>
+          <div class="crew-st st-busy">busy</div>
+        </div>
+      </div>
+      <div style="flex: 1; min-width: 0; border-right: 1px solid var(--border);">
+        <div class="sec">Core (cont.)</div>
+        <div class="crew-r">
+          <div class="ch" style="background:#059669;"><i data-lucide="clipboard-list"></i></div>
+          <div class="crew-n">Clerk</div>
+          <div class="crew-role">Admin</div>
+          <div class="crew-acts">5 actions</div>
+          <div class="crew-st st-idle">idle</div>
+        </div>
+        <div class="crew-r">
+          <div class="ch" style="background:#c2410c;"><i data-lucide="palette"></i></div>
+          <div class="crew-n">Curator</div>
+          <div class="crew-role">Art</div>
+          <div class="crew-acts">3 actions</div>
+          <div class="crew-st st-idle">idle</div>
+        </div>
+        <div class="crew-r">
+          <div class="ch" style="background:#a16207;"><i data-lucide="heart"></i></div>
+          <div class="crew-n">Coach</div>
+          <div class="crew-role">Wellbeing</div>
+          <div class="crew-acts">2 actions</div>
+          <div class="crew-st st-idle">idle</div>
+        </div>
+      </div>
+      <div style="flex: 1; min-width: 0;">
+        <div class="sec">Meta</div>
+        <div class="crew-r">
+          <div class="ch" style="background:#475569;"><i data-lucide="settings"></i></div>
+          <div class="crew-n">Architect</div>
+          <div class="crew-role">System</div>
+          <div class="crew-acts">4 actions</div>
+          <div class="crew-st st-idle">idle</div>
+        </div>
+        <div class="crew-r">
+          <div class="ch" style="background:#6366f1;"><i data-lucide="wrench"></i></div>
+          <div class="crew-n">Engineer</div>
+          <div class="crew-role">Code</div>
+          <div class="crew-acts">3 actions</div>
+          <div class="crew-st st-busy">busy</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ========= CHAT BAR ========= -->
+<div class="chat-bar">
+  <div class="chat-top">
+    <div class="wh-icon" style="background:#6366f1;"><i data-lucide="message-square"></i></div>
+    <div class="chat-label">Chat</div>
+    <div class="chat-agents">
+      <button class="chat-agent-btn active">
+        <div class="ch" style="background:#4f46e5;"><i data-lucide="mail"></i></div>
+      </button>
+      <button class="chat-agent-btn">
+        <div class="ch" style="background:#7c3aed;"><i data-lucide="book-open"></i></div>
+      </button>
+      <button class="chat-agent-btn">
+        <div class="ch" style="background:#0891b2;"><i data-lucide="graduation-cap"></i></div>
+      </button>
+      <button class="chat-agent-btn">
+        <div class="ch" style="background:#059669;"><i data-lucide="clipboard-list"></i></div>
+      </button>
+      <button class="chat-agent-btn">
+        <div class="ch" style="background:#c2410c;"><i data-lucide="palette"></i></div>
+      </button>
+      <button class="chat-agent-btn">
+        <div class="ch" style="background:#475569;"><i data-lucide="settings"></i></div>
+      </button>
+    </div>
+    <div style="margin-left: auto; font-family: var(--font-mono); font-size: 9px; color: var(--text-3);">
+      Postman / idle
+    </div>
+  </div>
+  <div class="chat-msgs">
+    <div class="chat-thread">
+      <div class="cm cm-user"><div class="cm-bubble">Check my inbox for anything urgent</div></div>
+      <div class="cm cm-asst">
+        <div class="ch" style="background:#4f46e5; flex-shrink:0;"><i data-lucide="mail"></i></div>
+        <div>
+          <div class="cm-bubble">Found 2 items needing attention. BAGEM course evaluation deadline (today). Murat's catalog proof review (waiting 2 days). Both flagged in your inbox.</div>
+          <div class="cm-meta">Postman / 2 min ago</div>
+        </div>
+      </div>
+      <div class="cm cm-user"><div class="cm-bubble">Draft a reply to Murat, say I'll review by Monday</div></div>
+      <div class="cm cm-asst">
+        <div class="ch" style="background:#4f46e5; flex-shrink:0;"><i data-lucide="mail"></i></div>
+        <div>
+          <div class="cm-bubble">Draft saved to Gmail. Confirming review by Monday March 17th, focusing on color accuracy and text placement.</div>
+          <div class="cm-meta">Postman / just now</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="chat-input-row">
+    <div class="ch" style="background:#4f46e5;"><i data-lucide="mail"></i></div>
+    <input class="chat-in" placeholder="Ask Postman..." />
+    <button class="chat-send"><i data-lucide="send"></i> SEND</button>
+  </div>
+</div>
+
+<script>lucide.createIcons();</script>
+</body>
+</html>

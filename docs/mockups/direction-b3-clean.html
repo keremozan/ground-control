@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Direction B3: Clean Dense</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #f0efe9;
+    --bg-2: #e6e4dc;
+    --surface: #faf9f6;
+    --surface-2: #f4f3ed;
+    --text: #1a1a18;
+    --text-2: #5c5a54;
+    --text-3: #95938b;
+    --border: #dbd9d0;
+    --border-2: #c8c5ba;
+    --font-display: 'Bricolage Grotesque', sans-serif;
+    --font-body: 'IBM Plex Sans', sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+  }
+
+  body {
+    background: var(--bg);
+    font-family: var(--font-body);
+    color: var(--text);
+    height: 100vh;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    padding: 8px;
+    gap: 6px;
+  }
+
+  /* ========= STATUS BAR ========= */
+  .status-bar {
+    display: flex; align-items: center;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 5px 12px;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  .logo {
+    font-family: var(--font-display); font-size: 14px; font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .sep { width: 1px; height: 14px; background: var(--border); }
+  .st-chip {
+    font-family: var(--font-mono); font-size: 9px; font-weight: 500;
+    padding: 2px 7px; border-radius: 3px;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .st-ok { background: #ecfdf5; color: #047857; }
+  .st-warn { background: #fffbeb; color: #b45309; }
+  .st-dot { width: 4px; height: 4px; border-radius: 50%; }
+  .st-dot-g { background: #10b981; }
+  .st-dot-a { background: #f59e0b; }
+  .st-time {
+    font-family: var(--font-mono); font-size: 10px; color: var(--text-3);
+    margin-left: auto;
+  }
+
+  /* ========= LAYOUT GRID ========= */
+  .top-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 6px;
+    flex: 1;
+    min-height: 0;
+  }
+  .bot-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 6px;
+    flex: 1;
+    min-height: 0;
+  }
+
+  /* ========= WIDGET ========= */
+  .w {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    overflow: hidden;
+    display: flex; flex-direction: column;
+    min-height: 0;
+  }
+  .wh {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 7px 12px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .wh-l { display: flex; align-items: center; gap: 6px; }
+  .wh-ico {
+    color: var(--text-2);
+    display: flex; align-items: center;
+  }
+  .wh-ico i { width: 14px; height: 14px; }
+  .wh-t {
+    font-family: var(--font-display); font-size: 13px; font-weight: 600;
+  }
+  .wh-n {
+    font-family: var(--font-mono); font-size: 10px; color: var(--text-3);
+  }
+  .wh-r { display: flex; align-items: center; gap: 2px; }
+  .btn {
+    width: 24px; height: 22px; border-radius: 3px; border: none;
+    background: transparent; color: var(--text-3); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .btn:hover { background: var(--bg); color: var(--text); }
+  .btn i { width: 12px; height: 12px; }
+
+  /* ========= TABS ========= */
+  .tabs {
+    display: flex; gap: 0;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    padding: 0 12px;
+  }
+  .tab {
+    font-family: var(--font-mono); font-size: 10px; font-weight: 500;
+    color: var(--text-3); background: none; border: none; cursor: pointer;
+    padding: 6px 10px 5px;
+    border-bottom: 2px solid transparent;
+    transition: color 0.12s;
+  }
+  .tab:hover { color: var(--text-2); }
+  .tab.on {
+    color: var(--text); font-weight: 600;
+    border-bottom-color: var(--text);
+  }
+  .tab-n {
+    font-size: 8px; font-weight: 600;
+    background: var(--bg-2); color: var(--text-3);
+    padding: 0 4px; border-radius: 3px;
+    margin-left: 4px; line-height: 13px;
+    display: inline-block; vertical-align: middle;
+  }
+
+  /* ========= VIEW TOGGLE ========= */
+  .vtog {
+    display: flex; background: var(--bg); border-radius: 4px; padding: 1px; gap: 1px;
+  }
+  .vb {
+    font-family: var(--font-mono); font-size: 9px; font-weight: 500;
+    color: var(--text-3); background: transparent; border: none;
+    padding: 2px 8px; border-radius: 3px; cursor: pointer;
+  }
+  .vb:hover { color: var(--text-2); }
+  .vb.on {
+    color: var(--text); background: var(--surface);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+  }
+
+  /* ========= SECTION LABEL ========= */
+  .sec {
+    font-family: var(--font-mono); font-size: 9px; font-weight: 600;
+    color: var(--text-3); text-transform: uppercase; letter-spacing: 0.05em;
+    padding: 7px 12px 3px;
+  }
+
+  /* ========= ITEM ROW ========= */
+  .wb { flex: 1; overflow-y: auto; }
+  .row {
+    display: flex; align-items: flex-start;
+    padding: 6px 12px;
+    gap: 8px;
+    border-bottom: 1px solid color-mix(in srgb, var(--border), transparent 40%);
+    cursor: pointer; transition: background 0.08s;
+    position: relative;
+  }
+  .row:hover { background: var(--surface-2); }
+  .row:last-child { border-bottom: none; }
+
+  /* Left color bar */
+  .bar { width: 3px; align-self: stretch; border-radius: 1px; flex-shrink: 0; min-height: 20px; }
+
+  /* Time column */
+  .time {
+    width: 38px; flex-shrink: 0;
+    font-family: var(--font-mono); font-size: 10px; color: var(--text-3);
+    padding-top: 1px;
+  }
+  .time-urg { color: #b91c1c; font-weight: 600; }
+  .time-warn { color: #92400e; font-weight: 500; }
+
+  /* Urgency dot */
+  .dot {
+    width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0;
+    margin-top: 5px;
+  }
+
+  /* Content */
+  .cnt { flex: 1; min-width: 0; }
+  .title {
+    font-family: var(--font-body); font-size: 12px; font-weight: 500;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    line-height: 1.3;
+  }
+  .sub {
+    font-family: var(--font-body); font-size: 11px; color: var(--text-2);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .meta {
+    font-family: var(--font-mono); font-size: 9px; color: var(--text-3);
+    margin-top: 1px;
+  }
+
+  /* Tag */
+  .tg {
+    font-family: var(--font-mono); font-size: 8px; font-weight: 600;
+    padding: 1px 5px; border-radius: 2px;
+    text-transform: uppercase; letter-spacing: 0.04em;
+    display: inline-block; margin-top: 2px;
+  }
+  .tg + .tg { margin-left: 3px; }
+
+  /* Muted tag colors */
+  .tg-red { background: #fde8e8; color: #991b1b; }
+  .tg-amb { background: #fef3cd; color: #92400e; }
+  .tg-blu { background: #e0e7ff; color: #3730a3; }
+  .tg-grn { background: #d1fae5; color: #065f46; }
+  .tg-pur { background: #ede9fe; color: #5b21b6; }
+  .tg-tea { background: #ccfbf1; color: #115e59; }
+  .tg-gry { background: var(--bg-2); color: var(--text-3); }
+
+  /* Dot colors */
+  .d-red { background: #dc2626; }
+  .d-amb { background: #d97706; }
+  .d-blu { background: #4f46e5; }
+  .d-gry { background: #94a3b8; }
+  .d-grn { background: #059669; }
+
+  /* Character badge */
+  .ch {
+    width: 22px; height: 22px; border-radius: 3px;
+    font-family: var(--font-mono); font-size: 10px; font-weight: 600;
+    color: white; display: inline-flex; align-items: center; justify-content: center;
+    flex-shrink: 0; letter-spacing: -0.02em;
+  }
+
+  /* ========= MINI WEEK ========= */
+  .week {
+    display: flex; padding: 4px 10px; gap: 2px;
+    background: var(--bg); border-bottom: 1px solid var(--border); flex-shrink: 0;
+  }
+  .wd {
+    flex: 1; text-align: center;
+    font-family: var(--font-mono); font-size: 8px; color: var(--text-3);
+    padding: 2px 0;
+  }
+  .wd-n { font-size: 11px; font-weight: 500; color: var(--text-2); display: block; margin-top: 1px; }
+  .wd.today { color: #3730a3; font-weight: 600; background: #e0e7ff; border-radius: 3px; }
+  .wd.today .wd-n { color: #3730a3; }
+  .wd-dots { display: flex; gap: 2px; justify-content: center; margin-top: 2px; }
+  .dd { width: 3px; height: 3px; border-radius: 50%; }
+
+  /* ========= CREW ROWS ========= */
+  .cr {
+    display: flex; align-items: center; gap: 8px;
+    padding: 5px 12px;
+    border-bottom: 1px solid color-mix(in srgb, var(--border), transparent 40%);
+    cursor: pointer; transition: background 0.08s;
+  }
+  .cr:hover { background: var(--surface-2); }
+  .cr-name { font-family: var(--font-body); font-size: 11px; font-weight: 500; flex: 1; }
+  .cr-role { font-family: var(--font-mono); font-size: 8px; color: var(--text-3); text-transform: uppercase; }
+  .cr-acts { font-family: var(--font-mono); font-size: 8px; color: var(--text-3); }
+  .cr-st {
+    font-family: var(--font-mono); font-size: 8px; font-weight: 500;
+    padding: 1px 6px; border-radius: 2px;
+  }
+  .cr-idle { background: var(--bg); color: var(--text-3); }
+  .cr-busy { background: #e0e7ff; color: #3730a3; }
+
+  /* ========= CHAT (warm, light theme) ========= */
+  .chat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    display: flex; flex-direction: column;
+    min-height: 0;
+  }
+  .chat-hdr {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 12px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .chat-title {
+    font-family: var(--font-display); font-size: 13px; font-weight: 600;
+  }
+  .chat-agents {
+    display: flex; gap: 3px; margin-left: 6px;
+  }
+  .chat-ab {
+    border: 2px solid transparent; background: transparent; cursor: pointer;
+    padding: 1px; border-radius: 5px; transition: border-color 0.1s;
+  }
+  .chat-ab:hover { border-color: var(--border-2); }
+  .chat-ab.on { border-color: var(--text); }
+  .chat-agent-meta {
+    font-family: var(--font-mono); font-size: 9px; color: var(--text-3);
+    margin-left: auto;
+  }
+
+  .chat-msgs {
+    flex: 1; overflow-y: auto;
+    padding: 10px 12px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .cm { display: flex; gap: 8px; align-items: flex-start; }
+  .cm-user { justify-content: flex-end; }
+  .cm-user .bubble {
+    background: #e0e7ff; color: var(--text);
+    border-radius: 10px 10px 3px 10px; padding: 7px 11px;
+    font-size: 12.5px; line-height: 1.5; max-width: 70%;
+  }
+  .cm-asst .bubble {
+    color: var(--text-2);
+    border-left: 2px solid var(--border-2);
+    padding: 2px 0 2px 10px;
+    font-size: 12px; line-height: 1.55;
+    max-width: 80%;
+  }
+  .cm-who {
+    font-family: var(--font-mono); font-size: 8px; color: var(--text-3);
+    margin-top: 2px;
+  }
+
+  .chat-input {
+    display: flex; gap: 8px; padding: 8px 12px;
+    border-top: 1px solid var(--border);
+    align-items: center; flex-shrink: 0;
+  }
+  .chat-in {
+    flex: 1; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 5px; padding: 7px 11px;
+    font-family: var(--font-body); font-size: 12px; color: var(--text);
+    outline: none;
+  }
+  .chat-in:focus { border-color: var(--border-2); }
+  .chat-in::placeholder { color: var(--text-3); }
+  .chat-send {
+    background: var(--text); color: var(--surface); border: none;
+    border-radius: 5px; padding: 7px 14px;
+    font-family: var(--font-mono); font-size: 10px; font-weight: 600;
+    cursor: pointer; display: flex; align-items: center; gap: 5px;
+  }
+  .chat-send:hover { opacity: 0.85; }
+  .chat-send i { width: 12px; height: 12px; }
+
+  /* ========= HOVER ACTIONS ========= */
+  .ha {
+    display: none; align-items: center; gap: 1px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 3px; padding: 2px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+    z-index: 2;
+  }
+  .row:hover .ha { display: flex; }
+  .ha-b {
+    width: 22px; height: 20px; border: none; background: transparent;
+    border-radius: 2px; color: var(--text-3); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .ha-b:hover { background: var(--bg); color: var(--text); }
+  .ha-b i { width: 11px; height: 11px; }
+
+  /* Deadline row */
+  .row-dl { background: #fefce8; }
+  .row-dl:hover { background: #fef9c3; }
+</style>
+</head>
+<body>
+
+<!-- ========= STATUS BAR ========= -->
+<div class="status-bar">
+  <div class="logo">Ground Control</div>
+  <div class="sep"></div>
+  <div class="st-chip st-ok"><span class="st-dot st-dot-g"></span> 8 agents</div>
+  <div class="st-chip st-warn"><span class="st-dot st-dot-a"></span> 3 due today</div>
+  <div class="sep"></div>
+  <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-3);">v1.5.2</span>
+  <div class="st-time">Sat 15 Mar 2026 / 10:30</div>
+</div>
+
+<!-- ========= TOP ROW: Inbox | Calendar | Tasks ========= -->
+<div class="top-row">
+
+  <!-- INBOX -->
+  <div class="w">
+    <div class="wh">
+      <div class="wh-l">
+        <div class="wh-ico"><i data-lucide="mail"></i></div>
+        <div class="wh-t">Inbox</div>
+        <div class="wh-n">4 unread</div>
+      </div>
+      <div class="wh-r">
+        <button class="btn"><i data-lucide="refresh-cw"></i></button>
+      </div>
+    </div>
+    <div class="wb">
+      <div class="row">
+        <div class="bar" style="background:#dc2626;"></div>
+        <div class="dot d-red" style="margin-top:6px;"></div>
+        <div class="time time-urg">2h</div>
+        <div class="cnt">
+          <div class="title">BAGEM Office</div>
+          <div class="sub">Course evaluation deadline reminder</div>
+          <span class="tg tg-red">urgent</span>
+        </div>
+        <div class="ha">
+          <button class="ha-b"><i data-lucide="reply"></i></button>
+          <button class="ha-b"><i data-lucide="square-check"></i></button>
+          <button class="ha-b"><i data-lucide="archive"></i></button>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="bar" style="background:#d97706;"></div>
+        <div class="dot d-amb" style="margin-top:6px;"></div>
+        <div class="time time-warn">5h</div>
+        <div class="cnt">
+          <div class="title">Murat Germen</div>
+          <div class="sub">Re: Exhibition catalog proof review</div>
+          <span class="tg tg-amb">to respond</span>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="bar" style="background:#4f46e5;"></div>
+        <div class="dot d-blu" style="margin-top:6px;"></div>
+        <div class="time">1d</div>
+        <div class="cnt">
+          <div class="title">Ars Electronica</div>
+          <div class="sub">Submission confirmation: Contamination</div>
+          <span class="tg tg-blu">info</span>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="bar" style="background:#94a3b8;"></div>
+        <div class="dot d-gry" style="margin-top:6px;"></div>
+        <div class="time">2d</div>
+        <div class="cnt">
+          <div class="title">GitHub</div>
+          <div class="sub">[ground-control] PR #47 merged</div>
+          <span class="tg tg-gry">notification</span>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="bar" style="background:#d97706;"></div>
+        <div class="dot d-amb" style="margin-top:6px;"></div>
+        <div class="time time-warn">3d</div>
+        <div class="cnt">
+          <div class="title">Student (VA 315)</div>
+          <div class="sub">Question about midterm project scope</div>
+          <span class="tg tg-amb">to respond</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CALENDAR -->
+  <div class="w">
+    <div class="wh">
+      <div class="wh-l">
+        <div class="wh-ico"><i data-lucide="calendar"></i></div>
+        <div class="wh-t">Calendar</div>
+        <div class="wh-n">5 events</div>
+      </div>
+      <div class="wh-r">
+        <div class="vtog">
+          <button class="vb on">List</button>
+          <button class="vb">Week</button>
+          <button class="vb">Month</button>
+        </div>
+        <button class="btn"><i data-lucide="plus"></i></button>
+        <button class="btn"><i data-lucide="refresh-cw"></i></button>
+      </div>
+    </div>
+    <div class="week">
+      <div class="wd">MON<span class="wd-n">10</span></div>
+      <div class="wd">TUE<span class="wd-n">11</span></div>
+      <div class="wd">WED<span class="wd-n">12</span></div>
+      <div class="wd">THU<span class="wd-n">13</span></div>
+      <div class="wd today">FRI<span class="wd-n">14</span>
+        <div class="wd-dots">
+          <div class="dd" style="background:#5b21b6;"></div>
+          <div class="dd" style="background:#115e59;"></div>
+          <div class="dd" style="background:#3730a3;"></div>
+        </div>
+      </div>
+      <div class="wd">SAT<span class="wd-n">15</span></div>
+      <div class="wd">SUN<span class="wd-n">16</span></div>
+    </div>
+    <div class="wb">
+      <div class="sec">Today</div>
+      <div class="row">
+        <div class="bar" style="background:#5b21b6;"></div>
+        <div class="time" style="width:36px;">09:30</div>
+        <div class="cnt">
+          <div class="title">VA 204 Studio</div>
+          <div class="meta">FASS G060 / 3h</div>
+        </div>
+        <span class="tg tg-pur">teaching</span>
+      </div>
+      <div class="row">
+        <div class="bar" style="background:#115e59;"></div>
+        <div class="time" style="width:36px;">14:00</div>
+        <div class="cnt">
+          <div class="title">Department Meeting</div>
+          <div class="meta">FASS 2034 / 1h</div>
+        </div>
+        <span class="tg tg-tea">meeting</span>
+      </div>
+      <div class="row">
+        <div class="bar" style="background:#3730a3;"></div>
+        <div class="time" style="width:36px;">16:00</div>
+        <div class="cnt">
+          <div class="title">Thesis Defense: Zeynep A.</div>
+          <div class="meta">FASS 1097 / 1.5h</div>
+        </div>
+        <span class="tg tg-blu">academic</span>
+      </div>
+
+      <div class="sec">Tomorrow</div>
+      <div class="row">
+        <div class="bar" style="background:#5b21b6;"></div>
+        <div class="time" style="width:36px;">10:00</div>
+        <div class="cnt">
+          <div class="title">VA 315 Seminar</div>
+          <div class="meta">FASS G060 / 2h</div>
+        </div>
+        <span class="tg tg-pur">teaching</span>
+      </div>
+      <div class="row row-dl">
+        <div class="bar" style="background:#92400e;"></div>
+        <div class="time time-warn" style="width:36px;">23:59</div>
+        <div class="cnt">
+          <div class="title" style="color:#92400e;font-weight:600;">Ars Electronica Submission</div>
+          <div class="meta" style="color:#92400e;">Deadline</div>
+        </div>
+        <span class="tg tg-amb">deadline</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- TASKS -->
+  <div class="w">
+    <div class="wh">
+      <div class="wh-l">
+        <div class="wh-ico"><i data-lucide="check-square"></i></div>
+        <div class="wh-t">Tasks</div>
+        <div class="wh-n">3 due today</div>
+      </div>
+      <div class="wh-r">
+        <button class="btn"><i data-lucide="plus"></i></button>
+        <button class="btn"><i data-lucide="refresh-cw"></i></button>
+      </div>
+    </div>
+    <div class="tabs">
+      <button class="tab on">Tasks<span class="tab-n">8</span></button>
+      <button class="tab">Projects</button>
+      <button class="tab">Classes<span class="tab-n">2</span></button>
+    </div>
+    <div class="wb">
+      <div class="sec">Due Today</div>
+      <div class="row">
+        <div class="bar" style="background:#059669;"></div>
+        <div class="dot d-red" style="margin-top:6px;"></div>
+        <div class="time time-urg">now</div>
+        <div class="cnt">
+          <div class="title">Submit course evaluations</div>
+          <span class="tg tg-tea">admin</span>
+        </div>
+        <div class="ch" style="background:#059669;">Cl</div>
+      </div>
+      <div class="row">
+        <div class="bar" style="background:#7c3aed;"></div>
+        <div class="dot d-amb" style="margin-top:6px;"></div>
+        <div class="time time-warn">today</div>
+        <div class="cnt">
+          <div class="title">Review thesis: Zeynep A. jury report</div>
+          <span class="tg tg-pur">academic</span>
+        </div>
+        <div class="ch" style="background:#7c3aed;">Sc</div>
+      </div>
+      <div class="row">
+        <div class="bar" style="background:#0891b2;"></div>
+        <div class="dot d-amb" style="margin-top:6px;"></div>
+        <div class="time time-warn">today</div>
+        <div class="cnt">
+          <div class="title">Prep VA 315 Week 8 materials</div>
+          <span class="tg tg-pur">teaching</span>
+        </div>
+        <div class="ch" style="background:#0891b2;">Pr</div>
+      </div>
+
+      <div class="sec">This Week</div>
+      <div class="row">
+        <div class="bar" style="background:#dc2626;"></div>
+        <div class="dot d-blu" style="margin-top:6px;"></div>
+        <div class="time">Mon</div>
+        <div class="cnt">
+          <div class="title">Finalize Ars Electronica submission</div>
+          <span class="tg tg-amb">art</span>
+        </div>
+        <div class="ch" style="background:#dc2626;">Cu</div>
+      </div>
+      <div class="row">
+        <div class="bar" style="background:#6366f1;"></div>
+        <div class="dot d-gry" style="margin-top:6px;"></div>
+        <div class="time">Wed</div>
+        <div class="cnt">
+          <div class="title">Ground Control: batch operations</div>
+          <span class="tg tg-blu">system</span>
+        </div>
+        <div class="ch" style="background:#6366f1;">En</div>
+      </div>
+      <div class="row">
+        <div class="bar" style="background:#a16207;"></div>
+        <div class="dot d-gry" style="margin-top:6px;"></div>
+        <div class="time">Fri</div>
+        <div class="cnt">
+          <div class="title">Weekly personal review</div>
+          <span class="tg tg-amb">wellbeing</span>
+        </div>
+        <div class="ch" style="background:#a16207;">Co</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ========= BOTTOM ROW: Chat (2 cols) | Crew (1 col) ========= -->
+<div class="bot-row">
+
+  <!-- CHAT -->
+  <div class="chat">
+    <div class="chat-hdr">
+      <div class="wh-ico"><i data-lucide="message-square"></i></div>
+      <div class="chat-title">Chat</div>
+      <div class="chat-agents">
+        <button class="chat-ab on"><div class="ch" style="background:#4f46e5;">Po</div></button>
+        <button class="chat-ab"><div class="ch" style="background:#7c3aed;">Sc</div></button>
+        <button class="chat-ab"><div class="ch" style="background:#0891b2;">Pr</div></button>
+        <button class="chat-ab"><div class="ch" style="background:#059669;">Cl</div></button>
+        <button class="chat-ab"><div class="ch" style="background:#dc2626;">Cu</div></button>
+        <button class="chat-ab"><div class="ch" style="background:#a16207;">Co</div></button>
+        <button class="chat-ab"><div class="ch" style="background:#475569;">Ar</div></button>
+        <button class="chat-ab"><div class="ch" style="background:#6366f1;">En</div></button>
+      </div>
+      <div class="chat-agent-meta">Postman / idle</div>
+    </div>
+    <div class="chat-msgs">
+      <div class="cm cm-user"><div class="bubble">Check my inbox for anything urgent</div></div>
+      <div class="cm cm-asst">
+        <div class="ch" style="background:#4f46e5;flex-shrink:0;margin-top:2px;">Po</div>
+        <div>
+          <div class="bubble">Found 2 items needing attention. BAGEM course evaluation deadline (today). Murat's catalog proof review (waiting 2 days). Both flagged in your inbox.</div>
+          <div class="cm-who">Postman / 2 min ago</div>
+        </div>
+      </div>
+      <div class="cm cm-user"><div class="bubble">Draft a reply to Murat, say I'll review by Monday</div></div>
+      <div class="cm cm-asst">
+        <div class="ch" style="background:#4f46e5;flex-shrink:0;margin-top:2px;">Po</div>
+        <div>
+          <div class="bubble">Draft saved to Gmail. Confirming review by Monday March 17th, focusing on color accuracy and text placement.</div>
+          <div class="cm-who">Postman / just now</div>
+        </div>
+      </div>
+    </div>
+    <div class="chat-input">
+      <div class="ch" style="background:#4f46e5;">Po</div>
+      <input class="chat-in" placeholder="Ask Postman..." />
+      <button class="chat-send"><i data-lucide="send"></i> Send</button>
+    </div>
+  </div>
+
+  <!-- CREW -->
+  <div class="w">
+    <div class="wh">
+      <div class="wh-l">
+        <div class="wh-ico"><i data-lucide="users"></i></div>
+        <div class="wh-t">Crew</div>
+        <div class="wh-n">8 active</div>
+      </div>
+      <div class="wh-r">
+        <button class="btn"><i data-lucide="refresh-cw"></i></button>
+      </div>
+    </div>
+    <div class="tabs">
+      <button class="tab on">Crew</button>
+      <button class="tab">Schedules<span class="tab-n">5</span></button>
+      <button class="tab">Logs<span class="tab-n">12</span></button>
+      <button class="tab">Proposals</button>
+    </div>
+    <div class="wb">
+      <div class="sec">Core</div>
+      <div class="cr">
+        <div class="ch" style="background:#4f46e5;">Po</div>
+        <div class="cr-name">Postman</div>
+        <div class="cr-role">Input</div>
+        <div class="cr-st cr-idle">idle</div>
+      </div>
+      <div class="cr">
+        <div class="ch" style="background:#7c3aed;">Sc</div>
+        <div class="cr-name">Scholar</div>
+        <div class="cr-role">Research</div>
+        <div class="cr-st cr-idle">idle</div>
+      </div>
+      <div class="cr">
+        <div class="ch" style="background:#0891b2;">Pr</div>
+        <div class="cr-name">Proctor</div>
+        <div class="cr-role">Teaching</div>
+        <div class="cr-st cr-busy">busy</div>
+      </div>
+      <div class="cr">
+        <div class="ch" style="background:#059669;">Cl</div>
+        <div class="cr-name">Clerk</div>
+        <div class="cr-role">Admin</div>
+        <div class="cr-st cr-idle">idle</div>
+      </div>
+      <div class="cr">
+        <div class="ch" style="background:#dc2626;">Cu</div>
+        <div class="cr-name">Curator</div>
+        <div class="cr-role">Art</div>
+        <div class="cr-st cr-idle">idle</div>
+      </div>
+      <div class="cr">
+        <div class="ch" style="background:#a16207;">Co</div>
+        <div class="cr-name">Coach</div>
+        <div class="cr-role">Wellbeing</div>
+        <div class="cr-st cr-idle">idle</div>
+      </div>
+      <div class="sec">Meta</div>
+      <div class="cr">
+        <div class="ch" style="background:#475569;">Ar</div>
+        <div class="cr-name">Architect</div>
+        <div class="cr-role">System</div>
+        <div class="cr-st cr-idle">idle</div>
+      </div>
+      <div class="cr">
+        <div class="ch" style="background:#6366f1;">En</div>
+        <div class="cr-name">Engineer</div>
+        <div class="cr-role">Code</div>
+        <div class="cr-st cr-busy">busy</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>lucide.createIcons();</script>
+</body>
+</html>
