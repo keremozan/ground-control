@@ -168,7 +168,24 @@ export default function StatusBar() {
     if (!changelog) {
       const res = await fetch("/api/changelog");
       const data = await res.json();
-      setChangelog(parseChangelog(data.content || ""));
+      const pub = parseChangelog(data.content || "");
+      const priv = parseChangelog(data.privateContent || "");
+      // Merge private entries into public versions by version string
+      const merged = pub.map(pv => {
+        const match = priv.find(pr => pr.version === pv.version);
+        if (match) return { ...pv, sections: [...pv.sections, ...match.sections] };
+        return pv;
+      });
+      // Add private-only versions that don't exist in public
+      for (const pr of priv) {
+        if (!pub.find(pv => pv.version === pr.version)) {
+          // Insert in version order
+          const idx = merged.findIndex(m => m.version < pr.version);
+          if (idx === -1) merged.push(pr);
+          else merged.splice(idx, 0, pr);
+        }
+      }
+      setChangelog(merged);
     }
     setShowChangelog(true);
   };
@@ -425,8 +442,8 @@ export default function StatusBar() {
               Changelog
             </div>
             {changelog ? changelog.map((ver, vi) => {
-              const publicSections = ver.sections.filter(s => !INTERNAL_SECTIONS.test(s.area));
-              if (publicSections.length === 0) return null;
+              const visibleSections = ver.sections;
+              if (visibleSections.length === 0) return null;
               return (
               <div key={vi} style={{ marginBottom: vi < changelog.length - 1 ? 20 : 0 }}>
                 <div style={{
@@ -436,7 +453,7 @@ export default function StatusBar() {
                 }}>
                   {ver.heading}
                 </div>
-                {publicSections.map((sec, si) => (
+                {visibleSections.map((sec, si) => (
                   <div key={si} style={{ marginBottom: 10 }}>
                     <div style={{
                       fontFamily: "var(--font-mono)", fontSize: 9.5, fontWeight: 600,

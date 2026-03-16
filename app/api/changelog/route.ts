@@ -38,11 +38,14 @@ export async function POST(req: Request) {
 }
 
 export async function GET() {
-  const pubFile = path.join(process.cwd(), 'CHANGELOG.md');
+  const cwd = process.cwd();
+  const pubFile = path.join(cwd, 'CHANGELOG.md');
+  const privFile = path.join(cwd, 'CHANGELOG.private.md');
   try {
-    const content = fs.readFileSync(pubFile, 'utf-8');
-    return Response.json({ content });
+    const pubContent = fs.existsSync(pubFile) ? fs.readFileSync(pubFile, 'utf-8') : '';
+    const privContent = fs.existsSync(privFile) ? fs.readFileSync(privFile, 'utf-8') : '';
+    return Response.json({ content: pubContent, privateContent: privContent });
   } catch {
-    return Response.json({ content: 'No changelog found.' });
+    return Response.json({ content: 'No changelog found.', privateContent: '' });
   }
 }
