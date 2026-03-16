@@ -741,7 +741,7 @@ export default function TasksWidget() {
       const match = tasks.filter(t => {
         if (!t.dueDate) return false;
         const badge = dueBadge(t.dueDate);
-        return badge !== null; // dueBadge returns non-null for overdue, today, and within 7 days
+        return badge !== null && badge.dot === true; // only overdue, today, and within 7 days have dot:true
       });
       if (match.length > 0) filtered[track] = match;
     }
