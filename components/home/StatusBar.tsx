@@ -465,7 +465,7 @@ export default function StatusBar() {
                     }}>
                       {sec.area}
                     </div>
-                    {sec.items.filter(it => it.type !== "sys").map((item, ii) => (
+                    {sec.items.map((item, ii) => (
                       <div key={ii} style={{
                         display: "flex", alignItems: "baseline", gap: 6,
                         fontFamily: "var(--font-mono)", fontSize: 10.5,
