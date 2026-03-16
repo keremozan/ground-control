@@ -170,20 +170,24 @@ export default function StatusBar() {
       const data = await res.json();
       const pub = parseChangelog(data.content || "");
       const priv = parseChangelog(data.privateContent || "");
-      // Merge private entries into public versions by version string
-      const merged = pub.map(pv => {
-        const match = priv.find(pr => pr.version === pv.version);
-        if (match) return { ...pv, sections: [...pv.sections, ...match.sections] };
-        return pv;
-      });
-      // Add private-only versions that don't exist in public
+      // Merge: for matching versions (same heading), combine sections.
+      // For non-matching, interleave by version number (semver-aware).
+      const pubMap = new Map(pub.map(v => [v.heading, v]));
+      const merged: CLVersion[] = [];
+      const usedPub = new Set<string>();
+      // Process private versions first (they tend to be newer)
       for (const pr of priv) {
-        if (!pub.find(pv => pv.version === pr.version)) {
-          // Insert in version order
-          const idx = merged.findIndex(m => m.version < pr.version);
-          if (idx === -1) merged.push(pr);
-          else merged.splice(idx, 0, pr);
+        const match = pubMap.get(pr.heading);
+        if (match) {
+          merged.push({ heading: pr.heading, sections: [...match.sections, ...pr.sections] });
+          usedPub.add(pr.heading);
+        } else {
+          merged.push(pr);
         }
+      }
+      // Add remaining public versions
+      for (const pv of pub) {
+        if (!usedPub.has(pv.heading)) merged.push(pv);
       }
       setChangelog(merged);
     }
