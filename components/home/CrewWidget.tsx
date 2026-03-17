@@ -872,16 +872,35 @@ export default function CrewWidget() {
           <div style={{ padding: "4px 10px 6px" }}>
             {enabledJobs.length > 0 && (
               <>
-                <div style={{
-                  display: "flex", alignItems: "center", gap: 4, marginBottom: 4,
-                }}>
-                  <CalendarDays size={10} strokeWidth={1.5} style={{ color: "var(--text-3)" }} />
-                  <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                    Recurring
-                  </span>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                  {enabledJobs.map((job, i) => {
+                {(() => {
+                  const GROUP_ORDER = ["scanning", "context", "delivery", "research", "tasks", "reviews", "system"];
+                  const GROUP_LABELS: Record<string, string> = {
+                    scanning: "Scanning", context: "Context", delivery: "Delivery",
+                    research: "Research", tasks: "Tasks", reviews: "Reviews", system: "System",
+                  };
+                  const groups = new Map<string, typeof enabledJobs>();
+                  for (const job of enabledJobs) {
+                    const g = (job as any).group || "system";
+                    if (!groups.has(g)) groups.set(g, []);
+                    groups.get(g)!.push(job);
+                  }
+                  const sortedGroups = [...groups.entries()].sort(
+                    ([a], [b]) => (GROUP_ORDER.indexOf(a) === -1 ? 99 : GROUP_ORDER.indexOf(a)) - (GROUP_ORDER.indexOf(b) === -1 ? 99 : GROUP_ORDER.indexOf(b))
+                  );
+                  let globalIdx = 0;
+                  return sortedGroups.map(([group, jobs]) => (
+                    <div key={group} style={{ marginBottom: 6 }}>
+                      <div style={{
+                        display: "flex", alignItems: "center", gap: 4, marginBottom: 3, marginTop: 2,
+                      }}>
+                        <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 500, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                          {GROUP_LABELS[group] || group}
+                        </span>
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                        {jobs.map((job) => {
+                          const i = globalIdx++;
+                          return (() => {
                     const Icon = charIcon[job.displayName] || BookOpen;
                     const color = charColor[job.charName] || "#94a3b8";
                     const isRunning = runningJobs.has(job.id);
@@ -950,8 +969,12 @@ export default function CrewWidget() {
                         </button>
                       </div>
                     );
-                  })}
-                </div>
+                          })();
+                        })}
+                      </div>
+                    </div>
+                  ));
+                })()}
               </>
             )}
 
