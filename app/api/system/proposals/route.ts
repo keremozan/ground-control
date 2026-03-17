@@ -1,120 +1,198 @@
 export const runtime = 'nodejs';
-import { readFile, writeFile } from 'fs/promises';
+import { readFile, writeFile, access, rename } from 'fs/promises';
 import { join } from 'path';
-import { readSkill, writeSkill, skillExists } from '@/lib/skills';
+import { createTask } from '@/lib/tana';
 
 const HOME = process.env.HOME || '/tmp';
-const PROPOSALS_PATH = join(HOME, '.claude/characters/pending-edits.json');
+const PROPOSALS_PATH = join(HOME, '.claude/characters/proposals.json');
+const OLD_PATH = join(HOME, '.claude/characters/pending-edits.json');
 
-type Proposal = {
-  id: string;
-  skill: string;
-  description: string;
-  diff: { old: string; new: string };
-  reason: string;
-  createdAt: string;
-  needsReview?: boolean;
+// Dismiss memory: skip re-proposing similar items for 30 days
+const DISMISS_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+
+export type ProposalType = 'skill-edit' | 'schedule' | 'rebalance' | 'pattern' | 'cleanup' | 'automation' | 'strategic';
+export type ProposalSource = 'watcher' | 'kybernetes' | 'coach' | 'oracle';
+export type ProposalPriority = 'low' | 'medium' | 'high';
+export type ProposalStatus = 'pending' | 'approved' | 'dismissed' | 'implemented';
+
+export type ProposalAction = {
+  type: 'edit-file' | 'edit-config' | 'create-task' | 'toggle-schedule' | 'reassign-tasks' | 'remove-scan-target';
+  spec: Record<string, unknown>;
 };
 
-// Raw shape written by watcher
-type RawProposal = {
+export type Proposal = {
+  id: string;
+  type: ProposalType;
+  source: ProposalSource;
+  title: string;
+  detail: string;
+  action: ProposalAction;
+  priority: ProposalPriority;
+  createdAt: string;
+  status: ProposalStatus;
+};
+
+type DismissedEntry = {
+  title: string;
+  type: ProposalType;
+  dismissedAt: string;
+};
+
+type ProposalsFile = {
+  proposals: Proposal[];
+  dismissed: DismissedEntry[];
+};
+
+// --- Migration from old pending-edits.json ---
+
+type OldProposal = {
   id: string;
   skill: string;
-  date?: string;
-  createdAt?: string;
-  reason?: string;
   description?: string;
   proposed_change?: string;
+  diff?: { old: string; new: string };
   old_section?: string;
   new_section?: string;
-  diff?: { old: string; new: string };
+  reason?: string;
+  date?: string;
+  createdAt?: string;
   needsReview?: boolean;
 };
 
-function normalize(p: RawProposal): Proposal {
+function migrateOld(old: OldProposal): Proposal {
   return {
-    id: p.id,
-    skill: p.skill,
-    createdAt: p.createdAt ?? p.date ?? '',
-    description: p.description ?? p.proposed_change ?? '',
-    reason: p.reason ?? '',
-    diff: p.diff ?? { old: p.old_section ?? '', new: p.new_section ?? '' },
-    needsReview: p.needsReview,
+    id: old.id,
+    type: 'skill-edit',
+    source: 'watcher',
+    title: old.description || old.proposed_change || `Edit ${old.skill}`,
+    detail: old.reason || '',
+    action: {
+      type: 'edit-file',
+      spec: {
+        file: old.skill,
+        old: old.diff?.old ?? old.old_section ?? '',
+        new: old.diff?.new ?? old.new_section ?? '',
+      },
+    },
+    priority: 'medium',
+    createdAt: old.createdAt ?? old.date ?? new Date().toISOString(),
+    status: 'pending',
   };
 }
 
-/** Apply a proposal's diff to its skill file. Returns true on success. */
-function applyProposal(p: Proposal): { ok: boolean; error?: string } {
-  if (!skillExists(p.skill)) return { ok: false, error: `skill "${p.skill}" not found` };
-  const content = readSkill(p.skill);
-  if (content === null) return { ok: false, error: `could not read skill "${p.skill}"` };
-  if (!p.diff?.old || !p.diff?.new) return { ok: false, error: 'missing diff' };
-  if (!content.includes(p.diff.old)) return { ok: false, error: 'old section not found in skill file (may have changed)' };
-  const updated = content.replace(p.diff.old, p.diff.new);
-  writeSkill(p.skill, updated);
-  return { ok: true };
+async function fileExists(p: string): Promise<boolean> {
+  try { await access(p); return true; } catch { return false; }
 }
+
+async function loadProposals(): Promise<ProposalsFile> {
+  // Try new file first
+  if (await fileExists(PROPOSALS_PATH)) {
+    try {
+      const raw = await readFile(PROPOSALS_PATH, 'utf-8');
+      const data = JSON.parse(raw);
+      // Handle both formats: { proposals, dismissed } or bare array
+      if (Array.isArray(data)) {
+        return { proposals: data, dismissed: [] };
+      }
+      return {
+        proposals: data.proposals || [],
+        dismissed: data.dismissed || [],
+      };
+    } catch {
+      return { proposals: [], dismissed: [] };
+    }
+  }
+
+  // Migrate from old file
+  if (await fileExists(OLD_PATH)) {
+    try {
+      const raw = await readFile(OLD_PATH, 'utf-8');
+      const old: OldProposal[] = JSON.parse(raw);
+      const migrated: ProposalsFile = {
+        proposals: old.map(migrateOld),
+        dismissed: [],
+      };
+      await saveProposals(migrated);
+      await rename(OLD_PATH, OLD_PATH + '.bak');
+      return migrated;
+    } catch {
+      return { proposals: [], dismissed: [] };
+    }
+  }
+
+  return { proposals: [], dismissed: [] };
+}
+
+async function saveProposals(data: ProposalsFile): Promise<void> {
+  await writeFile(PROPOSALS_PATH, JSON.stringify(data, null, 2), 'utf-8');
+}
+
+function pruneDismissed(dismissed: DismissedEntry[]): DismissedEntry[] {
+  const cutoff = Date.now() - DISMISS_TTL_MS;
+  return dismissed.filter(d => new Date(d.dismissedAt).getTime() > cutoff);
+}
+
+// --- Routes ---
 
 export async function GET() {
   try {
-    const raw = await readFile(PROPOSALS_PATH, 'utf-8');
-    const all: RawProposal[] = JSON.parse(raw);
-    const normalized = all.map(normalize);
-
-    // Auto-apply proposals that don't need review
-    const needsReview: Proposal[] = [];
-    const autoApplied: { id: string; skill: string; ok: boolean; error?: string }[] = [];
-    let changed = false;
-
-    for (const p of normalized) {
-      if (p.needsReview) {
-        needsReview.push(p);
-      } else {
-        // Auto-apply
-        const result = applyProposal(p);
-        autoApplied.push({ id: p.id, skill: p.skill, ok: result.ok, error: result.error });
-        changed = true;
-      }
-    }
-
-    // Write back only proposals that need review
-    if (changed) {
-      await writeFile(PROPOSALS_PATH, JSON.stringify(needsReview, null, 2), 'utf-8');
-    }
-
-    return Response.json({ proposals: needsReview, autoApplied });
+    const data = await loadProposals();
+    // Prune expired dismissals on read
+    data.dismissed = pruneDismissed(data.dismissed);
+    // Only return pending proposals
+    const pending = data.proposals.filter(p => p.status === 'pending');
+    return Response.json({ proposals: pending });
   } catch {
-    return Response.json({ proposals: [], autoApplied: [] });
+    return Response.json({ proposals: [] });
   }
 }
 
 export async function POST(req: Request) {
-  const { action, id } = await req.json() as { action: 'approve' | 'dismiss'; id: string };
+  const body = await req.json() as { action: 'approve' | 'dismiss'; id: string };
+  const { action, id } = body;
 
   try {
-    const raw = await readFile(PROPOSALS_PATH, 'utf-8');
-    const proposals: Proposal[] = JSON.parse(raw).map(normalize);
-    const idx = proposals.findIndex(p => p.id === id);
+    const data = await loadProposals();
+    const idx = data.proposals.findIndex(p => p.id === id);
     if (idx === -1) return Response.json({ error: 'not found' }, { status: 404 });
 
-    const proposal = proposals[idx];
+    const proposal = data.proposals[idx];
 
     if (action === 'dismiss') {
-      proposals.splice(idx, 1);
-      await writeFile(PROPOSALS_PATH, JSON.stringify(proposals, null, 2), 'utf-8');
+      proposal.status = 'dismissed';
+      data.dismissed = pruneDismissed(data.dismissed);
+      data.dismissed.push({
+        title: proposal.title,
+        type: proposal.type,
+        dismissedAt: new Date().toISOString(),
+      });
+      // Remove from active proposals
+      data.proposals.splice(idx, 1);
+      await saveProposals(data);
       return Response.json({ ok: true });
     }
 
-    // Approve: apply the diff to the skill file
-    const result = applyProposal(proposal);
-    proposals.splice(idx, 1);
-    await writeFile(PROPOSALS_PATH, JSON.stringify(proposals, null, 2), 'utf-8');
+    // Approve: create a task for Engineer in Tana, mark approved
+    proposal.status = 'approved';
+    data.proposals.splice(idx, 1);
+    await saveProposals(data);
 
-    if (!result.ok) {
-      return Response.json({ error: result.error, applied: false }, { status: 422 });
+    // Create implementation task for Engineer
+    try {
+      const actionSummary = proposal.action.type === 'edit-file'
+        ? `File: ${proposal.action.spec.file || 'N/A'}`
+        : `Action: ${proposal.action.type}`;
+      await createTask({
+        title: `[Proposal] ${proposal.title}`,
+        assigned: 'engineer',
+        priority: proposal.priority,
+        body: `${proposal.detail}\n\nAction type: ${proposal.action.type}\n${actionSummary}\nSpec: ${JSON.stringify(proposal.action.spec, null, 2)}`,
+      });
+    } catch {
+      // Task creation failure shouldn't block the approval
     }
 
-    return Response.json({ ok: true, applied: true, skill: proposal.skill });
+    return Response.json({ ok: true, approved: true, title: proposal.title });
   } catch {
     return Response.json({ error: 'failed' }, { status: 500 });
   }
