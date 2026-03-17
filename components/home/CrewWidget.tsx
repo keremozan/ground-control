@@ -5,7 +5,7 @@ import { useChatTrigger } from "@/lib/chat-store";
 import { logAction, clearLog, getLog, subscribeLog, type ActionLogEntry } from "@/lib/action-log";
 import { SCHEDULE_JOBS, type JobResult } from "@/lib/scheduler";
 import { charIcon, charColor } from "@/lib/char-icons";
-import { Loader2, Play, X, CalendarDays, BookOpen, SlidersHorizontal, CheckCircle, AlertCircle, Activity, Wrench, Bot, Trash2, Clock, Pencil, MessageSquare } from "lucide-react";
+import { Loader2, Play, X, CalendarDays, BookOpen, SlidersHorizontal, CheckCircle, AlertCircle, Activity, Wrench, Bot, Trash2, Clock, Pencil, MessageSquare, ListChecks } from "lucide-react";
 import CharDetailDrawer from "@/components/home/CharDetailDrawer";
 import LogsWidget from "@/components/pipeline/LogsWidget";
 import ProposalsWidget from "@/components/pipeline/ProposalsWidget";
@@ -484,6 +484,62 @@ export default function CrewWidget() {
     }
   };
 
+  const handleCharTasks = async (char: CharacterInfo) => {
+    const key = `${char.name}:tasks`;
+    if (runningRef.current.has(key)) return;
+    runningRef.current.add(key);
+    setRunningActions(prev => new Set(prev).add(key));
+
+    try {
+      const res = await fetch("/api/tana-tasks");
+      const data = await res.json();
+      type TanaTask = { id: string; name: string; status: string; assigned: string | null; track: string };
+      const allTasks: TanaTask[] = Object.values(data.tasks as Record<string, TanaTask[]>).flat();
+      const tasks = allTasks.filter(t => t.status !== "done" && (t.assigned || "").toLowerCase() === char.id);
+
+      if (tasks.length === 0) {
+        logAction({ widget: "crew", action: "tasks", target: `${char.name}: no pending tasks`, character: char.name });
+        return;
+      }
+
+      const taskList = tasks.map(t => `- [${t.id}] ${t.name} (${t.status}, ${t.track})`).join("\n");
+      const seedPrompt = [
+        `IMPORTANT: This is task processing, NOT a report or review. Do NOT send any email summaries. The REPORT EMAIL RULE does not apply here. Work silently and log results to Tana only.`,
+        ``,
+        `You have ${tasks.length} pending task(s) assigned to you.`,
+        ``,
+        `For EACH task below:`,
+        `1. Use read_node with the node ID in brackets to read the full task content`,
+        `2. Understand what needs to be done`,
+        `3. Do the work (create drafts, update Tana, research, etc.)`,
+        `4. When finished, set the task status to done using set_field_option`,
+        `5. If you cannot complete a task, leave it as-is and note why in your report`,
+        ``,
+        `Tasks:`,
+        taskList,
+      ].join("\n");
+      const taskRes = await fetch("/api/schedule/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          charName: char.id,
+          seedPrompt,
+          label: `${char.name} tasks`,
+          maxTurns: 100,
+        }),
+      });
+      const result = await taskRes.json();
+      if (result.ok) {
+        logAction({ widget: "crew", action: "tasks", target: `${char.name} (${tasks.length} tasks)`, character: char.name, detail: result.result ? `${Math.round(result.result.durationMs / 1000)}s` : undefined, jobId: result.result?.jobId });
+      }
+    } catch {
+      // silent
+    } finally {
+      runningRef.current.delete(key);
+      setRunningActions(prev => { const n = new Set(prev); n.delete(key); return n; });
+    }
+  };
+
   const selectChar = (id: string) => {
     setSelectedCharId(id);
     setPromptAction(null);
@@ -644,6 +700,27 @@ export default function CrewWidget() {
                       >
                         <MessageSquare size={10} strokeWidth={1.5} />
                         Chat
+                      </button>
+                      <button
+                        onClick={() => handleCharTasks(selectedChar)}
+                        disabled={runningActions.has(`${selectedChar.name}:tasks`)}
+                        data-tip="Run assigned tasks"
+                        style={{
+                          display: "flex", alignItems: "center", gap: 4,
+                          fontFamily: "var(--font-mono)", fontSize: 10,
+                          color: selectedChar.color,
+                          background: selectedChar.color + "12",
+                          border: `1px solid ${selectedChar.color}30`,
+                          borderRadius: 4, padding: "4px 8px", cursor: runningActions.has(`${selectedChar.name}:tasks`) ? "default" : "pointer",
+                          opacity: runningActions.has(`${selectedChar.name}:tasks`) ? 0.5 : 1,
+                          transition: "all 0.12s",
+                        }}
+                      >
+                        {runningActions.has(`${selectedChar.name}:tasks`)
+                          ? <Loader2 size={10} strokeWidth={1.5} style={{ animation: "spin 1s linear infinite" }} />
+                          : <ListChecks size={10} strokeWidth={1.5} />
+                        }
+                        Tasks
                       </button>
                       <button
                         onClick={() => setDrawerChar(selectedChar)}

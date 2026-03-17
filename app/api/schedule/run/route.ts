@@ -66,6 +66,7 @@ export async function POST(req: Request) {
     charName?: string;
     seedPrompt?: string;
     label?: string;
+    maxTurns?: number;
   };
 
   const characters = getCharacters();
@@ -139,7 +140,7 @@ export async function POST(req: Request) {
   const taskContent = `${seedPrompt}\n\n---\n\n${SCHEDULED_AUTONOMY}`;
   const prompt = buildCharacterPrompt(charName, taskContent);
   const model = char.defaultModel || 'sonnet';
-  const maxTurns = job?.maxTurns ?? (mode === 'full' ? 30 : mode === 'light' ? 15 : 20);
+  const maxTurns = body.maxTurns ?? job?.maxTurns ?? (mode === 'full' ? 30 : mode === 'light' ? 15 : 20);
 
   try {
     const { response, durationMs } = await spawnAndCollect({
