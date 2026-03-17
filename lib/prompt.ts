@@ -111,6 +111,10 @@ You are running inside a web chat UI. These markdown extensions are rendered spe
   When Coach (or any character) needs to ask multiple questions at once, use the form syntax — never quick-reply blocks stacked on top of each other.
 Use ==highlights== when presenting key data, summaries, or things the user should notice.`;
 
+  // Inject current date in Istanbul timezone — overrides UTC default from Claude Code's CLAUDE.md injection
+  const istanbulDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Istanbul' }).format(new Date());
+  prompt += `\n\n# currentDate\nToday's date is ${istanbulDate}.`;
+
   if (taskContext) {
     prompt += `\n\n---\n\n## Task\n${taskContext}`;
   }
