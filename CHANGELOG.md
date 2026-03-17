@@ -2,6 +2,16 @@
 
 ## v1.6.4 — 2026-03-15
 
+### Proposals
+- [new] System-wide proposal engine with 7 types (strategic, pattern, rebalance, schedule, skill-edit, cleanup, automation)
+- [new] Proposals grouped by type with section headers, priority badges (red/amber dots), source character icons
+- [improved] Approve creates a Tana task for Engineer instead of auto-applying edits
+- [new] Dismiss memory prevents re-proposals for 30 days
+
+### Crew
+- [new] Per-character Tasks button fetches assigned tasks and runs character autonomously
+- [improved] Task completion uses checkbox (check_node) instead of status field
+
 ## v1.6.3 — 2026-03-15
 
 ## v1.6.2 — 2026-03-15

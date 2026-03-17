@@ -242,7 +242,7 @@ async function handleProcessTasks(
       `1. Use read_node with the node ID in brackets to read the full task content`,
       `2. Understand what needs to be done`,
       `3. Do the work (create drafts, update Tana, research, etc.)`,
-      `4. When finished, set the task status to done using set_field_option`,
+      `4. When finished, use check_node with the task's node ID to mark it done (checkbox drives status)`,
       `5. If you cannot complete a task, leave it as-is and note why in your report`,
       ``,
       `REPORT FORMAT — Your report must focus on WHAT YOU DID, not what's pending:`,

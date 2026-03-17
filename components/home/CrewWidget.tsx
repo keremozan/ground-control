@@ -360,7 +360,7 @@ export default function CrewWidget() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             charName,
-            seedPrompt: `You have ${tasks.length} pending task(s).\n\nFor EACH task:\n1. read_node with the node ID\n2. Do the work\n3. Set status to done when finished\n\nTasks:\n${taskList}`,
+            seedPrompt: `You have ${tasks.length} pending task(s).\n\nFor EACH task:\n1. read_node with the node ID\n2. Do the work\n3. Use check_node to mark it done (checkbox drives status)\n\nTasks:\n${taskList}`,
             label: `${displayName} tasks`,
           }),
         })).json();
@@ -419,7 +419,7 @@ export default function CrewWidget() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             charName,
-            seedPrompt: `You have ${tasks.length} pending task(s).\n\nFor EACH task:\n1. read_node with the node ID\n2. Do the work\n3. Set status to done when finished\n\nTasks:\n${taskList}`,
+            seedPrompt: `You have ${tasks.length} pending task(s).\n\nFor EACH task:\n1. read_node with the node ID\n2. Do the work\n3. Use check_node to mark it done (checkbox drives status)\n\nTasks:\n${taskList}`,
             label: `${displayName} tasks`,
           }),
         })).json();
@@ -512,7 +512,7 @@ export default function CrewWidget() {
         `1. Use read_node with the node ID in brackets to read the full task content`,
         `2. Understand what needs to be done`,
         `3. Do the work (create drafts, update Tana, research, etc.)`,
-        `4. When finished, set the task status to done using set_field_option`,
+        `4. When finished, use check_node with the task's node ID to mark it done (checkbox drives status)`,
         `5. If you cannot complete a task, leave it as-is and note why in your report`,
         ``,
         `Tasks:`,
