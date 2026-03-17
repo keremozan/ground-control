@@ -629,16 +629,26 @@ export default function CalendarWidget() {
       .catch(() => setLoadingMonth(false));
   }, []);
 
-  useEffect(() => { fetchListEvents(); }, [fetchListEvents]);
-
-  useEffect(() => {
-    if (view === "week") fetchFullWeek(weekOffset);
-  }, [view, weekOffset, fetchFullWeek]);
-
   const targetMonth = useMemo(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth() + monthOffset, 1);
   }, [monthOffset]);
+
+  const handleRefresh = useCallback(() => {
+    fetchListEvents();
+    if (view === "week") fetchFullWeek(weekOffset);
+    if (view === "month") fetchMonthEvents(targetMonth.getFullYear(), targetMonth.getMonth());
+  }, [fetchListEvents, view, weekOffset, fetchFullWeek, targetMonth, fetchMonthEvents]);
+
+  useEffect(() => {
+    fetchListEvents();
+    const interval = setInterval(handleRefresh, 10 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [fetchListEvents, handleRefresh]);
+
+  useEffect(() => {
+    if (view === "week") fetchFullWeek(weekOffset);
+  }, [view, weekOffset, fetchFullWeek]);
 
   useEffect(() => {
     if (view === "month") {
@@ -702,11 +712,6 @@ export default function CalendarWidget() {
     } catch {}
   };
 
-  const handleRefresh = () => {
-    fetchListEvents();
-    if (view === "week") fetchFullWeek(weekOffset);
-    if (view === "month") fetchMonthEvents(targetMonth.getFullYear(), targetMonth.getMonth());
-  };
 
   const viewBtnStyle = (v: CalView): React.CSSProperties => ({
     display: "flex", alignItems: "center", justifyContent: "center",
