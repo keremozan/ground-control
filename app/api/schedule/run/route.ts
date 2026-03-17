@@ -22,9 +22,9 @@ RULES:
 - NEVER ask the user to choose, confirm, or answer anything. Just do it.
 - Execute ALL non-destructive operations autonomously: create tasks, classify, route, organize.
 - Create Tana tasks for ALL actionable items you find. The user can delete unwanted tasks later.
-- NEVER send emails or messages directly — only create drafts.
+- NEVER send emails or messages directly. Use the #outbox in Tana (see CLAUDE.md OUTBOX RULE).
+- NEVER create Gmail drafts directly. Write #outbox nodes to Tana Inbox instead. Postman-deliver handles dedup and actual draft creation.
 - SKIP items where the deadline has already passed — do not create tasks for expired deadlines.
-- When creating Gmail drafts as replies, MUST set both threadId AND inReplyTo.
 - At the end, produce a brief summary report of what you did.
 - Tana Paste: NEVER use !! heading syntax in node names. Just plain nodes and children. No bold in node names either.
 
@@ -35,6 +35,10 @@ Before creating ANY task, you MUST search Tana first to check if it already exis
 3. "Similar" means same intent, not exact wording. "Send weekly report" and "Email the weekly status report" are duplicates.
 4. In your report, list tasks you SKIPPED as duplicates with the existing task name you found.
 5. When in doubt, DO NOT create the task. It is much worse to create duplicates than to miss one task.
+
+CHANNEL RULE (MANDATORY):
+- If a task originated from WhatsApp (source contains "WhatsApp"), set channel to "whatsapp" in the outbox. Do not use email.
+- Creating an outbox item does NOT mean the task is done. Only mark a task as done when the actual action is complete (email sent, form submitted, document signed). Outbox items are intermediate steps. Leave the task status as-is.
 `.trim();
 
 // Dedup guard: tracks in-flight jobs to prevent double-spawn from rapid crontab firing
@@ -229,6 +233,8 @@ async function handleProcessTasks(
 
     const taskList = tasks.map(t => `- [${t.id}] ${t.name} (${t.status}, ${t.track})`).join('\n');
     const seedPrompt = [
+      `IMPORTANT: This is task processing, NOT a report or review. Do NOT send any email summaries. The REPORT EMAIL RULE does not apply here. Work silently and log results to Tana only.`,
+      ``,
       `You have ${tasks.length} pending task(s) assigned to you.`,
       ``,
       `For EACH task below:`,
@@ -237,6 +243,12 @@ async function handleProcessTasks(
       `3. Do the work (create drafts, update Tana, research, etc.)`,
       `4. When finished, set the task status to done using set_field_option`,
       `5. If you cannot complete a task, leave it as-is and note why in your report`,
+      ``,
+      `REPORT FORMAT — Your report must focus on WHAT YOU DID, not what's pending:`,
+      `- "Completed" section: tasks you finished and how (drafted email, updated Tana, created document, etc.)`,
+      `- "In progress" section: tasks you partially completed and what remains`,
+      `- "Blocked" section: tasks you could not act on and why (needs physical action, browser required, waiting for input)`,
+      `- Do NOT list pending tasks as a to-do list. Postman already does that. Your report is about work done.`,
       ``,
       `Tasks:`,
       taskList,

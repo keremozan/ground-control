@@ -9,6 +9,7 @@ export type ScheduleJob = {
   description: string;  // shown in UI
   cron: string;         // human-readable schedule
   label: string;
+  group?: string;       // UI grouping: scanning, context, delivery, research, tasks, reviews, system
   mode?: string;
   type?: 'single' | 'process-tasks';  // default: 'single'
   maxTurns?: number;  // override default maxTurns for this job

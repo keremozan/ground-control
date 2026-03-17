@@ -7,7 +7,7 @@ import TanaIcon from "@/components/icons/TanaIcon";
 import { parseToolName } from "@/lib/mcp-icons";
 import { resolveIcon } from "@/lib/icon-map";
 import {
-  BookOpen, Check, Copy, CornerUpRight, Flag, GripHorizontal, Loader2,
+  BookOpen, Check, Copy, CornerUpRight, Flag, GripHorizontal, Hammer, Loader2,
   MessageSquare, Send, Square, Trash2, Plus, Wrench, X,
 } from "lucide-react";
 
@@ -1448,6 +1448,9 @@ export default function ChatWidget() {
   const [renameValue, setRenameValue] = useState("");
   const [hydrated, setHydrated] = useState(false);
   const [showNewTabPicker, setShowNewTabPicker] = useState(false);
+  const [showEngineerInput, setShowEngineerInput] = useState(false);
+  const [engineerInputValue, setEngineerInputValue] = useState("");
+  const engineerInputRef = useRef<HTMLTextAreaElement>(null);
   const [showArchitectInput, setShowArchitectInput] = useState(false);
   const [architectInputValue, setArchitectInputValue] = useState("");
   const architectInputRef = useRef<HTMLTextAreaElement>(null);
@@ -1602,13 +1605,37 @@ export default function ChatWidget() {
     } catch {}
   }, [tabs, activeTabId, characters, formatChat]);
 
+  const sendToEngineer = useCallback((extraContext?: string) => {
+    const tab = tabs.find(t => t.id === activeTabId);
+    if (!tab || tab.messages.length === 0) return;
+    const engineer = characters.find(c => c.name === "Engineer");
+    if (!engineer) return;
+    const chatContent = formatChat(tab.messages);
+    const baseSeed = "Review this conversation for code-level issues. Diagnose bugs, fix broken implementations, resolve errors, and implement requested changes. Focus on the technical problem, not system architecture.";
+    const seed = extraContext ? `${baseSeed}\n\nContext: ${extraContext}` : baseSeed;
+    const newTab: TabMeta = { id: genTabId(), charId: engineer.id, messages: [] };
+    setTabs(prev => [...prev, newTab]);
+    setActiveTabId(newTab.id);
+    setShowEngineerInput(false);
+    setEngineerInputValue("");
+    setPendingTrigger({
+      tabId: newTab.id,
+      trigger: {
+        charName: "Engineer",
+        seedPrompt: seed,
+        context: chatContent,
+        action: "forward-to-engineer",
+      },
+    });
+  }, [tabs, activeTabId, characters, formatChat]);
+
   const sendToArchitect = useCallback((extraContext?: string) => {
     const tab = tabs.find(t => t.id === activeTabId);
     if (!tab || tab.messages.length === 0) return;
     const architect = characters.find(c => c.name === "Architect");
     if (!architect) return;
     const chatContent = formatChat(tab.messages);
-    const baseSeed = "Review this conversation for system-level issues — broken skills, wrong routing, missing tools, character misbehavior, or prompt failures. Diagnose what went wrong at the meta/system level, not the conversation's topic itself.";
+    const baseSeed = "Review this conversation for system-level issues. Broken skills, wrong routing, missing tools, character misbehavior, prompt failures, schema problems. Diagnose what went wrong at the system/architecture level.";
     const seed = extraContext ? `${baseSeed}\n\nContext: ${extraContext}` : baseSeed;
     const newTab: TabMeta = { id: genTabId(), charId: architect.id, messages: [] };
     setTabs(prev => [...prev, newTab]);
@@ -1704,6 +1731,14 @@ export default function ChatWidget() {
           </button>
           <button
             className="widget-toolbar-btn"
+            data-tip="Send to Engineer"
+            onClick={() => setShowEngineerInput(v => !v)}
+            style={showEngineerInput ? { color: "var(--blue)", opacity: 1 } : undefined}
+          >
+            <Hammer size={12} strokeWidth={1.5} />
+          </button>
+          <button
+            className="widget-toolbar-btn"
             data-tip="Send to Architect"
             onClick={() => setShowArchitectInput(v => !v)}
             style={showArchitectInput ? { color: "var(--blue)", opacity: 1 } : undefined}
@@ -1731,6 +1766,42 @@ export default function ChatWidget() {
           </button>
         </div>
       </div>
+
+      {/* Engineer context input */}
+      {showEngineerInput && (
+        <div style={{
+          borderBottom: "1px solid var(--border)", background: "var(--surface-2)",
+          padding: "6px 10px", flexShrink: 0, display: "flex", alignItems: "center", gap: 6,
+        }}>
+          <textarea
+            ref={engineerInputRef}
+            autoFocus
+            value={engineerInputValue}
+            onChange={e => setEngineerInputValue(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendToEngineer(engineerInputValue.trim() || undefined); }
+              if (e.key === "Escape") { setShowEngineerInput(false); setEngineerInputValue(""); }
+            }}
+            placeholder="context for engineer (optional)"
+            rows={1}
+            style={{
+              flex: 1, fontFamily: "var(--font-mono)", fontSize: 10,
+              color: "var(--text)", background: "transparent",
+              border: "none", outline: "none", resize: "none",
+              padding: 0, lineHeight: 1.5,
+            }}
+          />
+          <button
+            onClick={() => sendToEngineer(engineerInputValue.trim() || undefined)}
+            style={{
+              background: "transparent", border: "none", cursor: "pointer",
+              color: "var(--blue)", padding: 2, display: "flex", alignItems: "center",
+            }}
+          >
+            <CornerUpRight size={11} strokeWidth={2} />
+          </button>
+        </div>
+      )}
 
       {/* Architect context input */}
       {showArchitectInput && (
@@ -1767,7 +1838,6 @@ export default function ChatWidget() {
           </button>
         </div>
       )}
-
 
       {/* Tab bar */}
       <div style={{
