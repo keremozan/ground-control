@@ -3,7 +3,7 @@ import {
   Heart, Wrench, Telescope,
   Users, Stethoscope, Palette, GraduationCap,
   Pen, Eye, Hammer, Archive, Clock, Compass,
-  Crosshair, Scale,
+  Crosshair, Scale, Layers,
   type LucideIcon,
 } from "lucide-react";
 
@@ -26,7 +26,7 @@ export const charColor: Record<string, string> = {
   steward:   '#0d9488',  // teal
   kybernetes:'#4f46e5',  // indigo
   prober:    '#0891b2',  // cyan
-  auditor:   '#059669',  // emerald
+  auditor:   '#10b981',  // emerald-400
   system:    '#64748b',  // gray
 };
 
@@ -37,7 +37,7 @@ export const charIcon: Record<string, LucideIcon> = {
   Coach:     Heart,
   Curator:   Palette,
   Proctor:   GraduationCap,
-  Architect: Wrench,
+  Architect: Layers,
   Oracle:    Telescope,
   Doctor:    Stethoscope,
   Scribe:    Pen,

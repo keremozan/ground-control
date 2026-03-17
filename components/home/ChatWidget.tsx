@@ -7,8 +7,8 @@ import TanaIcon from "@/components/icons/TanaIcon";
 import { parseToolName } from "@/lib/mcp-icons";
 import { resolveIcon } from "@/lib/icon-map";
 import {
-  BookOpen, Check, Copy, CornerUpRight, Flag, GripHorizontal, Hammer, Loader2,
-  MessageSquare, Send, Square, Trash2, Plus, Wrench, X,
+  BookOpen, Check, Copy, CornerUpRight, Flag, GripHorizontal, Hammer, Layers, Loader2,
+  MessageSquare, Send, Square, Trash2, Plus, X,
 } from "lucide-react";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -1743,7 +1743,7 @@ export default function ChatWidget() {
             onClick={() => setShowArchitectInput(v => !v)}
             style={showArchitectInput ? { color: "var(--blue)", opacity: 1 } : undefined}
           >
-            <Wrench size={12} strokeWidth={1.5} />
+            <Layers size={12} strokeWidth={1.5} />
           </button>
           <button
             className="widget-toolbar-btn"
