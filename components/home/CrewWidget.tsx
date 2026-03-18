@@ -86,12 +86,12 @@ export default function CrewWidget() {
   const [recentLogs, setRecentLogs] = useState<ActionLogEntry[]>(() => getLog());
   useEffect(() => subscribeLog(() => setRecentLogs([...getLog()])), []);
 
-  const CREW_ORDER = ["scholar", "curator", "proctor", "coach", "postman", "clerk", "steward", "archivist", "scribe", "doctor", "prober", "auditor", "architect", "engineer", "watcher", "kybernetes", "oracle"];
+  const CREW_ORDER = ["scholar", "curator", "proctor", "coach", "tutor", "postman", "clerk", "steward", "archivist", "scribe", "doctor", "prober", "auditor", "architect", "engineer", "watcher", "kybernetes", "oracle"];
   const CREW_FILTERS: { label: string; ids: string[] }[] = [
     { label: "Research", ids: ["scholar", "scribe", "prober", "auditor", "curator"] },
     { label: "Teaching", ids: ["proctor", "scribe"] },
     { label: "Admin", ids: ["clerk", "steward", "archivist", "postman"] },
-    { label: "Personal", ids: ["coach", "doctor"] },
+    { label: "Personal", ids: ["coach", "doctor", "tutor"] },
     { label: "System", ids: ["architect", "engineer", "watcher", "kybernetes", "oracle"] },
   ];
   const [crewFilter, setCrewFilter] = useState<string | null>(null);
@@ -950,10 +950,10 @@ export default function CrewWidget() {
             {enabledJobs.length > 0 && (
               <>
                 {(() => {
-                  const GROUP_ORDER = ["scanning", "context", "delivery", "research", "tasks", "reviews", "system"];
+                  const GROUP_ORDER = ["scanning", "context", "delivery", "research", "tasks", "reviews", "personal", "system"];
                   const GROUP_LABELS: Record<string, string> = {
                     scanning: "Scanning", context: "Context", delivery: "Delivery",
-                    research: "Research", tasks: "Tasks", reviews: "Reviews", system: "System",
+                    research: "Research", tasks: "Tasks", reviews: "Reviews", personal: "Personal", system: "System",
                   };
                   const groups = new Map<string, typeof enabledJobs>();
                   for (const job of enabledJobs) {

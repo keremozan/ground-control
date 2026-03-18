@@ -151,7 +151,11 @@ export function ClassesTabContent() {
       .catch(() => setLoading(false));
   }, []);
 
-  useEffect(() => { fetchClasses(); }, [fetchClasses]);
+  useEffect(() => {
+    fetchClasses();
+    const interval = setInterval(fetchClasses, 10 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [fetchClasses]);
 
   async function handleToggle(item: ChecklistItem) {
     if (toggling.has(item.id)) return;

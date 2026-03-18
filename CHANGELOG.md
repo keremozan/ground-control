@@ -1,6 +1,6 @@
 # Changelog
 
-## v1.6.4 — 2026-03-15
+## v1.8.0 — 2026-03-18
 
 ### Proposals
 - [new] System-wide proposal engine with 7 types (strategic, pattern, rebalance, schedule, skill-edit, cleanup, automation)
@@ -9,8 +9,18 @@
 - [new] Dismiss memory prevents re-proposals for 30 days
 
 ### Crew
-- [new] Per-character Tasks button fetches assigned tasks and runs character autonomously
+- [new] Per-character Tasks button fetches assigned tasks and runs character autonomously (100 max turns)
+- [new] Tutor character added (Sprout icon, lime color, Personal group)
+- [new] "Personal" group in schedule tab for Tutor jobs
 - [improved] Task completion uses checkbox (check_node) instead of status field
+- [improved] Ad-hoc spawns accept maxTurns override from client
+
+### Scheduler
+- [new] sync-crontab.py script generates crontab from config
+- [fix] Installed all 28 scheduled jobs (only 4 were in crontab previously)
+
+### Widgets
+- [improved] Auto-refresh every 10 minutes for Tasks, Inbox, and Classes widgets
 
 ## v1.6.3 — 2026-03-15
 

@@ -125,7 +125,11 @@ export default function InboxWidget() {
       .catch(() => setLoading(false));
   }, []);
 
-  useEffect(() => { fetchEmails(); }, [fetchEmails]);
+  useEffect(() => {
+    fetchEmails();
+    const interval = setInterval(fetchEmails, 10 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [fetchEmails]);
 
   useEffect(() => {
     fetch("/api/characters").then(r => r.json())

@@ -516,7 +516,11 @@ export default function TasksWidget() {
       .catch(() => setLoading(false));
   }, []);
 
-  useEffect(() => { fetchTasks(); }, [fetchTasks]);
+  useEffect(() => {
+    fetchTasks();
+    const interval = setInterval(fetchTasks, 10 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [fetchTasks]);
 
   useEffect(() => {
     fetch("/api/characters").then(r => r.json())
