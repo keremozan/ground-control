@@ -50,5 +50,8 @@ mcp-tasks.json
 # internal design docs (may contain personal data)
 /docs/plans/
 
+# brainstorming session files
+.superpowers/
+
 # private system changelog (skills, characters, Tana schema — not for GitHub)
 CHANGELOG.private.md

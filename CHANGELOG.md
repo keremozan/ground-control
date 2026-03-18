@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.8.1 — 2026-03-18
+
+### Crew
+- [new] Proctor "Summary" action generates cumulative course PDF summaries with incremental fragment caching
+
+### System
+- [new] Crontab sync script (scripts/sync-crontab.py)
+- [fix] .superpowers/ added to .gitignore
+
 ## v1.8.0 — 2026-03-18
 
 ### Proposals
