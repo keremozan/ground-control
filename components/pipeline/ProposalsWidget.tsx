@@ -224,7 +224,7 @@ export default function ProposalsWidget({ hideHeader }: { hideHeader?: boolean }
           </div>
         )}
 
-        {proposals.length === 0 && (
+        {proposals.length === 0 && plans.length === 0 && (
           <div style={{
             display: "flex", flexDirection: "column", alignItems: "center",
             justifyContent: "center", height: "100%", padding: 20, gap: 6,
