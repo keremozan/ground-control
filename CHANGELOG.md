@@ -1,5 +1,18 @@
 # Changelog
 
+## v1.9.0 — 2026-03-18
+
+### Crew
+- [new] "Processes" tab shows all active Claude CLI processes with character icon, elapsed time, and stop button
+- [new] Live polling (3s) with badge count when processes are running
+
+### Proposals
+- [new] "Design Plans" section lists spec and plan files from docs/superpowers/
+- [new] Expand to preview content, copy file path for use in Claude Code sessions
+
+### Scheduler
+- [fix] process-tasks jobs (evening-tasks) now correctly mark completion, preventing catch-up from re-firing them repeatedly
+
 ## v1.8.1 — 2026-03-18
 
 ### Crew
