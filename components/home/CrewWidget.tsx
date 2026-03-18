@@ -102,6 +102,13 @@ export default function CrewWidget() {
     return () => clearInterval(interval);
   }, [fetchProcesses]);
 
+  // Auto-switch away from Processes tab when it empties
+  useEffect(() => {
+    if (activeTab === "processes" && processes.length === 0) {
+      setActiveTab("crew");
+    }
+  }, [processes.length, activeTab]);
+
   const handleStopProcess = useCallback(async (id: string) => {
     setStoppingProcess(id);
     try {
@@ -583,7 +590,9 @@ export default function CrewWidget() {
         <div style={{ display: "flex", alignItems: "center", gap: 0 }}>
           <CrewTabBtn label="Crew" icon={<Bot size={13} strokeWidth={1.5} />} active={activeTab === "crew"} onClick={() => setActiveTab("crew")} />
           <CrewTabBtn label="Schedules" icon={<CalendarDays size={13} strokeWidth={1.5} />} active={activeTab === "schedules"} badge={scheduledTasks.length > 0 ? scheduledTasks.length : undefined} onClick={() => setActiveTab("schedules")} />
-          <CrewTabBtn label="Processes" icon={<Zap size={13} strokeWidth={1.5} />} active={activeTab === "processes"} badge={processes.length > 0 ? processes.length : undefined} onClick={() => setActiveTab("processes")} />
+          {processes.length > 0 && (
+            <CrewTabBtn label="Processes" icon={<Zap size={13} strokeWidth={1.5} />} active={activeTab === "processes"} badge={processes.length} onClick={() => setActiveTab("processes")} />
+          )}
           <CrewTabBtn label="Logs" icon={<Activity size={13} strokeWidth={1.5} />} active={activeTab === "logs"} onClick={() => setActiveTab("logs")} />
           <CrewTabBtn label="Proposals" icon={<Wrench size={13} strokeWidth={1.5} />} active={activeTab === "proposals"} badge={proposalCount > 0 ? proposalCount : undefined} onClick={() => setActiveTab("proposals")} />
         </div>
@@ -1233,17 +1242,8 @@ export default function CrewWidget() {
           </div>
         )}
 
-        {activeTab === "processes" && (
+        {activeTab === "processes" && processes.length > 0 && (
           <div style={{ padding: "6px 10px 8px" }}>
-            {processes.length === 0 ? (
-              <div style={{
-                fontFamily: "var(--font-mono)", fontSize: 11,
-                color: "var(--text-3)", textAlign: "center",
-                padding: "24px 0",
-              }}>
-                No active processes
-              </div>
-            ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                 {processes.map((proc, i) => {
                   const color = charColor[proc.charName] || "#94a3b8";
@@ -1304,7 +1304,6 @@ export default function CrewWidget() {
                   );
                 })}
               </div>
-            )}
           </div>
         )}
 
