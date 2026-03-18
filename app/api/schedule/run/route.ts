@@ -15,7 +15,7 @@ import path from 'path';
 const RESULTS_FILE = JOB_RESULTS_PATH;
 const MAX_RESULTS = MAX_JOB_RESULTS;
 
-const SCHEDULED_AUTONOMY = `
+const SCHEDULED_AUTONOMY_TEMPLATE = `
 CRITICAL: This is an AUTOMATED scheduled job. You are running unattended — there is no human to answer questions.
 
 RULES:
@@ -28,18 +28,52 @@ RULES:
 - At the end, produce a brief summary report of what you did.
 - Tana Paste: NEVER use !! heading syntax in node names. Just plain nodes and children. No bold in node names either.
 
-DUPLICATE PREVENTION (MANDATORY):
-Before creating ANY task, you MUST search Tana first to check if it already exists:
-1. Use tana_semantic_search with the task name as query (limit: 10, minSimilarity: 0.4). This finds conceptually similar tasks even with different wording.
-2. Read through the results — if ANY existing task covers the same action/topic, SKIP creating it.
-3. "Similar" means same intent, not exact wording. "Send weekly report" and "Email the weekly status report" are duplicates.
-4. In your report, list tasks you SKIPPED as duplicates with the existing task name you found.
-5. When in doubt, DO NOT create the task. It is much worse to create duplicates than to miss one task.
+DUPLICATE PREVENTION (MANDATORY — ZERO TOLERANCE):
+A task already exists if ANY item in the EXISTING TASKS list below covers the same action, person, or topic — even with different wording. Examples of duplicates:
+- "Schedule meeting with Adnan Yerebakan" = "Schedule meeting with Adnan (Sanatorium)"
+- "Review Orhan's supply quotes" = "Process Orhan's SUSAM supply quote documents"
+- "Fill in Future of FASS survey" = "Fill FASS Future of FASS workshop survey"
+- "Book return flights Istanbul-London" = "Purchase reserved flight ticket for July"
+
+Rules:
+1. BEFORE creating ANY task, check the EXISTING TASKS list below. If the same intent exists, DO NOT create the task. No exceptions.
+2. If the list does not cover it, ALSO use tana_semantic_search (limit: 10, minSimilarity: 0.3) as a second check.
+3. "Same intent" means same person + same action OR same topic + same goal. Different wording does not make it a different task.
+4. In your report, list tasks you SKIPPED as duplicates.
+5. When in doubt, DO NOT create the task. Creating duplicates wastes significant time.
+{{EXISTING_TASKS}}
 
 CHANNEL RULE (MANDATORY):
 - If a task originated from WhatsApp (source contains "WhatsApp"), set channel to "whatsapp" in the outbox. Do not use email.
 - Creating an outbox item does NOT mean the task is done. Only mark a task as done when the actual action is complete (email sent, form submitted, document signed). Outbox items are intermediate steps. Leave the task status as-is.
 `.trim();
+
+// Cache of existing task names, refreshed before each scheduled run
+let _existingTasksCache: string[] = [];
+let _existingTasksCacheTs = 0;
+const TASK_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+async function getExistingTaskNames(): Promise<string[]> {
+  if (Date.now() - _existingTasksCacheTs < TASK_CACHE_TTL_MS && _existingTasksCache.length > 0) {
+    return _existingTasksCache;
+  }
+  try {
+    const tasks = await getTanaTasks();
+    _existingTasksCache = tasks.map(t => t.name);
+    _existingTasksCacheTs = Date.now();
+    return _existingTasksCache;
+  } catch {
+    return _existingTasksCache; // return stale cache on error
+  }
+}
+
+async function buildScheduledAutonomy(): Promise<string> {
+  const taskNames = await getExistingTaskNames();
+  const taskList = taskNames.length > 0
+    ? `\nEXISTING TASKS (do NOT create duplicates of these):\n${taskNames.map(n => `- ${n}`).join('\n')}\n`
+    : '';
+  return SCHEDULED_AUTONOMY_TEMPLATE.replace('{{EXISTING_TASKS}}', taskList);
+}
 
 // Dedup guard: tracks in-flight jobs to prevent double-spawn from rapid crontab firing
 const IN_FLIGHT = new Map<string, number>();
@@ -137,7 +171,8 @@ export async function POST(req: Request) {
     return Response.json({ ok: false, error: 'Character not found' }, { status: 404 });
   }
 
-  const taskContent = `${seedPrompt}\n\n---\n\n${SCHEDULED_AUTONOMY}`;
+  const scheduledAutonomy = await buildScheduledAutonomy();
+  const taskContent = `${seedPrompt}\n\n---\n\n${scheduledAutonomy}`;
   const prompt = buildCharacterPrompt(charName, taskContent);
   const model = char.defaultModel || 'sonnet';
   const maxTurns = body.maxTurns ?? job?.maxTurns ?? (mode === 'full' ? 30 : mode === 'light' ? 15 : 20);
@@ -205,6 +240,8 @@ async function handleProcessTasks(
       }
     }
   } catch (err) {
+    markJobRun(jobId, 'error');
+    IN_FLIGHT.delete(jobId);
     return Response.json({ ok: false, error: `Task fetch failed: ${err}` }, { status: 500 });
   }
 
@@ -220,6 +257,8 @@ async function handleProcessTasks(
     };
     const existing = readResults();
     writeResults([result, ...existing]);
+    markJobRun(jobId, 'success');
+    IN_FLIGHT.delete(jobId);
     return Response.json({ ok: true, result });
   }
 
@@ -255,7 +294,8 @@ async function handleProcessTasks(
       taskList,
     ].join('\n');
 
-    const taskContent = `${seedPrompt}\n\n---\n\n${SCHEDULED_AUTONOMY}`;
+    const scheduledAutonomy = await buildScheduledAutonomy();
+    const taskContent = `${seedPrompt}\n\n---\n\n${scheduledAutonomy}`;
     const prompt = buildCharacterPrompt(cn, taskContent);
     const model = char.defaultModel || 'sonnet';
 
@@ -294,6 +334,9 @@ async function handleProcessTasks(
     durationMs: Date.now() - start,
   };
   writeResults([mainResult, ...charResults, ...existing]);
+
+  markJobRun(jobId, 'success');
+  IN_FLIGHT.delete(jobId);
 
   return Response.json({ ok: true, result: mainResult });
 }

@@ -5,7 +5,7 @@ import { useChatTrigger } from "@/lib/chat-store";
 import { logAction, clearLog, getLog, subscribeLog, type ActionLogEntry } from "@/lib/action-log";
 import { SCHEDULE_JOBS, type JobResult } from "@/lib/scheduler";
 import { charIcon, charColor } from "@/lib/char-icons";
-import { Loader2, Play, X, CalendarDays, BookOpen, SlidersHorizontal, CheckCircle, AlertCircle, Activity, Wrench, Bot, Trash2, Clock, Pencil, MessageSquare, ListChecks } from "lucide-react";
+import { Loader2, Play, X, CalendarDays, BookOpen, SlidersHorizontal, CheckCircle, AlertCircle, Activity, Wrench, Bot, Trash2, Clock, Pencil, MessageSquare, ListChecks, Zap, Square } from "lucide-react";
 import CharDetailDrawer from "@/components/home/CharDetailDrawer";
 import LogsWidget from "@/components/pipeline/LogsWidget";
 import ProposalsWidget from "@/components/pipeline/ProposalsWidget";
@@ -75,7 +75,7 @@ export default function CrewWidget() {
   const [dispatchPhase, setDispatchPhase] = useState("");
   const [dispatchSummary, setDispatchSummary] = useState("");
   const dispatchRef = useRef(false);
-  const [activeTab, setActiveTab] = useState<"crew" | "schedules" | "logs" | "proposals">("crew");
+  const [activeTab, setActiveTab] = useState<"crew" | "schedules" | "processes" | "logs" | "proposals">("crew");
   const [selectedResult, setSelectedResult] = useState<JobResult | null>(null);
   const [proposalCount, setProposalCount] = useState(0);
   const [scheduledTasks, setScheduledTasks] = useState<Array<{ id: string; charName: string; seedPrompt: string; label: string; scheduledAt: string }>>([]);
@@ -85,6 +85,31 @@ export default function CrewWidget() {
   const [jobOverrides, setJobOverrides] = useState<Record<string, string>>({});
   const [recentLogs, setRecentLogs] = useState<ActionLogEntry[]>(() => getLog());
   useEffect(() => subscribeLog(() => setRecentLogs([...getLog()])), []);
+
+  const [processes, setProcesses] = useState<Array<{ id: string; pid: number; charName: string; label: string; jobId?: string; startedAt: string }>>([]);
+  const [stoppingProcess, setStoppingProcess] = useState<string | null>(null);
+
+  const fetchProcesses = useCallback(() => {
+    fetch("/api/processes")
+      .then(r => r.json())
+      .then(d => setProcesses(d.processes || []))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetchProcesses();
+    const interval = setInterval(fetchProcesses, 3000);
+    return () => clearInterval(interval);
+  }, [fetchProcesses]);
+
+  const handleStopProcess = useCallback(async (id: string) => {
+    setStoppingProcess(id);
+    try {
+      await fetch(`/api/processes/${id}`, { method: "DELETE" });
+      fetchProcesses();
+    } catch {}
+    setTimeout(() => setStoppingProcess(null), 1000);
+  }, [fetchProcesses]);
 
   const CREW_ORDER = ["scholar", "curator", "proctor", "coach", "tutor", "postman", "clerk", "steward", "archivist", "scribe", "doctor", "prober", "auditor", "architect", "engineer", "watcher", "kybernetes", "oracle"];
   const CREW_FILTERS: { label: string; ids: string[] }[] = [
@@ -558,6 +583,7 @@ export default function CrewWidget() {
         <div style={{ display: "flex", alignItems: "center", gap: 0 }}>
           <CrewTabBtn label="Crew" icon={<Bot size={13} strokeWidth={1.5} />} active={activeTab === "crew"} onClick={() => setActiveTab("crew")} />
           <CrewTabBtn label="Schedules" icon={<CalendarDays size={13} strokeWidth={1.5} />} active={activeTab === "schedules"} badge={scheduledTasks.length > 0 ? scheduledTasks.length : undefined} onClick={() => setActiveTab("schedules")} />
+          <CrewTabBtn label="Processes" icon={<Zap size={13} strokeWidth={1.5} />} active={activeTab === "processes"} badge={processes.length > 0 ? processes.length : undefined} onClick={() => setActiveTab("processes")} />
           <CrewTabBtn label="Logs" icon={<Activity size={13} strokeWidth={1.5} />} active={activeTab === "logs"} onClick={() => setActiveTab("logs")} />
           <CrewTabBtn label="Proposals" icon={<Wrench size={13} strokeWidth={1.5} />} active={activeTab === "proposals"} badge={proposalCount > 0 ? proposalCount : undefined} onClick={() => setActiveTab("proposals")} />
         </div>
@@ -1207,6 +1233,81 @@ export default function CrewWidget() {
           </div>
         )}
 
+        {activeTab === "processes" && (
+          <div style={{ padding: "6px 10px 8px" }}>
+            {processes.length === 0 ? (
+              <div style={{
+                fontFamily: "var(--font-mono)", fontSize: 11,
+                color: "var(--text-3)", textAlign: "center",
+                padding: "24px 0",
+              }}>
+                No active processes
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                {processes.map((proc, i) => {
+                  const color = charColor[proc.charName] || "#94a3b8";
+                  const Icon = charIcon[proc.charName.charAt(0).toUpperCase() + proc.charName.slice(1)] || Bot;
+                  const isStopping = stoppingProcess === proc.id;
+                  return (
+                    <div key={proc.id} style={{
+                      display: "flex", alignItems: "center", gap: 6,
+                      padding: "5px 4px",
+                      borderRadius: 5,
+                      background: i % 2 === 0 ? "transparent" : "var(--surface-2)",
+                    }}>
+                      <div style={{
+                        width: 20, height: 20, borderRadius: 4, flexShrink: 0,
+                        background: color + "16", border: `1px solid ${color}28`,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                      }}>
+                        <Icon size={10} strokeWidth={1.5} style={{ color }} />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{
+                          fontFamily: "var(--font-mono)", fontSize: 10,
+                          color: "var(--text)",
+                          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                        }}>
+                          {proc.label}
+                        </div>
+                        <div style={{
+                          fontFamily: "var(--font-mono)", fontSize: 9,
+                          color: "var(--text-3)", marginTop: 1,
+                          display: "flex", gap: 5,
+                        }}>
+                          <span>{proc.charName}</span>
+                          <span>PID {proc.pid}</span>
+                          <ProcessElapsed startedAt={proc.startedAt} />
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleStopProcess(proc.id)}
+                        disabled={isStopping}
+                        data-tip="Stop process"
+                        style={{
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          width: 20, height: 20, flexShrink: 0,
+                          background: "transparent",
+                          border: `1px solid ${isStopping ? "var(--border)" : "var(--red)"}40`,
+                          borderRadius: 4,
+                          cursor: isStopping ? "default" : "pointer",
+                          color: isStopping ? "var(--text-3)" : "var(--red)",
+                          transition: "all 0.15s ease",
+                        }}
+                      >
+                        {isStopping
+                          ? <Loader2 size={9} strokeWidth={2} style={{ animation: "spin 1s linear infinite" }} />
+                          : <Square size={8} strokeWidth={2.5} fill="currentColor" />}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
         {activeTab === "logs" && (
           <div style={{ height: "100%", minHeight: 0, overflow: "hidden" }}>
             <LogsWidget onShowResult={setSelectedResult} hideHeader />
@@ -1286,4 +1387,22 @@ function CrewTabBtn({
       )}
     </button>
   );
+}
+
+function ProcessElapsed({ startedAt }: { startedAt: string }) {
+  const [elapsed, setElapsed] = useState("");
+
+  useEffect(() => {
+    const update = () => {
+      const seconds = Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000);
+      if (seconds < 60) setElapsed(`${seconds}s`);
+      else if (seconds < 3600) setElapsed(`${Math.floor(seconds / 60)}m ${seconds % 60}s`);
+      else setElapsed(`${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`);
+    };
+    update();
+    const interval = setInterval(update, 1000);
+    return () => clearInterval(interval);
+  }, [startedAt]);
+
+  return <span>{elapsed}</span>;
 }

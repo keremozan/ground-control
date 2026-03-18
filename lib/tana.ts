@@ -1035,8 +1035,10 @@ function parseChecklist(markdown: string): ChecklistItem[] {
 
   // Known group headers by text pattern — skip them and use as group transitions.
   // Children (deeper indent) inherit the current group.
+  // "prep tasks" covers the supertag-template container structure; "prep lesson" covers the attached checklist structure.
   const GROUP_HEADERS: { pattern: RegExp; group: 'prep' | 'post-lesson' }[] = [
     { pattern: /prep lesson/i, group: 'prep' },
+    { pattern: /prep tasks?/i, group: 'prep' },
     { pattern: /post.?lesson/i, group: 'post-lesson' },
   ];
 
@@ -1151,9 +1153,8 @@ export async function getClassNodes(): Promise<ClassPrepNode[]> {
 
       // Auto-attach standard checklist if missing (handles calendar-synced nodes).
       // Guard: check actual direct children to see if prep/post-lesson nodes already exist.
-      // The supertag template may auto-create a "prep tasks" container with "prep lesson"
-      // inside it — that doesn't count. Only direct content children named "prep lesson"
-      // or "post-lesson review" mean the checklist is already attached.
+      // Both "prep tasks" (supertag template container) and "prep lesson" (attached checklist header)
+      // count as valid checklist roots.
       if (checklist.length === 0) {
         const childrenResult = await mcpCall('tools/call', {
           name: 'get_children',
@@ -1161,7 +1162,7 @@ export async function getClassNodes(): Promise<ClassPrepNode[]> {
         });
         const childList: { name: string; docType: string }[] = Array.isArray(childrenResult?.children) ? childrenResult.children : [];
         const hasDirectChecklist = childList.some(
-          c => c.docType === 'content' && (/prep lesson/i.test(c.name) || /post[\s-]?lesson/i.test(c.name))
+          c => c.docType === 'content' && (/prep tasks?/i.test(c.name) || /prep lesson/i.test(c.name) || /post[\s-]?lesson/i.test(c.name))
         );
         if (!hasDirectChecklist) {
           const freshMd = await attachChecklistToClass(node.id);

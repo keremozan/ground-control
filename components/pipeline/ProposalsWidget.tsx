@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import { RefreshCw, Check, X, ChevronDown, ChevronRight, Wrench } from "lucide-react";
+import { RefreshCw, Check, X, ChevronDown, ChevronRight, Wrench, FileText, Copy, ClipboardCheck } from "lucide-react";
 import { charIcon, charColor } from "@/lib/char-icons";
 
 type ProposalType = "skill-edit" | "schedule" | "rebalance" | "pattern" | "cleanup" | "automation" | "strategic";
@@ -22,6 +22,15 @@ type Proposal = {
   priority: ProposalPriority;
   createdAt: string;
   status: string;
+};
+
+type PlanFile = {
+  name: string;
+  path: string;
+  type: 'plan' | 'spec';
+  title: string;
+  goal: string;
+  modifiedAt: string;
 };
 
 const TYPE_LABELS: Record<ProposalType, string> = {
@@ -105,6 +114,39 @@ export default function ProposalsWidget({ hideHeader }: { hideHeader?: boolean }
   }, []);
 
   useEffect(() => { fetch_(); }, [fetch_]);
+
+  const [plans, setPlans] = useState<PlanFile[]>([]);
+  const [expandedPlan, setExpandedPlan] = useState<string | null>(null);
+  const [planContent, setPlanContent] = useState<string | null>(null);
+  const [copied, setCopied] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/system/plans")
+      .then(r => r.json())
+      .then(d => setPlans(d.plans || []))
+      .catch(() => {});
+  }, []);
+
+  const handleExpandPlan = async (name: string) => {
+    if (expandedPlan === name) {
+      setExpandedPlan(null);
+      setPlanContent(null);
+      return;
+    }
+    setExpandedPlan(name);
+    setPlanContent(null);
+    try {
+      const res = await fetch(`/api/system/plans?content=${encodeURIComponent(name)}`);
+      const data = await res.json();
+      setPlanContent(data.content || null);
+    } catch {}
+  };
+
+  const handleCopyPath = (filePath: string, name: string) => {
+    navigator.clipboard.writeText(filePath);
+    setCopied(name);
+    setTimeout(() => setCopied(null), 2000);
+  };
 
   const handleAction = async (id: string, action: "approve" | "dismiss") => {
     setBusy(prev => new Set(prev).add(id));
@@ -305,6 +347,111 @@ export default function ProposalsWidget({ hideHeader }: { hideHeader?: boolean }
             })}
           </div>
         ))}
+
+        {plans.length > 0 && (
+          <div>
+            <div style={{
+              padding: "6px 14px 4px",
+              fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 600,
+              color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.05em",
+              borderBottom: "1px solid var(--border)",
+              borderTop: "1px solid var(--border)",
+              background: "var(--bg-2, transparent)",
+            }}>
+              Design Plans
+              <span style={{ marginLeft: 6, opacity: 0.5 }}>{plans.length}</span>
+            </div>
+
+            {plans.map((plan) => {
+              const isExpanded = expandedPlan === plan.name;
+              return (
+                <div key={plan.name} style={{ borderBottom: "1px solid var(--border)" }}>
+                  <div
+                    onClick={() => handleExpandPlan(plan.name)}
+                    style={{
+                      padding: "8px 14px",
+                      cursor: "pointer",
+                      display: "flex", alignItems: "flex-start", gap: 8,
+                    }}
+                  >
+                    {isExpanded
+                      ? <ChevronDown size={12} strokeWidth={1.5} style={{ color: "var(--text-3)", marginTop: 2, flexShrink: 0 }} />
+                      : <ChevronRight size={12} strokeWidth={1.5} style={{ color: "var(--text-3)", marginTop: 2, flexShrink: 0 }} />
+                    }
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <FileText size={12} strokeWidth={1.5} style={{ color: plan.type === "plan" ? "var(--blue)" : "var(--green)", flexShrink: 0 }} />
+                        <span style={{
+                          fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 600,
+                          color: "var(--text)",
+                          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                        }}>
+                          {plan.title}
+                        </span>
+                        <span style={{
+                          fontFamily: "var(--font-mono)", fontSize: 8,
+                          color: plan.type === "plan" ? "var(--blue)" : "var(--green)",
+                          background: plan.type === "plan" ? "var(--blue-bg)" : "var(--green-bg)",
+                          padding: "0 4px", borderRadius: 3, flexShrink: 0,
+                        }}>
+                          {plan.type}
+                        </span>
+                      </div>
+                      {plan.goal && (
+                        <div style={{
+                          fontFamily: "var(--font-mono)", fontSize: 9,
+                          color: "var(--text-3)", marginTop: 2,
+                          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                        }}>
+                          {plan.goal}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {isExpanded && (
+                    <div style={{ padding: "0 14px 10px 34px" }}>
+                      <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+                        <button
+                          className="item-action-btn"
+                          onClick={() => handleCopyPath(plan.path, plan.name)}
+                          style={{
+                            cursor: "pointer", display: "flex", alignItems: "center", gap: 3,
+                            color: "var(--blue)", padding: "3px 8px", fontSize: 10,
+                            fontFamily: "var(--font-mono)", border: "1px solid var(--blue)30",
+                            borderRadius: 4, background: "var(--blue-bg)",
+                          }}
+                        >
+                          {copied === plan.name
+                            ? <><ClipboardCheck size={10} strokeWidth={2} /> Copied</>
+                            : <><Copy size={10} strokeWidth={2} /> Copy Path</>
+                          }
+                        </button>
+                      </div>
+                      {planContent ? (
+                        <pre style={{
+                          fontFamily: "var(--font-mono)", fontSize: 9,
+                          color: "var(--text-2)", lineHeight: 1.6,
+                          whiteSpace: "pre-wrap", wordBreak: "break-word",
+                          maxHeight: 300, overflow: "auto",
+                          background: "var(--surface-2)", borderRadius: 4,
+                          padding: "8px 10px",
+                          border: "1px solid var(--border)",
+                        }}>
+                          {planContent}
+                        </pre>
+                      ) : (
+                        <div style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "var(--text-3)" }}>
+                          Loading...
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

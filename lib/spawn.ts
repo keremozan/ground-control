@@ -1,5 +1,6 @@
 import { spawn } from 'child_process';
 import { HOME, CLAUDE_BIN, MCP_TASKS_CONFIG as MCP_CONFIG } from './config';
+import { registerProcess } from './process-registry';
 
 export type SSEEvent =
   | { event: 'status'; data: { state: string; label: string; character?: string } }
@@ -70,6 +71,7 @@ export function spawnAndCollect(opts: {
       env: env as NodeJS.ProcessEnv,
       stdio: ['ignore', 'pipe', 'pipe'],
     });
+    registerProcess(proc, { charName: opts.characterId || 'unknown', label: opts.label });
 
     let buffer = '';
     const textParts: string[] = [];
@@ -142,6 +144,7 @@ export function spawnOnce(opts: {
       env: env as NodeJS.ProcessEnv,
       stdio: ['ignore', 'pipe', 'pipe'],
     });
+    registerProcess(proc, { charName: 'system', label: 'one-shot' });
 
     let buffer = '';
     const textParts: string[] = [];
@@ -230,6 +233,7 @@ export function spawnSSEStream(opts: {
       ];
 
       proc = spawn(CLAUDE_BIN, args, { cwd: HOME, env: env as NodeJS.ProcessEnv, stdio: [hasImages ? 'pipe' : 'ignore', 'pipe', 'pipe'] });
+      registerProcess(proc, { charName: characterId || 'chat', label });
 
       // When images present, write multimodal message to stdin and close
       if (hasImages && proc.stdin) {
