@@ -3,6 +3,8 @@ import { quickFilter } from './email-filters';
 import { geminiJSON } from './gemini';
 import { logPipelineEntry, isMessageProcessed, type StageResult, type PipelineEntry } from './pipeline-log';
 import { spawnOnce } from './spawn';
+import { mcpCall } from './tana';
+import { TANA_INBOX_ID } from './config';
 import { GEMINI_API_KEY } from './config';
 
 // ── Types ──
@@ -198,10 +200,36 @@ export async function processEmail(email: EmailInput): Promise<PipelineEntry> {
           details.push('archived');
           break;
 
-        case 'create_task':
-          // TODO: Wire up Tana task creation (Task 8 in plan)
-          details.push(`task queued: "${action.title}" -> ${action.character} [${action.track}]`);
+        case 'create_task': {
+          // Map character name to Tana assigned option ID
+          const assignedMap: Record<string, string> = {
+            postman: 'NqMuiXnJ8NEg', scholar: '7Xoa3mdCTK1t', proctor: 'QQkKqejpmGyv',
+            clerk: 'SrqWi1I529WC', coach: 'cK-0HFGW1odT', curator: 'oaQx18xu9GD4',
+            architect: '6mku-XrMqemu', steward: 'oPQV0ekG2UyK', doctor: 'doctor',
+            archivist: 'tpuD7FytFy9d',
+          };
+          const priorityMap: Record<string, string> = {
+            high: 'dybSAOXOLRVn', medium: 'AZJRnhlWG_OJ', low: 'vb2-NBem7wRe',
+          };
+          const assignedId = assignedMap[action.character || 'postman'] || assignedMap.postman;
+          const priorityId = priorityMap[action.priority || 'medium'] || priorityMap.medium;
+          const lines = [
+            `- ${action.title} #[[^tuoCgN5Y6sn9]]`,
+            `  - [[^wRd8g4jr7Nqr]]:: [[^TQt9EnvCFbPW]]`,
+            `  - [[^kOYlKvF3ddrT]]:: [[^${assignedId}]]`,
+            `  - [[^C5ObhnBmyHvm]]:: [[^${priorityId}]]`,
+          ];
+          if (action.due) lines.push(`  - [[^8EVxOhX0Tnc4]]:: ${action.due}`);
+          if (action.track) lines.push(`  - Source: ${action.track}`);
+          lines.push(`  - Pipeline: from ${email.from}, ${email.subject}`);
+
+          await mcpCall('tools/call', {
+            name: 'import_tana_paste',
+            arguments: { content: lines.join('\n'), parentNodeId: TANA_INBOX_ID },
+          });
+          details.push(`task created: "${action.title}" -> ${action.character}`);
           break;
+        }
 
         case 'create_event':
           // TODO: Wire up Google Calendar event creation

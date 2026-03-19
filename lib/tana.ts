@@ -58,7 +58,7 @@ const WS_STATUS_FIELD_ID = TANA.fields.wsStatus;
 const WS_TRACK_FIELD_ID = TANA.fields.wsTrack;
 const WS_STATUS_OPTIONS = TANA.wsStatusOptions;
 
-async function mcpCall(method: string, params: Record<string, unknown>) {
+export async function mcpCall(method: string, params: Record<string, unknown>) {
   const res = await fetch(MCP_URL, {
     method: 'POST',
     headers: {
