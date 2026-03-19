@@ -1,11 +1,11 @@
+import fs from 'fs';
 import { getMessage, getEmailBody, searchSentTo, searchDrafts, createDraft, archiveEmail } from './gmail';
 import { quickFilter } from './email-filters';
 import { geminiJSON } from './gemini';
 import { logPipelineEntry, isMessageProcessed, getPipelineLog, type StageResult, type PipelineEntry } from './pipeline-log';
 import { spawnOnce } from './spawn';
 import { mcpCall } from './tana';
-import { TANA_INBOX_ID } from './config';
-import { GEMINI_API_KEY } from './config';
+import { TANA_INBOX_ID, GEMINI_API_KEY, SHARED_DIR } from './config';
 
 // ── Types ──
 
@@ -22,7 +22,7 @@ export type EmailInput = {
 };
 
 type RouteAction = {
-  type: 'create_task' | 'create_event' | 'draft_reply' | 'escalate' | 'archive';
+  type: 'create_task' | 'create_opportunity' | 'create_event' | 'draft_reply' | 'escalate' | 'archive';
   title?: string;
   character?: string;
   track?: string;
@@ -37,6 +37,60 @@ type RouteAction = {
 
 type ClassifyResult = { actionable: boolean; reason: string };
 type RouteResult = { actions: RouteAction[] };
+
+// ── Character reply detection ──
+
+const CHARACTER_SUBJECT_PATTERNS: { pattern: RegExp; character: string; taskTitle: string }[] = [
+  { pattern: /\[Tutor Test\]/i, character: 'tutor', taskTitle: 'Score test reply' },
+  { pattern: /\[Tutor\]/i, character: 'tutor', taskTitle: 'Process lesson feedback' },
+  { pattern: /\[Coach\]/i, character: 'coach', taskTitle: 'Process check-in reply' },
+  { pattern: /\[Doctor\]/i, character: 'doctor', taskTitle: 'Process health reply' },
+  { pattern: /\[Scholar\]/i, character: 'scholar', taskTitle: 'Process research reply' },
+  { pattern: /\[Curator\]/i, character: 'curator', taskTitle: 'Process exhibition reply' },
+  { pattern: /\[Proctor\]/i, character: 'proctor', taskTitle: 'Process teaching reply' },
+  { pattern: /\[Clerk\]/i, character: 'clerk', taskTitle: 'Process admin reply' },
+  { pattern: /\[Postman\]/i, character: 'postman', taskTitle: 'Process communication reply' },
+];
+
+function detectCharacterReply(subject: string): { character: string; taskTitle: string } | null {
+  for (const { pattern, character, taskTitle } of CHARACTER_SUBJECT_PATTERNS) {
+    if (pattern.test(subject)) return { character, taskTitle };
+  }
+  return null;
+}
+
+// ── Self-sent system email detection ──
+
+const SYSTEM_SUBJECT_PATTERNS = [
+  /Morning Brief/i,
+  /\[Tutor\]/i,
+  /\[Coach\]/i,
+  /\[Doctor\]/i,
+  /\[Scholar\]/i,
+  /\[Watcher\]/i,
+  /\[Kybernetes\]/i,
+  /\[Oracle\]/i,
+];
+
+function isSelfSentSystemEmail(email: EmailInput): boolean {
+  // Emails from Kerem to Kerem with system subject patterns (reports, lessons, etc.)
+  const fromSelf = email.fromRaw.includes('kerem.ozan@gmail.com') || email.fromRaw.includes('keremozan.bayraktar@');
+  if (!fromSelf) return false;
+  return SYSTEM_SUBJECT_PATTERNS.some(p => p.test(email.subject));
+}
+
+// ── Load routing table ──
+
+function loadRoutingContext(): string {
+  try {
+    const content = fs.readFileSync(`${SHARED_DIR}/routing-table.md`, 'utf-8');
+    // Extract the Source -> Character and Content Keywords sections
+    const sourceSection = content.match(/## Source -> Character[\s\S]*?(?=##|$)/)?.[0] || '';
+    return sourceSection.trim();
+  } catch {
+    return '';
+  }
+}
 
 // ── Prompts ──
 
@@ -56,6 +110,7 @@ const ROUTE_PROMPT = `You are an email router for an academic at Sabanci Univers
 
 Given this email, return a JSON object with an "actions" array. Each action is one of:
 - { "type": "create_task", "title": "...", "character": "...", "track": "...", "priority": "low|medium|high", "due": "YYYY-MM-DD or null" }
+- { "type": "create_opportunity", "title": "...", "character": "...", "track": "...", "due": "YYYY-MM-DD or null" }
 - { "type": "create_event", "title": "...", "date": "YYYY-MM-DD", "time": "HH:MM", "duration": minutes }
 - { "type": "draft_reply", "intent": "what the reply should convey" }
 - { "type": "escalate", "character": "...", "reason": "why this needs full character session" }
@@ -63,15 +118,19 @@ Given this email, return a JSON object with an "actions" array. Each action is o
 
 An email can have multiple actions (e.g., reply + create task).
 
+Use create_opportunity (not create_task) for: conference CFPs, exhibition open calls, residency programs, fellowship announcements, grant opportunities, journal calls for papers. These are opportunities to evaluate, not tasks to do.
+
 Character routing:
-- clerk: university admin, KAF forms, grants, petitions, student advising
+- clerk: university admin, KAF forms, grants, petitions, student advising, HR, finance
 - proctor: teaching, courses, SUCourse, assignments, student content questions
 - curator: art, exhibitions, galleries, artist communications
-- scholar: research, academic papers, conferences, brainstorming
+- scholar: research, academic papers, conferences, brainstorming, CFPs
 - coach: personal, wellbeing
 - doctor: health, medical
 - steward: calendar, scheduling, meetings
 - postman: general communications that don't fit above
+
+{{routingContext}}
 
 Track examples: "Sabanci Office Jobs", "Cambridge Plant Workshop", "Mondial Exhibition", "VA 204", "VA 315"
 
@@ -83,6 +142,62 @@ Email:
 From: {{from}}
 Subject: {{subject}}
 Body: {{body}}`;
+
+// ── Comms ledger ──
+
+function writeCommsLedger(contact: string, topic: string, channel: string) {
+  const ledgerPath = `${SHARED_DIR}/comms-ledger.json`;
+  try {
+    const data = JSON.parse(fs.readFileSync(ledgerPath, 'utf-8'));
+    const entries: { contact: string; topic: string; channel: string; date: string }[] = data.entries || [];
+    entries.push({ contact, topic, channel, date: new Date().toISOString() });
+    // Keep last 30 days
+    const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const filtered = entries.filter(e => new Date(e.date).getTime() > cutoff);
+    fs.writeFileSync(ledgerPath, JSON.stringify({ ...data, entries: filtered }, null, 2));
+  } catch {}
+}
+
+// ── Tana task creation helper ──
+
+const ASSIGNED_MAP: Record<string, string> = {
+  postman: 'NqMuiXnJ8NEg', scholar: '7Xoa3mdCTK1t', proctor: 'QQkKqejpmGyv',
+  clerk: 'SrqWi1I529WC', coach: 'cK-0HFGW1odT', curator: 'oaQx18xu9GD4',
+  architect: '6mku-XrMqemu', steward: 'oPQV0ekG2UyK', doctor: 'doctor',
+  archivist: 'tpuD7FytFy9d', tutor: 'tutor',
+};
+
+const PRIORITY_MAP: Record<string, string> = {
+  high: 'dybSAOXOLRVn', medium: 'AZJRnhlWG_OJ', low: 'vb2-NBem7wRe',
+};
+
+async function createTanaTask(opts: {
+  title: string;
+  character: string;
+  priority?: string;
+  due?: string;
+  track?: string;
+  source?: string;
+  threadId?: string;
+}): Promise<void> {
+  const assignedId = ASSIGNED_MAP[opts.character] || ASSIGNED_MAP.postman;
+  const priorityId = PRIORITY_MAP[opts.priority || 'medium'] || PRIORITY_MAP.medium;
+  const lines = [
+    `- ${opts.title} #[[^tuoCgN5Y6sn9]]`,
+    `  - [[^wRd8g4jr7Nqr]]:: [[^TQt9EnvCFbPW]]`,
+    `  - [[^kOYlKvF3ddrT]]:: [[^${assignedId}]]`,
+    `  - [[^C5ObhnBmyHvm]]:: [[^${priorityId}]]`,
+  ];
+  if (opts.due) lines.push(`  - [[^8EVxOhX0Tnc4]]:: ${opts.due}`);
+  if (opts.track) lines.push(`  - Source: ${opts.track}`);
+  if (opts.source) lines.push(`  - Pipeline: ${opts.source}`);
+  if (opts.threadId) lines.push(`  - Thread: ${opts.threadId}`);
+
+  await mcpCall('tools/call', {
+    name: 'import_tana_paste',
+    arguments: { content: lines.join('\n'), parentNodeId: TANA_INBOX_ID },
+  });
+}
 
 // ── Pipeline ──
 
@@ -101,6 +216,19 @@ export async function processEmail(email: EmailInput): Promise<PipelineEntry> {
     };
   }
 
+  // ── Stage 0.5: Skip self-sent system emails ──
+  if (isSelfSentSystemEmail(email)) {
+    stages.push({ stage: 0, name: 'self-sent', result: 'skipped', reason: 'system-generated email from self', ms: 0 });
+    finalAction = 'skipped (self-sent system email)';
+    const entry: PipelineEntry = {
+      messageId: email.id, threadId: email.threadId,
+      from: email.from, subject: email.subject, account: email.account,
+      receivedAt: email.date, stages, totalMs: Date.now() - startTotal, finalAction,
+    };
+    logPipelineEntry(entry);
+    return entry;
+  }
+
   // ── Stage 1: Quick Filter ──
   const s1Start = Date.now();
   const filterResult = quickFilter(email);
@@ -114,6 +242,46 @@ export async function processEmail(email: EmailInput): Promise<PipelineEntry> {
   if (filterResult.action === 'archive') {
     try { await archiveEmail(email.account, email.threadId); } catch {}
     finalAction = 'archived (filter)';
+    const entry: PipelineEntry = {
+      messageId: email.id, threadId: email.threadId,
+      from: email.from, subject: email.subject, account: email.account,
+      receivedAt: email.date, stages, totalMs: Date.now() - startTotal, finalAction,
+    };
+    logPipelineEntry(entry);
+    return entry;
+  }
+
+  // ── Stage 1.5: Character reply detection ──
+  // If the subject contains [Tutor], [Coach], etc., this is a reply to a character email.
+  // Route directly to the originating character. Skip classification + routing.
+  const charReply = detectCharacterReply(email.subject);
+  if (charReply) {
+    const s15Start = Date.now();
+    try {
+      await createTanaTask({
+        title: `${charReply.taskTitle} -- ${email.subject}`,
+        character: charReply.character,
+        priority: 'high',
+        source: `from ${email.from}, ${email.subject}`,
+        threadId: email.threadId,
+      });
+      stages.push({
+        stage: 1, name: 'character-reply',
+        result: 'routed to character',
+        reason: `subject matches [${charReply.character}] pattern`,
+        details: [`task created: "${charReply.taskTitle}" -> ${charReply.character}`],
+        ms: Date.now() - s15Start,
+      });
+      finalAction = `character reply -> ${charReply.character}`;
+    } catch (err) {
+      stages.push({
+        stage: 1, name: 'character-reply',
+        result: 'error',
+        reason: `failed to create task: ${err}`,
+        ms: Date.now() - s15Start,
+      });
+      finalAction = 'character reply (error)';
+    }
     const entry: PipelineEntry = {
       messageId: email.id, threadId: email.threadId,
       from: email.from, subject: email.subject, account: email.account,
@@ -162,16 +330,18 @@ export async function processEmail(email: EmailInput): Promise<PipelineEntry> {
     return entry;
   }
 
-  // ── Stage 3: Route (Gemini Pro) ──
+  // ── Stage 3: Route (Gemini Flash) ──
   const s3Start = Date.now();
   let actions: RouteAction[] = [];
   try {
     const body = await getEmailBody(email.account, email.id);
+    const routingContext = loadRoutingContext();
     const prompt = ROUTE_PROMPT
       .replace('{{from}}', email.fromRaw)
       .replace('{{subject}}', email.subject)
       .replace('{{body}}', body.slice(0, 2000))
-      .replace('{{date}}', new Date().toISOString().split('T')[0]);
+      .replace('{{date}}', new Date().toISOString().split('T')[0])
+      .replace('{{routingContext}}', routingContext);
     const result = await geminiJSON<RouteResult>({
       model: 'gemini-2.5-flash',
       prompt,
@@ -200,21 +370,17 @@ export async function processEmail(email: EmailInput): Promise<PipelineEntry> {
           details.push('archived');
           break;
 
-        case 'create_task': {
+        case 'create_task':
+        case 'create_opportunity': {
           // Check 1: Did we already create a task from this email thread?
           const priorEntry = getPipelineLog(200).find(e =>
             e.threadId === email.threadId && e.messageId !== email.id &&
-            e.finalAction.includes('create_task') &&
-            e.stages.some(s => s.details?.some(d => d.startsWith('task created:')))
+            (e.finalAction.includes('create_task') || e.finalAction.includes('create_opportunity')) &&
+            e.stages.some(s => s.details?.some(d => d.startsWith('task created:') || d.startsWith('opportunity created:')))
           );
 
           if (priorEntry) {
-            // Thread update: add a note to the existing task instead of creating new
-            // Find the task nodeId from the prior entry's details
-            const taskDetail = priorEntry.stages
-              .flatMap(s => s.details || [])
-              .find(d => d.startsWith('task created:'));
-            details.push(`thread update: "${action.title}" (prior task exists from ${priorEntry.from}: ${priorEntry.subject})`);
+            details.push(`thread update: "${action.title}" (prior item exists from ${priorEntry.subject})`);
             break;
           }
 
@@ -229,39 +395,23 @@ export async function processEmail(email: EmailInput): Promise<PipelineEntry> {
               (m.score || 0) >= 0.5 || (m.name && action.title && m.name.toLowerCase().includes(action.title.toLowerCase().slice(0, 20)))
             );
             if (duplicate) {
-              details.push(`task skipped (duplicate): "${(duplicate as { name?: string }).name || 'unknown'}"`);
+              details.push(`${action.type} skipped (duplicate): "${(duplicate as { name?: string }).name || 'unknown'}"`);
               break;
             }
-          } catch {} // If search fails, proceed with creation
+          } catch {}
 
-          // Create the task
-          const assignedMap: Record<string, string> = {
-            postman: 'NqMuiXnJ8NEg', scholar: '7Xoa3mdCTK1t', proctor: 'QQkKqejpmGyv',
-            clerk: 'SrqWi1I529WC', coach: 'cK-0HFGW1odT', curator: 'oaQx18xu9GD4',
-            architect: '6mku-XrMqemu', steward: 'oPQV0ekG2UyK', doctor: 'doctor',
-            archivist: 'tpuD7FytFy9d',
-          };
-          const priorityMap: Record<string, string> = {
-            high: 'dybSAOXOLRVn', medium: 'AZJRnhlWG_OJ', low: 'vb2-NBem7wRe',
-          };
-          const assignedId = assignedMap[action.character || 'postman'] || assignedMap.postman;
-          const priorityId = priorityMap[action.priority || 'medium'] || priorityMap.medium;
-          const lines = [
-            `- ${action.title} #[[^tuoCgN5Y6sn9]]`,
-            `  - [[^wRd8g4jr7Nqr]]:: [[^TQt9EnvCFbPW]]`,
-            `  - [[^kOYlKvF3ddrT]]:: [[^${assignedId}]]`,
-            `  - [[^C5ObhnBmyHvm]]:: [[^${priorityId}]]`,
-          ];
-          if (action.due) lines.push(`  - [[^8EVxOhX0Tnc4]]:: ${action.due}`);
-          if (action.track) lines.push(`  - Source: ${action.track}`);
-          lines.push(`  - Pipeline: from ${email.from}, ${email.subject}`);
-          lines.push(`  - Thread: ${email.threadId}`);
-
-          await mcpCall('tools/call', {
-            name: 'import_tana_paste',
-            arguments: { content: lines.join('\n'), parentNodeId: TANA_INBOX_ID },
+          // Create the task/opportunity
+          await createTanaTask({
+            title: action.title || email.subject,
+            character: action.character || 'postman',
+            priority: action.priority,
+            due: action.due,
+            track: action.track,
+            source: `from ${email.from}, ${email.subject}`,
+            threadId: email.threadId,
           });
-          details.push(`task created: "${action.title}" -> ${action.character}`);
+          const label = action.type === 'create_opportunity' ? 'opportunity' : 'task';
+          details.push(`${label} created: "${action.title}" -> ${action.character}`);
           break;
         }
 
@@ -297,6 +447,8 @@ export async function processEmail(email: EmailInput): Promise<PipelineEntry> {
             threadId: email.threadId,
           });
           details.push(`draft created: ${draftId}`);
+          // Write to comms ledger
+          writeCommsLedger(fromEmail, email.subject, `email-${email.account}`);
           break;
         }
 
