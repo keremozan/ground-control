@@ -801,8 +801,8 @@ export default function CrewWidget() {
                                   const isDirect = !!action.endpoint;
                                   const isRunning = runningActions.has(`${selectedChar.name}:${action.label}`);
                                   const ctxKey = `${selectedChar.name}:${action.label}`;
-                                  const isCtxOn = !isAuto && !isDirect && !isAutoInput && contextOn.has(ctxKey);
-                                  const showCtx = !isAuto && !isDirect && !isAutoInput;
+                                  const isCtxOn = !isAuto && !(isDirect && !isAutoInput) && contextOn.has(ctxKey);
+                                  const showCtx = !isAuto && !(isDirect && !isAutoInput);
                                   return (
                                     <button
                                       key={action.label}
