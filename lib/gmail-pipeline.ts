@@ -76,6 +76,8 @@ function isSelfSentSystemEmail(email: EmailInput): boolean {
   // Emails from Kerem to Kerem with system subject patterns (reports, lessons, etc.)
   const fromSelf = email.fromRaw.includes('kerem.ozan@gmail.com') || email.fromRaw.includes('keremozan.bayraktar@');
   if (!fromSelf) return false;
+  // Replies to system emails (Re: [Tutor]...) should NOT be skipped -- they go to Stage 1.5
+  if (/^Re:/i.test(email.subject)) return false;
   return SYSTEM_SUBJECT_PATTERNS.some(p => p.test(email.subject));
 }
 
