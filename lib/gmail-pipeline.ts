@@ -201,6 +201,22 @@ export async function processEmail(email: EmailInput): Promise<PipelineEntry> {
           break;
 
         case 'create_task': {
+          // Dedup: check Tana for existing similar tasks
+          try {
+            const searchResult = await mcpCall('tools/call', {
+              name: 'semantic_search',
+              arguments: { query: action.title, limit: 5, minSimilarity: 0.3 },
+            });
+            const matches = Array.isArray(searchResult) ? searchResult : [];
+            const duplicate = matches.find((m: { name?: string; score?: number }) =>
+              (m.score || 0) >= 0.5 || (m.name && action.title && m.name.toLowerCase().includes(action.title.toLowerCase().slice(0, 20)))
+            );
+            if (duplicate) {
+              details.push(`task skipped (duplicate): "${(duplicate as { name?: string }).name || 'unknown'}"`);
+              break;
+            }
+          } catch {} // If search fails, proceed with creation (better to duplicate than miss)
+
           // Map character name to Tana assigned option ID
           const assignedMap: Record<string, string> = {
             postman: 'NqMuiXnJ8NEg', scholar: '7Xoa3mdCTK1t', proctor: 'QQkKqejpmGyv',
