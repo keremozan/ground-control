@@ -22,6 +22,10 @@ const config = {
     tokensPath: path.join(HOME, '.config', 'google-calendar-mcp', 'tokens.json'),
   },
 
+  gemini: {
+    apiKey: "YOUR_GEMINI_API_KEY", // from https://aistudio.google.com/apikey
+  },
+
   scheduler: {
     skipTrackPattern: "",
     taskCharacters: ["scholar", "clerk", "architect", "archivist", "steward"] as string[],

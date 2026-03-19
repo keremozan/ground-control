@@ -34,3 +34,21 @@ export function markJobRun(jobId: string, result: 'success' | 'error') {
   state[jobId] = { lastRunAt: new Date().toISOString(), lastResult: result };
   writeJobState(state);
 }
+
+// ── Gmail History Tracking ──
+
+const HISTORY_FILE = path.join(process.cwd(), 'data', 'gmail-history.json');
+
+export type HistoryState = Record<string, string>; // account -> historyId
+
+export function readHistoryState(): HistoryState {
+  try { return JSON.parse(fs.readFileSync(HISTORY_FILE, 'utf-8')); }
+  catch { return {}; }
+}
+
+export function writeHistoryId(account: string, historyId: string) {
+  const state = readHistoryState();
+  state[account] = historyId;
+  fs.mkdirSync(path.dirname(HISTORY_FILE), { recursive: true });
+  fs.writeFileSync(HISTORY_FILE, JSON.stringify(state, null, 2));
+}

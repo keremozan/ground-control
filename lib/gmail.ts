@@ -277,3 +277,145 @@ export async function getRecentThreads(account: string, maxResults = 8): Promise
 
   return threads.filter((t): t is EmailSummary => t !== null);
 }
+
+// ── Pipeline functions ──────────────────────────
+
+/** Get changes since a historyId. Returns new message IDs. */
+export async function getHistoryChanges(account: string, startHistoryId: string): Promise<{
+  messageIds: string[];
+  newHistoryId: string;
+}> {
+  const messageIds: string[] = [];
+  let pageToken: string | undefined;
+  let latestHistoryId = startHistoryId;
+
+  do {
+    const params = new URLSearchParams({
+      startHistoryId,
+      historyTypes: 'messageAdded',
+      labelId: 'INBOX',
+    });
+    if (pageToken) params.set('pageToken', pageToken);
+
+    const data = await gmailFetch(`/history?${params}`, account);
+    latestHistoryId = data.historyId || latestHistoryId;
+
+    for (const record of data.history || []) {
+      for (const added of record.messagesAdded || []) {
+        const msg = added.message;
+        if (msg?.id && msg.labelIds?.includes('INBOX')) {
+          messageIds.push(msg.id);
+        }
+      }
+    }
+    pageToken = data.nextPageToken;
+  } while (pageToken);
+
+  return { messageIds: [...new Set(messageIds)], newHistoryId: latestHistoryId };
+}
+
+/** Get a single message with full metadata + snippet */
+export async function getMessage(account: string, messageId: string): Promise<{
+  id: string;
+  threadId: string;
+  from: string;
+  fromRaw: string;
+  subject: string;
+  snippet: string;
+  date: string;
+  labels: string[];
+}> {
+  const msg = await gmailFetch(`/messages/${messageId}?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date`, account);
+  const headers = (msg.payload?.headers || []) as { name: string; value: string }[];
+  const fromRaw = parseHeader(headers, 'From');
+  return {
+    id: msg.id,
+    threadId: msg.threadId,
+    from: parseFrom(fromRaw),
+    fromRaw,
+    subject: parseHeader(headers, 'Subject') || '(no subject)',
+    snippet: msg.snippet || '',
+    date: parseHeader(headers, 'Date'),
+    labels: (msg.labelIds || []) as string[],
+  };
+}
+
+/** Set up Gmail push notifications. Returns expiration timestamp. */
+export async function watchInbox(account: string, topicName: string): Promise<number> {
+  const data = await gmailFetch('/watch', account, {
+    method: 'POST',
+    body: JSON.stringify({
+      topicName,
+      labelIds: ['INBOX'],
+      labelFilterBehavior: 'include',
+    }),
+  });
+  return Number(data.expiration);
+}
+
+/** Get current historyId for an account */
+export async function getProfile(account: string): Promise<{ historyId: string; emailAddress: string }> {
+  const data = await gmailFetch('', account);
+  return { historyId: data.historyId, emailAddress: data.emailAddress };
+}
+
+/** Search sent mail for recent replies to a specific email address */
+export async function searchSentTo(account: string, toEmail: string, maxResults = 5): Promise<{ id: string; threadId: string; subject: string }[]> {
+  const q = `in:sent to:${toEmail} newer_than:7d`;
+  const data = await gmailFetch(`/messages?maxResults=${maxResults}&q=${encodeURIComponent(q)}`, account);
+  if (!data.messages?.length) return [];
+  const results = [];
+  for (const m of data.messages.slice(0, maxResults)) {
+    try {
+      const msg = await gmailFetch(`/messages/${m.id}?format=metadata&metadataHeaders=Subject`, account);
+      const headers = (msg.payload?.headers || []) as { name: string; value: string }[];
+      results.push({ id: m.id, threadId: msg.threadId, subject: parseHeader(headers, 'Subject') });
+    } catch {}
+  }
+  return results;
+}
+
+/** Search existing drafts for a recipient */
+export async function searchDrafts(account: string, toEmail: string): Promise<{ id: string; subject: string }[]> {
+  const data = await gmailFetch('/drafts?maxResults=10', account);
+  if (!data.drafts?.length) return [];
+  const results = [];
+  for (const d of data.drafts.slice(0, 10)) {
+    try {
+      const draft = await gmailFetch(`/drafts/${d.id}`, account);
+      const headers = (draft.message?.payload?.headers || []) as { name: string; value: string }[];
+      const to = parseHeader(headers, 'To');
+      if (to.toLowerCase().includes(toEmail.toLowerCase())) {
+        results.push({ id: d.id, subject: parseHeader(headers, 'Subject') });
+      }
+    } catch {}
+  }
+  return results;
+}
+
+/** Create a Gmail draft */
+export async function createDraft(account: string, opts: {
+  to: string;
+  subject: string;
+  body: string;
+  threadId?: string;
+  inReplyTo?: string;
+}): Promise<string> {
+  const { to, subject, body, threadId, inReplyTo } = opts;
+  const headers = [
+    `To: ${to}`,
+    `Subject: ${subject}`,
+    'Content-Type: text/plain; charset=utf-8',
+  ];
+  if (inReplyTo) headers.push(`In-Reply-To: ${inReplyTo}`, `References: ${inReplyTo}`);
+  const raw = Buffer.from(`${headers.join('\r\n')}\r\n\r\n${body}`).toString('base64url');
+
+  const reqBody: Record<string, unknown> = { message: { raw } };
+  if (threadId) reqBody.message = { ...reqBody.message as object, threadId };
+
+  const data = await gmailFetch('/drafts', account, {
+    method: 'POST',
+    body: JSON.stringify(reqBody),
+  });
+  return data.id;
+}
