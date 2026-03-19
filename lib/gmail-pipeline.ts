@@ -147,21 +147,6 @@ From: {{from}}
 Subject: {{subject}}
 Body: {{body}}`;
 
-// ── Comms ledger ──
-
-function writeCommsLedger(contact: string, topic: string, channel: string) {
-  const ledgerPath = `${SHARED_DIR}/comms-ledger.json`;
-  try {
-    const data = JSON.parse(fs.readFileSync(ledgerPath, 'utf-8'));
-    const entries: { contact: string; topic: string; channel: string; date: string }[] = data.entries || [];
-    entries.push({ contact, topic, channel, date: new Date().toISOString() });
-    // Keep last 30 days
-    const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
-    const filtered = entries.filter(e => new Date(e.date).getTime() > cutoff);
-    fs.writeFileSync(ledgerPath, JSON.stringify({ ...data, entries: filtered }, null, 2));
-  } catch {}
-}
-
 // ── Tana task creation helper ──
 
 const ASSIGNED_MAP: Record<string, string> = {
