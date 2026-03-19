@@ -9,6 +9,9 @@ let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 const pendingAccounts = new Set<string>();
 let processing = false;
 
+// Map email addresses to account names (populated on first profile fetch)
+const emailToAccount = new Map<string, string>();
+
 async function processPendingAccounts() {
   if (processing) return;
   processing = true;
@@ -21,15 +24,20 @@ async function processPendingAccounts() {
   processing = false;
 }
 
-async function processAccount(account: string): Promise<{ processed: number; found?: number; historyId?: string; error?: string }> {
+// Labels that indicate non-inbox messages we should skip
+const SKIP_LABELS = new Set(['DRAFT', 'TRASH', 'SPAM']);
+
+async function processAccount(account: string): Promise<{ processed: number; found?: number; historyId?: string; errors?: string[] }> {
+  const errors: string[] = [];
   try {
     const historyState = readHistoryState();
     const startHistoryId = historyState[account];
 
-    // First run: set checkpoint, nothing to process
+    // First run: set checkpoint and populate email->account mapping
     if (!startHistoryId) {
       const profile = await getProfile(account);
       writeHistoryId(account, profile.historyId);
+      emailToAccount.set(profile.emailAddress, account);
       return { processed: 0, historyId: profile.historyId };
     }
 
@@ -40,16 +48,19 @@ async function processAccount(account: string): Promise<{ processed: number; fou
     for (const msgId of messageIds) {
       try {
         const email = await getMessage(account, msgId);
-        // Skip sent messages (unless also in inbox, e.g. send-to-self)
+        // Skip non-inbox messages (drafts, trash, spam, sent-only)
+        if (email.labels.some(l => SKIP_LABELS.has(l))) continue;
         if (email.labels.includes('SENT') && !email.labels.includes('INBOX')) continue;
         await processEmail({ ...email, account });
         processed++;
-      } catch {}
+      } catch (err) {
+        errors.push(`${msgId}: ${err}`);
+      }
     }
-    return { processed, found: messageIds.length, historyId: newHistoryId };
+    return { processed, found: messageIds.length, historyId: newHistoryId, errors: errors.length > 0 ? errors : undefined };
   } catch (err) {
     console.error(`Pipeline error for ${account}:`, err);
-    return { processed: 0, error: String(err) };
+    return { processed: 0, errors: [String(err)] };
   }
 }
 
@@ -61,11 +72,12 @@ export async function POST(req: Request) {
     const data = JSON.parse(Buffer.from(encoded, 'base64url').toString());
     const emailAddress: string = data.emailAddress || '';
 
-    // Find matching account (process all accounts if we can't match)
-    const matchedAccount = GMAIL_ACCOUNTS.find(() => true); // simplified; refined when email->account mapping exists
+    // Match notification to account by email address
+    const matchedAccount = emailToAccount.get(emailAddress);
     if (matchedAccount) {
       pendingAccounts.add(matchedAccount);
     } else {
+      // Can't match -- process all accounts
       for (const a of GMAIL_ACCOUNTS) pendingAccounts.add(a);
     }
 
@@ -79,9 +91,16 @@ export async function POST(req: Request) {
 
 // GET: Manual catch-up (startup, dashboard button)
 export async function GET() {
-  const results: { account: string; processed: number; error?: string }[] = [];
+  const results: { account: string; processed: number; errors?: string[] }[] = [];
 
   for (const account of GMAIL_ACCOUNTS) {
+    // Populate email->account mapping on catch-up
+    if (emailToAccount.size < GMAIL_ACCOUNTS.length) {
+      try {
+        const profile = await getProfile(account);
+        emailToAccount.set(profile.emailAddress, account);
+      } catch {}
+    }
     const result = await processAccount(account);
     results.push({ account, ...result });
   }

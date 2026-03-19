@@ -53,6 +53,8 @@ const CHARACTER_SUBJECT_PATTERNS: { pattern: RegExp; character: string; taskTitl
 ];
 
 function detectCharacterReply(subject: string): { character: string; taskTitle: string } | null {
+  // Only detect replies, not original outgoing emails
+  if (!/^Re:/i.test(subject)) return null;
   for (const { pattern, character, taskTitle } of CHARACTER_SUBJECT_PATTERNS) {
     if (pattern.test(subject)) return { character, taskTitle };
   }
@@ -165,8 +167,10 @@ function writeCommsLedger(contact: string, topic: string, channel: string) {
 const ASSIGNED_MAP: Record<string, string> = {
   postman: 'NqMuiXnJ8NEg', scholar: '7Xoa3mdCTK1t', proctor: 'QQkKqejpmGyv',
   clerk: 'SrqWi1I529WC', coach: 'cK-0HFGW1odT', curator: 'oaQx18xu9GD4',
-  architect: '6mku-XrMqemu', steward: 'oPQV0ekG2UyK', doctor: 'doctor',
-  archivist: 'tpuD7FytFy9d', tutor: 'tutor',
+  architect: '6mku-XrMqemu', steward: 'oPQV0ekG2UyK',
+  archivist: 'tpuD7FytFy9d',
+  // TODO: Add Doctor and Tutor IDs after creating options in Tana assigned field
+  // For now, tasks for doctor/tutor fall back to postman
 };
 
 const PRIORITY_MAP: Record<string, string> = {
@@ -236,7 +240,7 @@ export async function processEmail(email: EmailInput): Promise<PipelineEntry> {
   const filterResult = quickFilter(email);
   stages.push({
     stage: 1, name: 'filter',
-    result: filterResult.action === 'archive' ? 'archived' : 'passed',
+    result: filterResult.action === 'archive' ? 'skipped' : 'passed',
     reason: filterResult.action === 'archive' ? filterResult.reason : 'passed to classifier',
     ms: Date.now() - s1Start,
   });
@@ -421,7 +425,13 @@ export async function processEmail(email: EmailInput): Promise<PipelineEntry> {
           break;
 
         case 'draft_reply': {
-          const fromEmail = email.fromRaw.match(/<([^>]+)>/)?.[1] || email.fromRaw;
+          // Extract email address: "Name <user@example.com>" -> "user@example.com"
+          const fromEmail = email.fromRaw.match(/<([^>]+)>/)?.[1]
+            || (email.fromRaw.includes('@') ? email.fromRaw.trim() : null);
+          if (!fromEmail) {
+            details.push('draft skipped: could not extract sender email');
+            break;
+          }
           // Dedup: already replied in this thread?
           const sentResults = await searchSentTo(email.account, fromEmail, 3);
           if (sentResults.some(s => s.threadId === email.threadId)) {
@@ -447,8 +457,6 @@ export async function processEmail(email: EmailInput): Promise<PipelineEntry> {
             threadId: email.threadId,
           });
           details.push(`draft created: ${draftId}`);
-          // Write to comms ledger
-          writeCommsLedger(fromEmail, email.subject, `email-${email.account}`);
           break;
         }
 
