@@ -1,6 +1,6 @@
 const GEMINI_API = 'https://generativelanguage.googleapis.com/v1beta/models';
 
-export type GeminiModel = 'gemini-2.5-flash-lite' | 'gemini-2.5-pro';
+export type GeminiModel = 'gemini-2.5-flash-lite' | 'gemini-2.5-flash' | 'gemini-2.5-pro';
 
 export async function geminiCall(opts: {
   model: GeminiModel;
