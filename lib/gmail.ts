@@ -355,7 +355,7 @@ export async function watchInbox(account: string, topicName: string): Promise<nu
 
 /** Get current historyId for an account */
 export async function getProfile(account: string): Promise<{ historyId: string; emailAddress: string }> {
-  const data = await gmailFetch('', account);
+  const data = await gmailFetch('/profile', account);
   return { historyId: data.historyId, emailAddress: data.emailAddress };
 }
 
