@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { GEMINI_API_KEY } from './config';
+import { GEMINI_API_KEY, HOME } from './config';
 
 const INTERACTIONS_API = 'https://generativelanguage.googleapis.com/v1beta/interactions';
 const AGENT = 'deep-research-pro-preview-12-2025';
@@ -117,6 +117,16 @@ export async function checkResearch(taskId: string): Promise<ResearchTask | null
       task.status = 'completed';
       task.completedAt = new Date().toISOString();
       task.result = resultText;
+
+      // Save as markdown for Scholar to read
+      const researchDir = path.join(HOME, 'Desktop', 'Scholar', 'deep-research');
+      fs.mkdirSync(researchDir, { recursive: true });
+      const slug = task.query.slice(0, 60).replace(/[^a-zA-Z0-9]+/g, '-').toLowerCase();
+      const date = new Date().toISOString().split('T')[0];
+      fs.writeFileSync(
+        path.join(researchDir, `${date}-${slug}.md`),
+        `# Deep Research: ${task.query}\n\nRequested by: ${task.requestedBy}\nCompleted: ${task.completedAt}\n\n---\n\n${resultText}`
+      );
     } else if (status === 'failed' || status === 'error') {
       task.status = 'failed';
       task.error = (data.error as string) || 'Unknown error';
