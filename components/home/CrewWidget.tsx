@@ -51,7 +51,7 @@ export default function CrewWidget() {
   const [characters, setCharacters] = useState<CharacterInfo[]>([]);
   const [runningActions, setRunningActions] = useState<Set<string>>(new Set());
   const runningRef = useRef(new Set<string>());
-  const [promptAction, setPromptAction] = useState<{ charName: string; label: string; seed: string; type: "chat" | "autonomous"; placeholder?: string } | null>(null);
+  const [promptAction, setPromptAction] = useState<{ charName: string; label: string; seed: string; type: "chat" | "autonomous" | "endpoint"; placeholder?: string; endpoint?: string } | null>(null);
   const [promptInput, setPromptInput] = useState("");
   const promptRef = useRef<HTMLTextAreaElement>(null);
   const [contextOn, setContextOn] = useState<Set<string>>(() => {
@@ -288,21 +288,25 @@ export default function CrewWidget() {
 
   const enabledJobs = SCHEDULE_JOBS.filter(j => j.enabled);
 
-  const runEndpoint = async (charName: string, action: string, endpoint: string) => {
+  const runEndpoint = async (charName: string, action: string, endpoint: string, body?: Record<string, unknown>) => {
     const key = `${charName}:${action}`;
     if (runningRef.current.has(key)) return;
     runningRef.current.add(key);
     setRunningActions(prev => new Set(prev).add(key));
 
     try {
-      const res = await fetch(endpoint, { method: "POST" });
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: body ? { "Content-Type": "application/json" } : undefined,
+        body: body ? JSON.stringify(body) : undefined,
+      });
       const data = await res.json();
       logAction({
         widget: "crew",
         action: "endpoint",
         target: `${charName} ${action}`,
         character: charName,
-        detail: JSON.stringify(data.report || data),
+        detail: JSON.stringify(data.report || data.task || data),
       });
     } catch {
       // silent
@@ -491,8 +495,9 @@ export default function CrewWidget() {
     if (action.autonomousInput || contextOn.has(key)) {
       setPromptAction({
         charName, label: action.label, seed: seedPrompt,
-        type: action.autonomousInput ? "autonomous" : "chat",
+        type: action.endpoint ? "endpoint" : action.autonomousInput ? "autonomous" : "chat",
         placeholder: action.inputPlaceholder,
+        endpoint: action.endpoint,
       });
       setPromptInput("");
       setTimeout(() => promptRef.current?.focus(), 50);
@@ -507,12 +512,15 @@ export default function CrewWidget() {
     const seed = ctx
       ? `${promptAction.seed}\n\nContext: ${ctx}`
       : promptAction.seed;
+    const { charName, label, type, endpoint } = promptAction;
     setPromptAction(null);
     setPromptInput("");
-    if (promptAction.type === "autonomous") {
-      runAutonomous(promptAction.charName, promptAction.label, seed);
+    if (type === "endpoint" && endpoint) {
+      runEndpoint(charName, label, endpoint, { query: ctx, requestedBy: charName.toLowerCase() });
+    } else if (type === "autonomous") {
+      runAutonomous(charName, label, seed);
     } else {
-      setTrigger({ charName: promptAction.charName, seedPrompt: seed, action: promptAction.label });
+      setTrigger({ charName, seedPrompt: seed, action: label });
     }
   };
 
@@ -801,12 +809,12 @@ export default function CrewWidget() {
                                       className="item-action-btn"
                                       data-tip={action.description || action.label}
                                       disabled={isRunning}
-                                      onClick={isDirect
+                                      onClick={isDirect && !isAutoInput
                                         ? () => runEndpoint(selectedChar.name, action.label, action.endpoint!)
-                                        : seedPrompt
+                                        : seedPrompt || (isDirect && isAutoInput)
                                           ? isAuto
                                             ? () => runAutonomous(selectedChar.name, action.label, seedPrompt)
-                                            : () => fireAction(selectedChar.name, action, seedPrompt)
+                                            : () => fireAction(selectedChar.name, action, seedPrompt || '')
                                           : undefined
                                       }
                                       style={{
