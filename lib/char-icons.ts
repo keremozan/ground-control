@@ -26,7 +26,7 @@ export const charColor: Record<string, string> = {
   steward:   '#0d9488',  // teal
   kybernetes:'#4f46e5',  // indigo
   prober:    '#0891b2',  // cyan
-  auditor:   '#10b981',  // emerald-400
+  auditor:   '#059669',  // emerald
   tutor:     '#65a30d',  // lime
   system:    '#64748b',  // gray
 };

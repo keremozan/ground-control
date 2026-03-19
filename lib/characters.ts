@@ -44,19 +44,26 @@ export function validateSpawn(
   return { ok: true };
 }
 
-// Character colors — matches CSS vars in globals.css
+// Character colors — fallback; should match character JSON configs
 export const CHARACTER_COLORS: Record<string, string> = {
-  postman:   '#4f46e5',
-  scholar:   '#7c3aed',
-  clerk:     '#b45309',
-  coach:     '#047857',
-  architect: '#475569',
-  oracle:    '#9333ea',
-  scribe:    '#d97706',
-  watcher:   '#64748b',
-  engineer:  '#374151',
-  archivist: '#92400e',
-  steward:   '#0d9488',
+  postman:    '#2563eb',  // blue
+  scholar:    '#7c3aed',  // purple
+  clerk:      '#b45309',  // amber
+  coach:      '#059669',  // emerald
+  curator:    '#be185d',  // rose
+  proctor:    '#c026d3',  // fuchsia
+  architect:  '#475569',  // slate
+  oracle:     '#0891b2',  // cyan
+  doctor:     '#0284c7',  // sky blue
+  scribe:     '#d97706',  // amber
+  watcher:    '#64748b',  // slate
+  engineer:   '#374151',  // gray
+  archivist:  '#92400e',  // brown
+  steward:    '#0d9488',  // teal
+  kybernetes: '#4f46e5',  // indigo
+  prober:     '#0891b2',  // cyan
+  auditor:    '#059669',  // emerald
+  tutor:      '#65a30d',  // lime
 };
 
 let _cache: Record<string, Character> | null = null;

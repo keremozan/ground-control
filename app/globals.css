@@ -1,12 +1,12 @@
 @import "tailwindcss";
 
 @theme {
-  --c-postman: #4f46e5;
+  --c-postman: #2563eb;
   --c-scholar: #7c3aed;
   --c-clerk: #b45309;
-  --c-coach: #047857;
+  --c-coach: #059669;
   --c-architect: #475569;
-  --c-oracle: #9333ea;
+  --c-oracle: #0891b2;
 }
 
 :root {
