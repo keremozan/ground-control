@@ -1,5 +1,44 @@
 # Changelog
 
+## v2.0.0 — 2026-03-19
+
+### Gmail Pipeline (new architecture)
+- [new] Event-driven email processing replaces 3x daily Postman scans
+- [new] 5-stage pipeline: filter -> character reply -> classify (Gemini Flash-Lite) -> route (Gemini Flash) -> execute
+- [new] Character reply detection: replies to [Tutor], [Coach], etc. route directly without classification
+- [new] Tana task creation with semantic search dedup (supertag CLI, 28K embeddings)
+- [new] Thread-aware dedup prevents duplicate tasks from email follow-ups
+- [new] Pipeline log API (/api/pipeline/log) with per-stage timing and decisions
+- [new] 5-minute cron polling replaces crontab scan jobs
+- [retired] 3 postman-deliver cron jobs (pipeline handles drafts directly)
+
+### Gemini Integration
+- [new] Gemini API client (Flash-Lite, Flash, Pro models)
+- [new] Deep Research integration for Scholar (async, 5-20 min reports with citations)
+- [new] Deep Research action button on Scholar card (direct API call, no Claude session)
+- [new] Results saved as markdown to ~/Desktop/Scholar/deep-research/
+
+### Dashboard
+- [new] Process monitor tab (appears when processes running, stop buttons, live elapsed time)
+- [new] Design Plans browser in Proposals tab (expand, preview, copy path)
+- [new] SharedDataProvider eliminates 7 redundant API calls per page load
+- [new] endpoint + autonomousInput action type for direct API calls with user input
+- [fix] Stale unread counts update immediately on archive/delete
+- [fix] Character colors consolidated across 3 source files
+- [fix] force-dynamic on all 28 GET routes (prevents cached responses in production)
+- [fix] Removed dead /api/action route and Google Tasks health stub
+
+### Scheduler
+- [fix] handleProcessTasks now calls markJobRun (stopped evening-tasks from re-firing 10x/day)
+- [fix] Task dedup blocklist injected into all scheduled job prompts
+- [fix] markJobRun preserves startedAt field instead of discarding
+
+### System
+- [new] Semantic search via supertag CLI for server-side dedup (lib/semantic-search.ts)
+- [new] Tana re-indexed from fresh export (188K nodes, 28K embeddings)
+- [fix] Doctor skill reconciled with REPORT EMAIL RULE
+- [fix] Doctor and Tutor Tana IDs added to schema and pipeline
+
 ## v1.9.0 — 2026-03-18
 
 ### Crew
