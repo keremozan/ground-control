@@ -1,4 +1,5 @@
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 import { getTanaTasks, getTanaPhases, resolveCharacter, type TanaPhase } from '@/lib/tana';
 
 export async function GET() {

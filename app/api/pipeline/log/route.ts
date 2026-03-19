@@ -1,4 +1,5 @@
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 import { getPipelineLog } from '@/lib/pipeline-log';
 
 export async function GET(req: Request) {

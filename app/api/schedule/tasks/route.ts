@@ -1,4 +1,5 @@
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 import { readTasks, createTask, deleteTask } from '@/lib/scheduled-tasks';
 
 export async function GET() {

@@ -1,4 +1,5 @@
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 import { readFile, writeFile, access, rename } from 'fs/promises';
 import { join } from 'path';
 import { createTask } from '@/lib/tana';

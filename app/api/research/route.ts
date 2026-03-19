@@ -1,4 +1,5 @@
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 import { startResearch, listResearch, pollAllResearch } from '@/lib/deep-research';
 
 // GET: List all research tasks + poll running ones for updates

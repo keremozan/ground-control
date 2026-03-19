@@ -1,3 +1,4 @@
+export const runtime = 'nodejs';
 import { NextResponse } from 'next/server';
 import { validateSpawn, getCharacters } from '@/lib/characters';
 import { buildCharacterPrompt } from '@/lib/prompt';

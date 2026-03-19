@@ -1,4 +1,5 @@
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 import { getClassNodes } from '@/lib/tana';
 
 export async function GET() {

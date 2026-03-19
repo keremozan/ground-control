@@ -1,3 +1,5 @@
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 import fs from "fs";
 import { appendFile } from "fs/promises";
 import { join } from "path";

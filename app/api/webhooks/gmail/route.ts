@@ -1,4 +1,5 @@
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 import { getHistoryChanges, getMessage, getProfile } from '@/lib/gmail';
 import { readHistoryState, writeHistoryId } from '@/lib/job-state';
 import { processEmail } from '@/lib/gmail-pipeline';

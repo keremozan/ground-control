@@ -1,4 +1,5 @@
 export const runtime = "nodejs";
+export const dynamic = 'force-dynamic';
 
 import { readFile, writeFile, appendFile, mkdir } from "fs/promises";
 import { existsSync } from "fs";

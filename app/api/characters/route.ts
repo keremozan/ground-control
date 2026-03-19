@@ -1,4 +1,5 @@
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 import { getCharacterList } from '@/lib/characters';
 import { SCHEDULE_JOBS } from '@/lib/scheduler';
 

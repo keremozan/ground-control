@@ -1,9 +1,10 @@
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 import fs from 'fs';
-import path from 'path';
+import { JOB_RESULTS_PATH } from '@/lib/config';
 import type { JobResult } from '@/lib/scheduler';
 
-const RESULTS_FILE = path.join(process.cwd(), 'data', 'job-results.json');
+const RESULTS_FILE = JOB_RESULTS_PATH;
 
 export async function GET() {
   let results: JobResult[] = [];
