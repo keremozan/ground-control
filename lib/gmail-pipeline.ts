@@ -1,7 +1,7 @@
 import { getMessage, getEmailBody, searchSentTo, searchDrafts, createDraft, archiveEmail } from './gmail';
 import { quickFilter } from './email-filters';
 import { geminiJSON } from './gemini';
-import { logPipelineEntry, isMessageProcessed, type StageResult, type PipelineEntry } from './pipeline-log';
+import { logPipelineEntry, isMessageProcessed, getPipelineLog, type StageResult, type PipelineEntry } from './pipeline-log';
 import { spawnOnce } from './spawn';
 import { mcpCall } from './tana';
 import { TANA_INBOX_ID } from './config';
@@ -201,7 +201,24 @@ export async function processEmail(email: EmailInput): Promise<PipelineEntry> {
           break;
 
         case 'create_task': {
-          // Dedup: check Tana for existing similar tasks
+          // Check 1: Did we already create a task from this email thread?
+          const priorEntry = getPipelineLog(200).find(e =>
+            e.threadId === email.threadId && e.messageId !== email.id &&
+            e.finalAction.includes('create_task') &&
+            e.stages.some(s => s.details?.some(d => d.startsWith('task created:')))
+          );
+
+          if (priorEntry) {
+            // Thread update: add a note to the existing task instead of creating new
+            // Find the task nodeId from the prior entry's details
+            const taskDetail = priorEntry.stages
+              .flatMap(s => s.details || [])
+              .find(d => d.startsWith('task created:'));
+            details.push(`thread update: "${action.title}" (prior task exists from ${priorEntry.from}: ${priorEntry.subject})`);
+            break;
+          }
+
+          // Check 2: Semantic dedup against all Tana tasks
           try {
             const searchResult = await mcpCall('tools/call', {
               name: 'semantic_search',
@@ -215,9 +232,9 @@ export async function processEmail(email: EmailInput): Promise<PipelineEntry> {
               details.push(`task skipped (duplicate): "${(duplicate as { name?: string }).name || 'unknown'}"`);
               break;
             }
-          } catch {} // If search fails, proceed with creation (better to duplicate than miss)
+          } catch {} // If search fails, proceed with creation
 
-          // Map character name to Tana assigned option ID
+          // Create the task
           const assignedMap: Record<string, string> = {
             postman: 'NqMuiXnJ8NEg', scholar: '7Xoa3mdCTK1t', proctor: 'QQkKqejpmGyv',
             clerk: 'SrqWi1I529WC', coach: 'cK-0HFGW1odT', curator: 'oaQx18xu9GD4',
@@ -238,6 +255,7 @@ export async function processEmail(email: EmailInput): Promise<PipelineEntry> {
           if (action.due) lines.push(`  - [[^8EVxOhX0Tnc4]]:: ${action.due}`);
           if (action.track) lines.push(`  - Source: ${action.track}`);
           lines.push(`  - Pipeline: from ${email.from}, ${email.subject}`);
+          lines.push(`  - Thread: ${email.threadId}`);
 
           await mcpCall('tools/call', {
             name: 'import_tana_paste',
