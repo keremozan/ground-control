@@ -171,7 +171,7 @@ export async function processEmail(email: EmailInput): Promise<PipelineEntry> {
       .replace('{{body}}', body.slice(0, 2000))
       .replace('{{date}}', new Date().toISOString().split('T')[0]);
     const result = await geminiJSON<RouteResult>({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-2.5-pro',
       prompt,
       apiKey: GEMINI_API_KEY,
     });
