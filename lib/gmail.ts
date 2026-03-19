@@ -292,8 +292,6 @@ export async function getHistoryChanges(account: string, startHistoryId: string)
   do {
     const params = new URLSearchParams({
       startHistoryId,
-      historyTypes: 'messageAdded',
-      labelId: 'INBOX',
     });
     if (pageToken) params.set('pageToken', pageToken);
 
@@ -301,9 +299,15 @@ export async function getHistoryChanges(account: string, startHistoryId: string)
     latestHistoryId = data.historyId || latestHistoryId;
 
     for (const record of data.history || []) {
+      // messagesAdded: new messages arriving
       for (const added of record.messagesAdded || []) {
         const msg = added.message;
-        if (msg?.id && msg.labelIds?.includes('INBOX')) {
+        if (msg?.id) messageIds.push(msg.id);
+      }
+      // labelsAdded: label changes (e.g., INBOX added to a message)
+      for (const labeled of record.labelsAdded || []) {
+        const msg = labeled.message;
+        if (msg?.id && (labeled.labelIds || []).includes('INBOX')) {
           messageIds.push(msg.id);
         }
       }

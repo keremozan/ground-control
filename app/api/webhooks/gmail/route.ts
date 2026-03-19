@@ -21,16 +21,16 @@ async function processPendingAccounts() {
   processing = false;
 }
 
-async function processAccount(account: string): Promise<{ processed: number; error?: string }> {
+async function processAccount(account: string): Promise<{ processed: number; found?: number; historyId?: string; error?: string }> {
   try {
     const historyState = readHistoryState();
-    let startHistoryId = historyState[account];
+    const startHistoryId = historyState[account];
 
     // First run: set checkpoint, nothing to process
     if (!startHistoryId) {
       const profile = await getProfile(account);
       writeHistoryId(account, profile.historyId);
-      return { processed: 0 };
+      return { processed: 0, historyId: profile.historyId };
     }
 
     const { messageIds, newHistoryId } = await getHistoryChanges(account, startHistoryId);
@@ -40,13 +40,13 @@ async function processAccount(account: string): Promise<{ processed: number; err
     for (const msgId of messageIds) {
       try {
         const email = await getMessage(account, msgId);
-        // Skip sent messages
-        if (email.labels.includes('SENT')) continue;
+        // Skip sent messages (unless also in inbox, e.g. send-to-self)
+        if (email.labels.includes('SENT') && !email.labels.includes('INBOX')) continue;
         await processEmail({ ...email, account });
         processed++;
       } catch {}
     }
-    return { processed };
+    return { processed, found: messageIds.length, historyId: newHistoryId };
   } catch (err) {
     console.error(`Pipeline error for ${account}:`, err);
     return { processed: 0, error: String(err) };
