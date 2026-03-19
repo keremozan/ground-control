@@ -31,7 +31,7 @@ export function markJobStarted(jobId: string) {
 
 export function markJobRun(jobId: string, result: 'success' | 'error') {
   const state = readJobState();
-  state[jobId] = { lastRunAt: new Date().toISOString(), lastResult: result };
+  state[jobId] = { lastRunAt: new Date().toISOString(), lastResult: result, startedAt: undefined };
   writeJobState(state);
 }
 

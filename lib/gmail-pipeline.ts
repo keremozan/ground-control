@@ -373,21 +373,33 @@ export async function processEmail(email: EmailInput): Promise<PipelineEntry> {
             break;
           }
 
-          // Check 2: Semantic dedup against all Tana tasks
+          // Check 2: Search Tana for existing tasks with similar names
           try {
-            const searchResult = await mcpCall('tools/call', {
-              name: 'semantic_search',
-              arguments: { query: action.title, limit: 5, minSimilarity: 0.3 },
-            });
-            const matches = Array.isArray(searchResult) ? searchResult : [];
-            const duplicate = matches.find((m: { name?: string; score?: number }) =>
-              (m.score || 0) >= 0.5 || (m.name && action.title && m.name.toLowerCase().includes(action.title.toLowerCase().slice(0, 20)))
-            );
-            if (duplicate) {
-              details.push(`${action.type} skipped (duplicate): "${(duplicate as { name?: string }).name || 'unknown'}"`);
-              break;
+            const searchTitle = (action.title || '').slice(0, 40);
+            if (searchTitle) {
+              const searchResult = await mcpCall('tools/call', {
+                name: 'search_nodes',
+                arguments: {
+                  query: { and: [{ hasType: 'tuoCgN5Y6sn9' }, { matches: searchTitle }] },
+                  limit: 5,
+                },
+              });
+              const matches = Array.isArray(searchResult) ? searchResult : [];
+              const duplicate = matches.find((m: { name?: string }) =>
+                m.name && action.title && (
+                  m.name.toLowerCase().includes(action.title.toLowerCase().slice(0, 20)) ||
+                  action.title.toLowerCase().includes((m.name || '').toLowerCase().slice(0, 20))
+                )
+              );
+              if (duplicate) {
+                details.push(`${action.type} skipped (duplicate): "${(duplicate as { name?: string }).name || 'unknown'}"`);
+                break;
+              }
             }
-          } catch {}
+          } catch (err) {
+            // Log dedup check failure but continue with creation
+            details.push(`dedup check failed: ${err}`);
+          }
 
           // Create the task/opportunity
           await createTanaTask({

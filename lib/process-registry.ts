@@ -54,7 +54,8 @@ export function registerProcess(proc: ChildProcess, meta: {
   jobId?: string;
 }): string {
   const id = `proc-${Date.now()}-${++counter}`;
-  const pid = proc.pid!;
+  const pid = proc.pid;
+  if (!pid) return id; // Process failed to spawn, skip registration
   const entry: InternalEntry = {
     id, pid,
     charName: meta.charName,

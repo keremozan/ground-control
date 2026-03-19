@@ -12,16 +12,27 @@ let processing = false;
 // Map email addresses to account names (populated on first profile fetch)
 const emailToAccount = new Map<string, string>();
 
+let processingStartedAt = 0;
+const MAX_PROCESSING_MS = 5 * 60 * 1000; // 5 min safety timeout
+
 async function processPendingAccounts() {
+  // Reset stuck processing flag
+  if (processing && Date.now() - processingStartedAt > MAX_PROCESSING_MS) {
+    processing = false;
+  }
   if (processing) return;
   processing = true;
+  processingStartedAt = Date.now();
   const accounts = [...pendingAccounts];
   pendingAccounts.clear();
 
-  for (const account of accounts) {
-    await processAccount(account);
+  try {
+    for (const account of accounts) {
+      await processAccount(account);
+    }
+  } finally {
+    processing = false;
   }
-  processing = false;
 }
 
 // Labels that indicate non-inbox messages we should skip
@@ -42,7 +53,6 @@ async function processAccount(account: string): Promise<{ processed: number; fou
     }
 
     const { messageIds, newHistoryId } = await getHistoryChanges(account, startHistoryId);
-    writeHistoryId(account, newHistoryId);
 
     let processed = 0;
     for (const msgId of messageIds) {
@@ -57,6 +67,9 @@ async function processAccount(account: string): Promise<{ processed: number; fou
         errors.push(`${msgId}: ${err}`);
       }
     }
+
+    // Only advance historyId after all messages processed successfully
+    writeHistoryId(account, newHistoryId);
     return { processed, found: messageIds.length, historyId: newHistoryId, errors: errors.length > 0 ? errors : undefined };
   } catch (err) {
     console.error(`Pipeline error for ${account}:`, err);
@@ -69,7 +82,7 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const encoded = body.message?.data || '';
-    const data = JSON.parse(Buffer.from(encoded, 'base64url').toString());
+    const data = JSON.parse(Buffer.from(encoded, 'base64').toString());
     const emailAddress: string = data.emailAddress || '';
 
     // Match notification to account by email address

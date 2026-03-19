@@ -98,9 +98,10 @@ export default function CrewWidget() {
 
   useEffect(() => {
     fetchProcesses();
-    const interval = setInterval(fetchProcesses, 3000);
+    // Poll every 3s when processes exist, every 30s otherwise (just to detect new ones)
+    const interval = setInterval(fetchProcesses, processes.length > 0 ? 3000 : 30000);
     return () => clearInterval(interval);
-  }, [fetchProcesses]);
+  }, [fetchProcesses, processes.length > 0]);
 
   // Auto-switch away from Processes tab when it empties
   useEffect(() => {
