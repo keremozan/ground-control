@@ -3,11 +3,12 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Play, CheckCircle, Archive, Trash2, RefreshCw, Loader2, ChevronRight, ChevronLeft, X, Send, SkipForward, ExternalLink, ChevronDown, CalendarClock, Plus, ListChecks, BookOpen, FolderKanban } from "lucide-react";
 import { ClassesTabContent } from "./ClassesWidget";
 import { charIcon, charColor } from "@/lib/char-icons";
+import { useSharedData } from "@/lib/shared-data";
 import { useChatTrigger } from "@/lib/chat-store";
 import { logAction } from "@/lib/action-log";
 import { formatWhen, getDateUrgency } from "@/lib/date-format";
 
-type CharInfo = { id: string; name: string; model: string; tier: string };
+type CharInfo = { id: string; name: string; model?: string; tier: string };
 const MODELS = ["haiku", "sonnet", "opus"];
 
 type Task = {
@@ -108,12 +109,8 @@ function ProjectsTabContent() {
     setLoading(true);
     Promise.all([
       fetch("/api/tana-projects").then(r => r.json()),
-      fetch("/api/system/config").then(r => r.json()),
-    ]).then(([projData, configData]) => {
+    ]).then(([projData]) => {
       setProjects(projData.projects || []);
-      if (configData.trackColorPatterns) {
-        setGetTrackColor(() => buildTrackColor(configData.trackColorPatterns));
-      }
       setLoading(false);
     }).catch(() => setLoading(false));
   }, []);
@@ -438,6 +435,7 @@ function ProjectsTabContent() {
 }
 
 export default function TasksWidget() {
+  const { characters: sharedCharacters, config: sharedConfig } = useSharedData();
   const [activeTab, setActiveTab] = useState<"projects" | "tasks" | "classes">("tasks");
   const [grouped, setGrouped] = useState<Record<string, Task[]>>({});
   const [loading, setLoading] = useState(true);
@@ -523,17 +521,11 @@ export default function TasksWidget() {
   }, [fetchTasks]);
 
   useEffect(() => {
-    fetch("/api/characters").then(r => r.json())
-      .then((d: { characters: CharInfo[] }) => {
-        setCharacters(d.characters || []);
-      })
-      .catch(() => {});
-    fetch("/api/system/config").then(r => r.json())
-      .then(d => {
-        if (d.trackColorPatterns) setTrackColor(() => buildTrackColor(d.trackColorPatterns));
-      })
-      .catch(() => {});
-  }, []);
+    setCharacters(sharedCharacters as CharInfo[]);
+    if (sharedConfig.trackColorPatterns) {
+      setTrackColor(() => buildTrackColor(sharedConfig.trackColorPatterns!));
+    }
+  }, [sharedCharacters, sharedConfig]);
 
   // --- Action handlers ---
 
@@ -1231,7 +1223,7 @@ export default function TasksWidget() {
                                 const name = e.target.value;
                                 setPromptChar(name);
                                 const c = characters.find(ch => ch.name === name);
-                                if (c) setPromptModel(c.model);
+                                if (c) setPromptModel(c.model || 'sonnet');
                               }}
                               style={{
                                 fontFamily: "var(--font-mono)", fontSize: 10,

@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Reply, ListChecks, Calendar, Archive, Trash2, CornerUpRight, User, GraduationCap, RefreshCw, Loader2, ExternalLink, FileText, Send, X, Play, Mail } from "lucide-react";
 import { useChatTrigger } from "@/lib/chat-store";
+import { useSharedData } from "@/lib/shared-data";
 import { logAction } from "@/lib/action-log";
 import { charColor, iconForColor } from "@/lib/char-icons";
 import { formatWhen, getDateUrgency } from "@/lib/date-format";
@@ -103,7 +104,8 @@ export default function InboxWidget() {
   const [taskEmail, setTaskEmail] = useState<Email | null>(null);
   const [taskInput, setTaskInput] = useState("");
   const [taskChar, setTaskChar] = useState(capitalize(ACTION_DEFAULTS.task));
-  const [characters, setCharacters] = useState<{ id: string; name: string }[]>([]);
+  const { characters: allCharacters, config: sharedConfig } = useSharedData();
+  const characters = allCharacters.filter(c => c.tier !== "meta");
   const [summaryEmail, setSummaryEmail] = useState<Email | null>(null);
   const [summaryText, setSummaryText] = useState("");
   const [summaryLoading, setSummaryLoading] = useState(false);
@@ -132,18 +134,9 @@ export default function InboxWidget() {
   }, [fetchEmails]);
 
   useEffect(() => {
-    fetch("/api/characters").then(r => r.json())
-      .then((d: { characters: { id: string; name: string; tier: string }[] }) => {
-        setCharacters((d.characters || []).filter(c => c.tier !== "meta"));
-      })
-      .catch(() => {});
-    fetch("/api/system/config").then(r => r.json())
-      .then(d => {
-        if (d.emailLabelColors) setLabelStyle(() => buildLabelStyle(d.emailLabelColors));
-        if (d.emailColorPatterns) setEmailColor(() => buildEmailColor(d.emailColorPatterns));
-      })
-      .catch(() => {});
-  }, []);
+    if (sharedConfig.emailLabelColors) setLabelStyle(() => buildLabelStyle(sharedConfig.emailLabelColors!));
+    if (sharedConfig.emailColorPatterns) setEmailColor(() => buildEmailColor(sharedConfig.emailColorPatterns!));
+  }, [sharedConfig]);
 
   // Direct actions: archive, delete, postman (no AI, instant)
   const runDirectAction = async (action: string, email: Email) => {
@@ -170,6 +163,12 @@ export default function InboxWidget() {
         });
         if (action === "archive" || action === "delete") {
           setEmails(prev => prev.filter(e => e.id !== email.id));
+          if (email.unread) {
+            setUnread(prev => ({
+              ...prev,
+              [email.account]: Math.max(0, prev[email.account] - 1),
+            }));
+          }
         }
       }
     } finally {

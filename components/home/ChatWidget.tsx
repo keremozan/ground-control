@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { charIcon } from "@/lib/char-icons";
 import { useChatTrigger, type ChatTrigger } from "@/lib/chat-store";
+import { useCharacters } from "@/lib/shared-data";
 import { logAction } from "@/lib/action-log";
 import TanaIcon from "@/components/icons/TanaIcon";
 import { parseToolName } from "@/lib/mcp-icons";
@@ -1497,13 +1498,11 @@ export default function ChatWidget() {
     } catch {}
   }, [tabs, activeTabId, hydrated]);
 
-  // ── Load characters ───────────────────────────────────────────────────
+  // ── Load characters from shared context ──────────────────────────────
+  const sharedChars = useCharacters();
   useEffect(() => {
-    fetch("/api/characters")
-      .then(r => r.json())
-      .then(d => setCharacters(d.characters as CharacterInfo[]))
-      .catch(() => {});
-  }, []);
+    if (sharedChars.length > 0) setCharacters(sharedChars as CharacterInfo[]);
+  }, [sharedChars]);
 
   // ── Create default tab if none restored ───────────────────────────────
   useEffect(() => {

@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useSystemConfig } from "@/lib/shared-data";
 import {
   ListChecks, Trash2, MapPin, RefreshCw, Loader2, ExternalLink, Plus, X,
   CalendarDays, Sun, Moon, Sunrise, Sunset,
@@ -568,6 +569,7 @@ function MonthView({
 // ── Main widget ──────────────────────────────────────────────────────────────
 
 export default function CalendarWidget() {
+  const sharedConfig = useSystemConfig();
   const [todayEvents, setTodayEvents] = useState<CalEvent[]>([]);
   const [weekEvents, setWeekEvents] = useState<CalEvent[]>([]);
   const [fullWeekEvents, setFullWeekEvents] = useState<CalEvent[]>([]);
@@ -588,12 +590,8 @@ export default function CalendarWidget() {
   const [eventColor, setEventColor] = useState<(title: string) => string>(() => defaultEventColor);
 
   useEffect(() => {
-    fetch("/api/system/config").then(r => r.json())
-      .then(d => {
-        if (d.calendarColorPatterns) setEventColor(() => buildEventColor(d.calendarColorPatterns));
-      })
-      .catch(() => {});
-  }, []);
+    if (sharedConfig.calendarColorPatterns) setEventColor(() => buildEventColor(sharedConfig.calendarColorPatterns!));
+  }, [sharedConfig]);
 
   // Base fetch for list view (today + upcoming week)
   const fetchListEvents = useCallback(() => {

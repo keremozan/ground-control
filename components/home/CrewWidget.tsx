@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { resolveIcon } from "@/lib/icon-map";
 import { useChatTrigger } from "@/lib/chat-store";
+import { useCharacters as useSharedCharacters } from "@/lib/shared-data";
 import { logAction, clearLog, getLog, subscribeLog, type ActionLogEntry } from "@/lib/action-log";
 import { SCHEDULE_JOBS, type JobResult } from "@/lib/scheduler";
 import { charIcon, charColor } from "@/lib/char-icons";
@@ -129,20 +130,18 @@ export default function CrewWidget() {
   ];
   const [crewFilter, setCrewFilter] = useState<string | null>(null);
 
+  const sharedChars = useSharedCharacters();
   useEffect(() => {
-    fetch("/api/characters")
-      .then(r => r.json())
-      .then(d => {
-        const filtered = (d.characters || []).filter((c: CharacterInfo) => c.tier === "core" || c.tier === "meta");
-        filtered.sort((a: CharacterInfo, b: CharacterInfo) => {
-          const ai = CREW_ORDER.indexOf(a.id);
-          const bi = CREW_ORDER.indexOf(b.id);
-          return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
-        });
-        setCharacters(filtered);
-      })
-      .catch(() => {});
-  }, []);
+    if (sharedChars.length > 0) {
+      const filtered = sharedChars.filter((c) => c.tier === "core" || c.tier === "meta") as CharacterInfo[];
+      filtered.sort((a, b) => {
+        const ai = CREW_ORDER.indexOf(a.id);
+        const bi = CREW_ORDER.indexOf(b.id);
+        return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+      });
+      setCharacters(filtered);
+    }
+  }, [sharedChars]);
 
   useEffect(() => {
     fetch("/api/schedule/results")

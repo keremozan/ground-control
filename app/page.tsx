@@ -1,5 +1,6 @@
 "use client";
 import { ChatProvider } from "@/lib/chat-store";
+import { SharedDataProvider } from "@/lib/shared-data";
 import InboxWidget from "@/components/home/InboxWidget";
 import CalendarWidget from "@/components/home/CalendarWidget";
 import TasksWidget from "@/components/home/TasksWidget";
@@ -8,6 +9,7 @@ import ChatWidget from "@/components/home/ChatWidget";
 import StatusBar from "@/components/home/StatusBar";
 export default function Home() {
   return (
+    <SharedDataProvider>
     <ChatProvider>
       <div style={{
         display: "grid",
@@ -28,5 +30,6 @@ export default function Home() {
         <CrewWidget />
       </div>
     </ChatProvider>
+    </SharedDataProvider>
   );
 }
