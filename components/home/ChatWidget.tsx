@@ -1933,33 +1933,27 @@ export default function ChatWidget() {
               position: "absolute", top: 22, left: 0, zIndex: 100,
               background: "var(--surface)", border: "1px solid var(--border)",
               borderRadius: 6, boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
-              minWidth: 156, overflow: "hidden",
+              padding: 6,
+              display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 3,
+              width: 180,
             }}>
               {characters.map(c => {
                 const CIcon = charIcon[c.name] || BookOpen;
                 return (
                   <button
                     key={c.id}
+                    data-tip={c.name}
                     onClick={() => createTab(c.id)}
                     style={{
-                      display: "flex", alignItems: "center", gap: 8, width: "100%",
-                      padding: "6px 12px", border: "none", cursor: "pointer",
-                      textAlign: "left", background: "transparent",
-                    }}
-                  >
-                    <div style={{
-                      width: 22, height: 22, borderRadius: 5, flexShrink: 0,
-                      background: c.color + "16", border: `1px solid ${c.color}28`,
                       display: "flex", alignItems: "center", justifyContent: "center",
-                    }}>
-                      <CIcon size={11} strokeWidth={1.5} style={{ color: c.color }} />
-                    </div>
-                    <span style={{
-                      fontFamily: "var(--font-mono)", fontSize: 11,
-                      color: "var(--text)",
-                    }}>
-                      {c.name}
-                    </span>
+                      width: 30, height: 30, border: "none", cursor: "pointer",
+                      background: c.color + "08", borderRadius: 5,
+                      transition: "background 0.12s",
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.background = c.color + "20")}
+                    onMouseLeave={e => (e.currentTarget.style.background = c.color + "08")}
+                  >
+                    <CIcon size={13} strokeWidth={1.5} style={{ color: c.color }} />
                   </button>
                 );
               })}
