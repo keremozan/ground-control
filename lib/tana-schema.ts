@@ -56,6 +56,8 @@ export const TANA = {
     'gD7gjtPAEbTo': 'kybernetes',
     'I0NQsNUXbAwe': 'prober',
     '5Ud2YISIG5mC': 'auditor',
+    'pHBzKcvvxCN5': 'doctor',
+    'Xl4WjK42NXgp': 'tutor',
   } as Record<string, string>,
   wsStatusOptions: {
     'DlvHvGV-uj2w': 'pending',

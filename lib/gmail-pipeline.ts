@@ -154,8 +154,8 @@ const ASSIGNED_MAP: Record<string, string> = {
   clerk: 'SrqWi1I529WC', coach: 'cK-0HFGW1odT', curator: 'oaQx18xu9GD4',
   architect: '6mku-XrMqemu', steward: 'oPQV0ekG2UyK',
   archivist: 'tpuD7FytFy9d',
-  // TODO: Add Doctor and Tutor IDs after creating options in Tana assigned field
-  // For now, tasks for doctor/tutor fall back to postman
+  doctor: 'pHBzKcvvxCN5',
+  tutor: 'Xl4WjK42NXgp',
 };
 
 const PRIORITY_MAP: Record<string, string> = {
