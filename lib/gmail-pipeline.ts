@@ -240,8 +240,7 @@ export async function processEmail(email: EmailInput): Promise<PipelineEntry> {
   });
 
   if (filterResult.action === 'archive') {
-    try { await archiveEmail(email.account, email.threadId); } catch {}
-    finalAction = 'archived (filter)';
+    finalAction = 'skipped (filter)';
     const entry: PipelineEntry = {
       messageId: email.id, threadId: email.threadId,
       from: email.from, subject: email.subject, account: email.account,
@@ -319,8 +318,7 @@ export async function processEmail(email: EmailInput): Promise<PipelineEntry> {
   });
 
   if (!actionable) {
-    try { await archiveEmail(email.account, email.threadId); } catch {}
-    finalAction = 'archived (classifier)';
+    finalAction = 'skipped (classifier)';
     const entry: PipelineEntry = {
       messageId: email.id, threadId: email.threadId,
       from: email.from, subject: email.subject, account: email.account,
