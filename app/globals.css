@@ -192,6 +192,11 @@ body {
   min-height: 0;
 }
 
+[data-fullscreen] .widget-body {
+  padding-left: calc(50% - 380px);
+  padding-right: calc(50% - 380px);
+}
+
 .widget-footer {
   padding: 8px 16px;
   border-top: 1px solid var(--border);

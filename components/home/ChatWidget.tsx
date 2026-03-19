@@ -1729,7 +1729,7 @@ export default function ChatWidget() {
   }
 
   return (
-    <div className="widget" style={fullscreen ? {
+    <div className="widget" data-fullscreen={fullscreen || undefined} style={fullscreen ? {
       position: "fixed", inset: 0, zIndex: 1000,
       height: "100vh", width: "100vw",
       borderRadius: 0, overflow: "visible",
@@ -1738,9 +1738,6 @@ export default function ChatWidget() {
       <div className="widget-header">
         <span className="widget-header-label"><MessageSquare size={13} strokeWidth={1.5} /> Chat</span>
         <div style={{ display: "flex", gap: 2 }}>
-          <button className="widget-toolbar-btn" data-tip={fullscreen ? "Exit fullscreen (Esc)" : "Fullscreen"} onClick={() => setFullscreen(v => !v)}>
-            {fullscreen ? <Minimize2 size={12} strokeWidth={1.5} /> : <Maximize2 size={12} strokeWidth={1.5} />}
-          </button>
           <button className="widget-toolbar-btn" data-tip="Send to Tana today" onClick={sendAllToTana}>
             <TanaIcon size={12} strokeWidth={1.5} />
           </button>
@@ -1778,6 +1775,9 @@ export default function ChatWidget() {
           </button>
           <button className="widget-toolbar-btn" data-tip="Clear all chats" onClick={clearAllChats}>
             <Trash2 size={12} strokeWidth={1.5} />
+          </button>
+          <button className="widget-toolbar-btn" data-tip={fullscreen ? "Exit fullscreen (Esc)" : "Fullscreen"} onClick={() => setFullscreen(v => !v)}>
+            {fullscreen ? <Minimize2 size={12} strokeWidth={1.5} /> : <Maximize2 size={12} strokeWidth={1.5} />}
           </button>
         </div>
       </div>
