@@ -1,5 +1,5 @@
 import fs from 'fs';
-import { getMessage, getEmailBody, searchSentTo, searchDrafts, createDraft, archiveEmail } from './gmail';
+import { getMessage, getEmailBody, searchSentTo, searchDrafts, createDraft, archiveEmail, applyLabel } from './gmail';
 import { quickFilter } from './email-filters';
 import { geminiJSON } from './gemini';
 import { logPipelineEntry, isMessageProcessed, getPipelineLog, type StageResult, type PipelineEntry } from './pipeline-log';
@@ -117,7 +117,7 @@ Given this email, return a JSON object with an "actions" array. Each action is o
 - { "type": "create_task", "title": "...", "character": "...", "track": "...", "priority": "low|medium|high", "due": "YYYY-MM-DD or null" }
 - { "type": "create_opportunity", "title": "...", "character": "...", "track": "...", "due": "YYYY-MM-DD or null" }
 - { "type": "create_event", "title": "...", "date": "YYYY-MM-DD", "time": "HH:MM", "duration": minutes }
-- { "type": "draft_reply", "intent": "what the reply should convey" }
+- { "type": "draft_reply", "character": "...", "intent": "what the reply should convey" }
 - { "type": "escalate", "character": "...", "reason": "why this needs full character session" }
 - { "type": "archive", "reason": "..." }
 
@@ -264,6 +264,13 @@ export async function processEmail(email: EmailInput): Promise<PipelineEntry> {
         ms: Date.now() - s15Start,
       });
       finalAction = `character reply -> ${charReply.character}`;
+      // Apply Gmail label for character replies
+      const charLabel: Record<string, string> = {
+        tutor: 'English', coach: 'Personal', doctor: 'Personal',
+        scholar: 'Research', curator: 'Art', proctor: 'Teaching', clerk: 'Admin',
+      };
+      const replyLabel = charLabel[charReply.character] || '';
+      if (replyLabel) { try { await applyLabel(email.account, email.id, replyLabel); } catch {} }
     } catch (err) {
       stages.push({
         stage: 1, name: 'character-reply',
@@ -457,6 +464,32 @@ export async function processEmail(email: EmailInput): Promise<PipelineEntry> {
     details,
     ms: Date.now() - s4Start,
   });
+
+  // ── Stage 5: Apply Gmail label based on routing ──
+  const CHARACTER_LABEL_MAP: Record<string, string> = {
+    proctor: 'Teaching', scholar: 'Research', clerk: 'Admin',
+    curator: 'Art', coach: 'Personal', doctor: 'Personal',
+    tutor: 'English', steward: 'Calendar', postman: 'General',
+    architect: 'System', engineer: 'System', archivist: 'Admin',
+  };
+
+  // Determine label from routed character or subject patterns
+  let routedCharacter = actions.find(a => a.character)?.character || '';
+  if (!routedCharacter) {
+    // Infer from subject/sender patterns
+    const subj = email.subject.toLowerCase();
+    if (/va\s*\d{3}|sucourse|ders|assignment|student/.test(subj)) routedCharacter = 'proctor';
+    else if (/exhibition|gallery|sergi|artist|curator/.test(subj)) routedCharacter = 'curator';
+    else if (/kaf|suform|dekan|bordro|fatura/.test(subj)) routedCharacter = 'clerk';
+    else if (/research|paper|conference|cfp|journal/.test(subj)) routedCharacter = 'scholar';
+  }
+  const labelName = CHARACTER_LABEL_MAP[routedCharacter] || '';
+  if (labelName && labelName !== 'General') {
+    try {
+      await applyLabel(email.account, email.id, labelName);
+      details.push(`label: ${labelName}`);
+    } catch {}
+  }
 
   finalAction = actions.map(a => a.type).join(', ');
   const entry: PipelineEntry = {

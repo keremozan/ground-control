@@ -278,6 +278,48 @@ export async function getRecentThreads(account: string, maxResults = 8): Promise
   return threads.filter((t): t is EmailSummary => t !== null);
 }
 
+// ── Label management ────────────────────────────
+
+// Cache: account -> (label name -> label ID)
+const labelIdCache = new Map<string, Map<string, string>>();
+
+/** Get or create a Gmail label by name. Returns the label ID. */
+export async function getOrCreateLabel(account: string, labelName: string): Promise<string> {
+  // Check cache
+  let cache = labelIdCache.get(account);
+  if (cache?.has(labelName)) return cache.get(labelName)!;
+
+  // Fetch all labels and populate cache
+  const data = await gmailFetch('/labels', account);
+  if (!cache) { cache = new Map(); labelIdCache.set(account, cache); }
+  for (const label of data.labels || []) {
+    cache.set(label.name, label.id);
+  }
+
+  if (cache.has(labelName)) return cache.get(labelName)!;
+
+  // Create the label
+  const created = await gmailFetch('/labels', account, {
+    method: 'POST',
+    body: JSON.stringify({
+      name: labelName,
+      labelListVisibility: 'labelShow',
+      messageListVisibility: 'show',
+    }),
+  });
+  cache.set(labelName, created.id);
+  return created.id;
+}
+
+/** Apply a label to a message */
+export async function applyLabel(account: string, messageId: string, labelName: string): Promise<void> {
+  const labelId = await getOrCreateLabel(account, labelName);
+  await gmailFetch(`/messages/${messageId}/modify`, account, {
+    method: 'POST',
+    body: JSON.stringify({ addLabelIds: [labelId] }),
+  });
+}
+
 // ── Pipeline functions ──────────────────────────
 
 /** Get changes since a historyId. Returns new message IDs. */
