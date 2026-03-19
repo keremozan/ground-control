@@ -312,10 +312,6 @@ export default function StatusBar() {
             <LayoutDashboard size={10} strokeWidth={1.5} style={{ color: "var(--text-3)" }} />
             <ServiceDot ok={status?.miro ?? null} label="Miro" />
           </div>
-          {/* Google Tasks */}
-          <div style={{ display: "flex", alignItems: "center", gap: 4 }} data-tip="Google Tasks">
-            <ListChecks size={10} strokeWidth={1.5} style={{ color: "var(--text-3)" }} />
-          </div>
         </button>
 
         {/* Health detail dropdown */}

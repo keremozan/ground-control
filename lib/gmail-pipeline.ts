@@ -5,6 +5,7 @@ import { geminiJSON } from './gemini';
 import { logPipelineEntry, isMessageProcessed, getPipelineLog, type StageResult, type PipelineEntry } from './pipeline-log';
 import { spawnOnce } from './spawn';
 import { mcpCall } from './tana';
+import { semanticSearch } from './semantic-search';
 import { TANA_INBOX_ID, GEMINI_API_KEY, SHARED_DIR } from './config';
 
 // ── Types ──
@@ -373,32 +374,15 @@ export async function processEmail(email: EmailInput): Promise<PipelineEntry> {
             break;
           }
 
-          // Check 2: Search Tana for existing tasks with similar names
-          try {
-            const searchTitle = (action.title || '').slice(0, 40);
-            if (searchTitle) {
-              const searchResult = await mcpCall('tools/call', {
-                name: 'search_nodes',
-                arguments: {
-                  query: { and: [{ hasType: 'tuoCgN5Y6sn9' }, { matches: searchTitle }] },
-                  limit: 5,
-                },
-              });
-              const matches = Array.isArray(searchResult) ? searchResult : [];
-              const duplicate = matches.find((m: { name?: string }) =>
-                m.name && action.title && (
-                  m.name.toLowerCase().includes(action.title.toLowerCase().slice(0, 20)) ||
-                  action.title.toLowerCase().includes((m.name || '').toLowerCase().slice(0, 20))
-                )
-              );
-              if (duplicate) {
-                details.push(`${action.type} skipped (duplicate): "${(duplicate as { name?: string }).name || 'unknown'}"`);
-                break;
-              }
+          // Check 2: Semantic search for existing similar tasks
+          const searchTitle = action.title || '';
+          if (searchTitle) {
+            const matches = semanticSearch(searchTitle, { limit: 5, minSimilarity: 0.5 });
+            const duplicate = matches.find(m => m.tags.includes('task') || m.tags.includes('opportunity'));
+            if (duplicate) {
+              details.push(`${action.type} skipped (duplicate, ${Math.round(duplicate.similarity * 100)}%): "${duplicate.name}"`);
+              break;
             }
-          } catch (err) {
-            // Log dedup check failure but continue with creation
-            details.push(`dedup check failed: ${err}`);
           }
 
           // Create the task/opportunity
