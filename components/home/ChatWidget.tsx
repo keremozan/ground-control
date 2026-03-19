@@ -9,7 +9,7 @@ import { parseToolName } from "@/lib/mcp-icons";
 import { resolveIcon } from "@/lib/icon-map";
 import {
   BookOpen, Check, Copy, CornerUpRight, Flag, GripHorizontal, Hammer, Layers, Loader2,
-  MessageSquare, Send, Square, Trash2, Plus, X,
+  MessageSquare, Send, Square, Trash2, Plus, X, Maximize2, Minimize2,
 } from "lucide-react";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -1444,6 +1444,15 @@ export default function ChatWidget() {
   const [characters, setCharacters] = useState<CharacterInfo[]>([]);
   const [tabs, setTabs] = useState<TabMeta[]>([]);
   const [activeTabId, setActiveTabId] = useState("");
+  const [fullscreen, setFullscreen] = useState(false);
+
+  // Escape exits fullscreen
+  useEffect(() => {
+    if (!fullscreen) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") setFullscreen(false); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [fullscreen]);
   const [loadingTabIds, setLoadingTabIds] = useState<string[]>([]);
   const [renamingTabId, setRenamingTabId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
@@ -1720,11 +1729,18 @@ export default function ChatWidget() {
   }
 
   return (
-    <div className="widget" style={{ position: "relative", height: "100%", overflow: "visible" }}>
+    <div className="widget" style={fullscreen ? {
+      position: "fixed", inset: 0, zIndex: 1000,
+      height: "100vh", width: "100vw",
+      borderRadius: 0, overflow: "visible",
+    } : { position: "relative", height: "100%", overflow: "visible" }}>
       {/* Header */}
       <div className="widget-header">
         <span className="widget-header-label"><MessageSquare size={13} strokeWidth={1.5} /> Chat</span>
         <div style={{ display: "flex", gap: 2 }}>
+          <button className="widget-toolbar-btn" data-tip={fullscreen ? "Exit fullscreen (Esc)" : "Fullscreen"} onClick={() => setFullscreen(v => !v)}>
+            {fullscreen ? <Minimize2 size={12} strokeWidth={1.5} /> : <Maximize2 size={12} strokeWidth={1.5} />}
+          </button>
           <button className="widget-toolbar-btn" data-tip="Send to Tana today" onClick={sendAllToTana}>
             <TanaIcon size={12} strokeWidth={1.5} />
           </button>
