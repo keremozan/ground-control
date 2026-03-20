@@ -1,5 +1,45 @@
 # Changelog
 
+## v3.0.0 — 2026-03-20
+
+### Architecture
+- [new] Shared type system: `types/index.ts` (client) and `types/server.ts` (server) replace 50+ inline definitions
+- [new] Custom hooks library: `useFetchAPI`, `useLocalStorage`, `useBusy`, `useInterval`, `useClickOutside`
+- [new] Shared UI components: Modal (accessible, focus trap), Spinner, EmptyState, Led, WidgetErrorBoundary
+- [new] API helpers: `apiOk`, `apiError`, `apiStream`, `requireFields`, `captureError` standardize all 42 routes
+- [new] Design token system: spacing (6-step), typography (7-step), radius, shadow, transition variables
+- [new] Error boundaries wrap every widget. One crash no longer takes down the dashboard.
+
+### Component Decomposition
+- [improved] ChatWidget (2007 lines) split into ChatPanel, ChatMessage, ChatMarkdown, ChatForm, ChatToolOutput, helpers
+- [improved] CrewWidget (1415 lines) split into CrewPanel, CharacterGrid, SchedulesTab, ProcessesTab, LogsTab, ProposalsTab
+- [improved] TasksWidget (1291 lines) split into TasksPanel, TaskList, ProjectsTimeline, ClassesTab
+- [improved] CalendarWidget (1007 lines) split into CalendarPanel, ListView, WeekView, MonthView, helpers
+- [improved] InboxWidget (653 lines) split into InboxPanel, EmailItem, SummaryPanel, ReplyPanel, TaskPanel
+- [improved] StatusBar (557 lines) split into StatusBar, HealthDropdown, ChangelogModal, BugReportModal
+- [improved] Pipeline components absorbed into crew/ directory
+
+### Lib
+- [improved] `lib/tana.ts` (1242 lines) split into `lib/tana/` with client, queries, mutations, routing, cache modules
+- [improved] `buildColorMatcher` replaces 3 duplicated color-pattern functions
+- [improved] Tana ID maps consolidated to single source of truth (tana-schema.ts)
+- [fix] Task names stripped of Tana "show field in name" suffixes (assigned, status, priority)
+
+### Design
+- [improved] All CSS classes migrated to design token variables
+- [improved] Inline styles replaced with utility CSS classes across all components
+- [fix] Task counter moved inline with filter chips (no wasted row)
+
+### Tests
+- [new] Vitest test infrastructure with 55 tests across 5 files
+- [new] Unit tests: buildColorMatcher, requireFields, validateName, date formatting, urgency
+- [new] Hook tests: useLocalStorage
+- [new] Component tests: Modal (open/close, Escape, backdrop click, aria)
+
+### Documentation
+- [new] Engineer operations guide: directory map, patterns, procedures
+- [new] Architect operations guide: schema flow, character ecosystem, consistency rules
+
 ## v2.0.0 — 2026-03-19
 
 ### Gmail Pipeline (new architecture)
