@@ -7,6 +7,7 @@ import { spawnOnce } from './spawn';
 import { mcpCall } from './tana';
 import { semanticSearch } from './semantic-search';
 import { TANA_INBOX_ID, GEMINI_API_KEY, SHARED_DIR } from './config';
+import { ASSIGNED_BY_NAME, PRIORITY_BY_NAME } from './tana-schema';
 
 // ── Types ──
 
@@ -150,19 +151,6 @@ Body: {{body}}`;
 
 // ── Tana task creation helper ──
 
-const ASSIGNED_MAP: Record<string, string> = {
-  postman: 'NqMuiXnJ8NEg', scholar: '7Xoa3mdCTK1t', proctor: 'QQkKqejpmGyv',
-  clerk: 'SrqWi1I529WC', coach: 'cK-0HFGW1odT', curator: 'oaQx18xu9GD4',
-  architect: '6mku-XrMqemu', steward: 'oPQV0ekG2UyK',
-  archivist: 'tpuD7FytFy9d',
-  doctor: 'pHBzKcvvxCN5',
-  tutor: 'Xl4WjK42NXgp',
-};
-
-const PRIORITY_MAP: Record<string, string> = {
-  high: 'dybSAOXOLRVn', medium: 'AZJRnhlWG_OJ', low: 'vb2-NBem7wRe',
-};
-
 async function createTanaTask(opts: {
   title: string;
   character: string;
@@ -172,8 +160,8 @@ async function createTanaTask(opts: {
   source?: string;
   threadId?: string;
 }): Promise<void> {
-  const assignedId = ASSIGNED_MAP[opts.character] || ASSIGNED_MAP.postman;
-  const priorityId = PRIORITY_MAP[opts.priority || 'medium'] || PRIORITY_MAP.medium;
+  const assignedId = ASSIGNED_BY_NAME[opts.character] || ASSIGNED_BY_NAME.postman;
+  const priorityId = PRIORITY_BY_NAME[opts.priority || 'medium'] || PRIORITY_BY_NAME.medium;
   const lines = [
     `- ${opts.title} #[[^tuoCgN5Y6sn9]]`,
     `  - [[^wRd8g4jr7Nqr]]:: [[^TQt9EnvCFbPW]]`,
