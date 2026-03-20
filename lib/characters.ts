@@ -25,6 +25,9 @@ export type Character = {
   trackPatterns?: string[];
   routingKeywords?: string[];
   schedules?: { id: string; displayName: string; seedPrompt: string; cron: string; label: string; enabled: boolean }[];
+  memoryFile?: string;
+  injectChangelog?: boolean;
+  autoReviewConfig?: { skillPatterns: Record<string, string> };
 };
 
 export function validateSpawn(
