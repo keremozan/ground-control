@@ -8,7 +8,9 @@
     "start": "next start",
     "setup": "npx tsx scripts/setup.ts",
     "changelog": "zsh scripts/changelog.sh",
-    "release": "zsh scripts/release.sh"
+    "release": "zsh scripts/release.sh",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@dagrejs/dagre": "^2.0.4",
@@ -22,9 +24,14 @@
     "tailwindcss": "^4.2.1"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "typescript": "^5"
+    "jsdom": "^29.0.1",
+    "typescript": "^5",
+    "vitest": "^4.1.0"
   }
 }
