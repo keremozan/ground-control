@@ -34,7 +34,7 @@ export type ChatPanelProps = {
   onMessagesChange: (msgs: ChatMessageType[]) => void;
   onLoadingChange: (loading: boolean) => void;
   canSend: boolean;
-  trigger: ChatTrigger;
+  trigger: ChatTrigger | null;
   onTriggerConsumed: () => void;
   isActive: boolean;
 };
@@ -65,7 +65,7 @@ export default function ChatPanel({
   const [modelOverride, setModelOverride] = useState<string>(initialModel || charDefault?.model || "sonnet");
   const bodyRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
-  const triggerFiredRef = useRef<ChatTrigger>(null);
+  const triggerFiredRef = useRef<ChatTrigger | null>(null);
 
   const activeChar = characters.find(c => c.id === charId) || characters[0];
   const ActiveIcon = activeChar ? (charIcon[activeChar.name] || BookOpen) : BookOpen;

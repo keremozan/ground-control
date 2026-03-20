@@ -1,12 +1,6 @@
-export type ActionLogEntry = {
-  timestamp: string;
-  widget: "inbox" | "tasks" | "chat" | "crew" | "calendar" | "scheduler" | "bug";
-  action: string;
-  target: string;
-  character?: string;
-  detail?: string;
-  jobId?: string;
-};
+import type { ActionLogEntry } from "@/types";
+
+export type { ActionLogEntry } from "@/types";
 
 const STORAGE_KEY = "gc-action-log";
 const MAX_ENTRIES = 200;

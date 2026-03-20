@@ -1,37 +1,6 @@
 "use client";
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
-
-// ── Types ──
-
-type CharacterInfo = {
-  id: string;
-  name: string;
-  tier: string;
-  icon: string;
-  color: string;
-  domain?: string;
-  groups?: string[];
-  actions?: Array<{
-    label: string;
-    icon: string;
-    description: string;
-    autonomous?: boolean;
-    autonomousInput?: boolean;
-    inputPlaceholder?: string;
-    endpoint?: string;
-  }>;
-  seeds?: Record<string, string>;
-  skills?: string[];
-  routingKeywords?: string[];
-  sharedKnowledge?: string[];
-};
-
-type SystemConfig = {
-  trackColorPatterns?: Record<string, string>;
-  emailColorPatterns?: Record<string, string>;
-  emailLabelColors?: Record<string, { color: string; bg: string }>;
-  calendarColorPatterns?: Record<string, string>;
-};
+import type { CharacterInfo, SystemConfig } from "@/types";
 
 type SharedDataValue = {
   characters: CharacterInfo[];

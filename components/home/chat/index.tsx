@@ -60,7 +60,7 @@ export default function ChatWidget() {
   const architectInputRef = useRef<HTMLTextAreaElement>(null);
   const [pendingTrigger, setPendingTrigger] = useState<{ tabId: string; trigger: NonNullable<ChatTrigger> } | null>(null);
   const newTabRef = useRef<HTMLDivElement>(null);
-  const triggerHandledRef = useRef<ChatTrigger>(null);
+  const triggerHandledRef = useRef<ChatTrigger | null>(null);
   const { trigger, setTrigger } = useChatTrigger();
 
   // Hydrate from localStorage

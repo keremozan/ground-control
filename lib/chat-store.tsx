@@ -1,19 +1,8 @@
 "use client";
 import { createContext, useContext, useState } from "react";
+import type { ChatTrigger, ChatContextValue } from "@/types";
 
-export type ChatTrigger = {
-  charName: string;
-  seedPrompt: string;
-  action: string;
-  context?: string;
-  openOnly?: boolean;
-  model?: string;
-} | null;
-
-type ChatContextValue = {
-  trigger: ChatTrigger;
-  setTrigger: (t: ChatTrigger) => void;
-};
+export type { ChatTrigger } from "@/types";
 
 const ChatContext = createContext<ChatContextValue>({
   trigger: null,
@@ -21,7 +10,7 @@ const ChatContext = createContext<ChatContextValue>({
 });
 
 export function ChatProvider({ children }: { children: React.ReactNode }) {
-  const [trigger, setTrigger] = useState<ChatTrigger>(null);
+  const [trigger, setTrigger] = useState<ChatTrigger | null>(null);
   return (
     <ChatContext.Provider value={{ trigger, setTrigger }}>
       {children}
