@@ -245,6 +245,10 @@ body {
   color: var(--text);
   background: var(--bg);
 }
+.widget-toolbar-btn:focus,
+button:focus {
+  outline: none;
+}
 
 /* --- Per-item Action Rows --- */
 
