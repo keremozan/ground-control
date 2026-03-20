@@ -22,7 +22,7 @@ function formatTime(iso: string): string {
   return d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 }
 
-export default function LogsWidget({
+export default function LogsTab({
   onShowResult,
   hideHeader,
 }: {
@@ -86,7 +86,6 @@ export default function LogsWidget({
       const res = await fetch("/api/schedule/results");
       const data = await res.json();
       const results = (data.results || []) as JobResult[];
-      // Find result matching this job that's closest in time to the log entry
       const match = results.find(r => r.jobId === entry.jobId);
       if (match) onShowResult(match);
     } catch {

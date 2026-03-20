@@ -109,7 +109,7 @@ export default function JobResultModal({
           </div>
           <div style={{ flex: 1 }}>
             <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 600, color: "var(--text)" }}>
-              {result.displayName} — {result.jobId}
+              {result.displayName} -- {result.jobId}
             </div>
             <div style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "var(--text-3)", marginTop: 1 }}>
               {dateStr} {timeStr} · {durationStr}
