@@ -4,7 +4,7 @@ import { SharedDataProvider } from "@/lib/shared-data";
 import { WidgetErrorBoundary } from "@/components/ui/WidgetErrorBoundary";
 import InboxWidget from "@/components/home/inbox";
 import CalendarWidget from "@/components/home/calendar";
-import TasksWidget from "@/components/home/TasksWidget";
+import TasksWidget from "@/components/home/tasks";
 import CrewWidget from "@/components/home/CrewWidget";
 import ChatWidget from "@/components/home/ChatWidget";
 import StatusBar from "@/components/home/status";

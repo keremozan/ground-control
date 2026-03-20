@@ -1,19 +1,19 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import { BookOpen, RefreshCw, Loader2, ChevronRight, ChevronDown, CheckCheck, MessageSquare } from "lucide-react";
+import { RefreshCw, Loader2, ChevronRight, ChevronDown, CheckCheck, MessageSquare } from "lucide-react";
 import type { ClassPrepNode, ChecklistItem } from "@/lib/tana";
 import { useChatTrigger } from "@/lib/chat-store";
 import { formatWhen, getDateUrgency } from "@/lib/date-format";
 
 function coursePill(course: string): { label: string; color: string } {
-  if (/203|204|drawing/i.test(course)) return { label: "VA 204", color: "#7c3aed" };
-  if (/315|515|culture/i.test(course)) return { label: "VA 315", color: "#0369a1" };
-  return { label: course.slice(0, 8), color: "#64748b" };
+  if (/203|204|drawing/i.test(course)) return { label: "VA 204", color: "var(--purple)" };
+  if (/315|515|culture/i.test(course)) return { label: "VA 315", color: "var(--blue)" };
+  return { label: course.slice(0, 8), color: "var(--accent-muted)" };
 }
 
 function ProgressBar({ checked, total }: { checked: number; total: number }) {
   const pct = total === 0 ? 0 : Math.round((checked / total) * 100);
-  const color = pct === 100 ? "#16a34a" : pct >= 50 ? "#2563eb" : "#94a3b8";
+  const color = pct === 100 ? "var(--green)" : pct >= 50 ? "var(--blue)" : "var(--accent-muted)";
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
       <div style={{
@@ -29,7 +29,7 @@ function ProgressBar({ checked, total }: { checked: number; total: number }) {
       </div>
       <span style={{
         fontFamily: "var(--font-mono)", fontSize: 9,
-        color: pct === 100 ? "#16a34a" : "var(--text-3)",
+        color: pct === 100 ? "var(--green)" : "var(--text-3)",
         fontWeight: pct === 100 ? 600 : 400,
         minWidth: 28, textAlign: "right",
       }}>
@@ -40,10 +40,7 @@ function ProgressBar({ checked, total }: { checked: number; total: number }) {
 }
 
 function ChecklistGroup({
-  label,
-  items,
-  toggling,
-  onToggle,
+  label, items, toggling, onToggle,
 }: {
   label: string;
   items: ChecklistItem[];
@@ -71,7 +68,7 @@ function ChecklistGroup({
         <span style={{
           fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 600,
           textTransform: "uppercase", letterSpacing: "0.05em",
-          color: done === items.length ? "#16a34a" : "var(--text-3)",
+          color: done === items.length ? "var(--green)" : "var(--text-3)",
         }}>
           {label}
         </span>
@@ -104,7 +101,7 @@ function ChecklistGroup({
                       checked={item.checked}
                       disabled={isBusy}
                       onChange={() => onToggle(item)}
-                      style={{ width: 11, height: 11, accentColor: "#2563eb", flexShrink: 0, cursor: "pointer" }}
+                      style={{ width: 11, height: 11, accentColor: "var(--blue)", flexShrink: 0, cursor: "pointer" }}
                     />
                   )
                 }
@@ -125,12 +122,11 @@ function ChecklistGroup({
   );
 }
 
-export function ClassesTabContent() {
+export default function ClassesTab() {
   const [classes, setClasses] = useState<ClassPrepNode[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [toggling, setToggling] = useState<Set<string>>(new Set());
-  // Local optimistic state: nodeId → checked
   const [localChecked, setLocalChecked] = useState<Record<string, boolean>>({});
   const [lessonDoneLoading, setLessonDoneLoading] = useState<string | null>(null);
   const { setTrigger } = useChatTrigger();
@@ -142,10 +138,7 @@ export function ClassesTabContent() {
       .then(d => {
         const list = (d.classes || []) as ClassPrepNode[];
         setClasses(list);
-        // Auto-expand the next upcoming class
-        if (list.length > 0) {
-          setExpanded(new Set([list[0].id]));
-        }
+        if (list.length > 0) setExpanded(new Set([list[0].id]));
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -160,18 +153,14 @@ export function ClassesTabContent() {
   async function handleToggle(item: ChecklistItem) {
     if (toggling.has(item.id)) return;
     const newChecked = !((localChecked[item.id] !== undefined) ? localChecked[item.id] : item.checked);
-
-    // Optimistic update
     setLocalChecked(prev => ({ ...prev, [item.id]: newChecked }));
     setToggling(prev => new Set(prev).add(item.id));
-    // Update the count in classes optimistically
     setClasses(prev => prev.map(c => {
       const inList = c.checklist.some(i => i.id === item.id);
       if (!inList) return c;
       const delta = newChecked ? 1 : -1;
       return { ...c, checkedItems: Math.max(0, Math.min(c.totalItems, c.checkedItems + delta)) };
     }));
-
     try {
       const res = await fetch("/api/class-prep/toggle", {
         method: "POST",
@@ -179,7 +168,6 @@ export function ClassesTabContent() {
         body: JSON.stringify({ nodeId: item.id, checked: newChecked }),
       });
       if (!res.ok) {
-        // Revert
         setLocalChecked(prev => ({ ...prev, [item.id]: !newChecked }));
         setClasses(prev => prev.map(c => {
           const inList = c.checklist.some(i => i.id === item.id);
@@ -200,7 +188,6 @@ export function ClassesTabContent() {
     setLessonDoneLoading(cls.id + '-prep');
     try {
       const prepItems = cls.checklist.filter(i => i.group === 'prep');
-      // Mark all prep items done via individual toggles
       await Promise.all(
         prepItems.filter(i => !(localChecked[i.id] !== undefined ? localChecked[i.id] : i.checked))
           .map(item => fetch('/api/class-prep/toggle', {
@@ -265,7 +252,7 @@ export function ClassesTabContent() {
     const daysStr = daysCalc === 0 ? 'today' : daysCalc === 1 ? 'tomorrow' : daysCalc !== null ? `in ${daysCalc} days` : '';
 
     const msg = [
-      `${cls.name}${dateStr ? ` — ${dateStr}${daysStr ? ` (${daysStr})` : ''}` : ''}`,
+      `${cls.name}${dateStr ? ` \u2014 ${dateStr}${daysStr ? ` (${daysStr})` : ''}` : ''}`,
       `Progress: ${checkedCount}/${allItems.length}`,
       '',
       prepItems.length > 0 ? `Prep:\n${fmt(prepItems)}` : '',
@@ -294,7 +281,7 @@ export function ClassesTabContent() {
     <>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "4px 16px", borderBottom: "1px solid var(--border)" }}>
         <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-3)" }}>
-          {loading ? "..." : <><span style={{ color: "#16a34a", fontWeight: 600 }}>{totalPrepped}</span>/{classes.length} prepped</>}
+          {loading ? "..." : <><span style={{ color: "var(--green)", fontWeight: 600 }}>{totalPrepped}</span>/{classes.length} prepped</>}
         </span>
         <button className="widget-toolbar-btn" data-tip="Refresh" onClick={fetchClasses}>
           <RefreshCw size={12} strokeWidth={1.5} style={loading ? { animation: "spin 1s linear infinite" } : undefined} />
@@ -319,8 +306,7 @@ export function ClassesTabContent() {
           const isExpanded = expanded.has(cls.id);
           const pill = coursePill(cls.course);
           const dateUrgency = cls.date ? getDateUrgency(cls.date, "future") : null;
-          const isToday = dateUrgency?.color === "#d97706" && dateUrgency?.dot;
-          const isSoon = dateUrgency?.color === "#0d9488" && dateUrgency?.dot;
+          const isToday = dateUrgency?.level === "today";
 
           const prepItems = cls.checklist.map(item => ({
             ...item,
@@ -339,10 +325,8 @@ export function ClassesTabContent() {
 
           return (
             <div key={cls.id} style={{
-              paddingTop: i > 0 ? 0 : 0,
               borderTop: i > 0 ? "1px solid var(--border)" : "none",
             }}>
-              {/* Class header row */}
               <div
                 onClick={() => toggleExpand(cls.id)}
                 style={{
@@ -351,7 +335,6 @@ export function ClassesTabContent() {
                   background: isToday ? "rgba(37,99,235,0.04)" : "transparent",
                 }}
               >
-                {/* When column */}
                 <span style={{ width: 72, flexShrink: 0, display: "flex", alignItems: "center", gap: 4 }}>
                   {cls.date && dateUrgency ? (
                     <>
@@ -372,7 +355,6 @@ export function ClassesTabContent() {
                   }}
                 />
 
-                {/* Course pill */}
                 <span style={{
                   fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 600,
                   color: pill.color, background: pill.color + "18",
@@ -382,7 +364,6 @@ export function ClassesTabContent() {
                   {pill.label}
                 </span>
 
-                {/* Lesson number badge */}
                 {cls.number !== null && (
                   <span style={{
                     fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 600,
@@ -392,7 +373,6 @@ export function ClassesTabContent() {
                   </span>
                 )}
 
-                {/* Class name */}
                 <span style={{
                   fontFamily: "var(--font-body)", fontSize: 12, fontWeight: 500,
                   color: "var(--text)", flex: 1,
@@ -400,36 +380,18 @@ export function ClassesTabContent() {
                 }}>
                   {cls.name}
                 </span>
-
               </div>
 
-              {/* Progress bar (always visible) */}
               <div style={{ padding: "0 16px 6px 34px" }}>
                 <ProgressBar checked={cls.checkedItems} total={cls.totalItems} />
               </div>
 
-              {/* Expanded checklist */}
               {isExpanded && cls.checklist.length > 0 && (
                 <div style={{ padding: "0 16px 10px 34px" }}>
-                  <ChecklistGroup
-                    label="Prep"
-                    items={prepItems}
-                    toggling={toggling}
-                    onToggle={handleToggle}
-                  />
-                  <ChecklistGroup
-                    label="Post-lesson"
-                    items={postItems}
-                    toggling={toggling}
-                    onToggle={handleToggle}
-                  />
+                  <ChecklistGroup label="Prep" items={prepItems} toggling={toggling} onToggle={handleToggle} />
+                  <ChecklistGroup label="Post-lesson" items={postItems} toggling={toggling} onToggle={handleToggle} />
                   {otherItems.length > 0 && (
-                    <ChecklistGroup
-                      label="Other"
-                      items={otherItems}
-                      toggling={toggling}
-                      onToggle={handleToggle}
-                    />
+                    <ChecklistGroup label="Other" items={otherItems} toggling={toggling} onToggle={handleToggle} />
                   )}
                 </div>
               )}
@@ -442,7 +404,6 @@ export function ClassesTabContent() {
                 </div>
               )}
 
-              {/* Action buttons — visible on all expanded classes */}
               {isExpanded && (
                 <div style={{ padding: "4px 16px 10px 34px", display: "flex", gap: 6, flexWrap: "wrap" }}>
                   <button
@@ -450,7 +411,7 @@ export function ClassesTabContent() {
                     onClick={() => handlePrepDone(cls)}
                     style={{
                       display: "flex", alignItems: "center", gap: 5,
-                      background: lessonDoneLoading === cls.id + '-prep' ? "var(--border)" : "#7c3aed",
+                      background: lessonDoneLoading === cls.id + '-prep' ? "var(--border)" : "var(--purple)",
                       color: lessonDoneLoading === cls.id + '-prep' ? "var(--text-3)" : "#fff",
                       border: "none", borderRadius: 5, cursor: lessonDoneLoading ? "default" : "pointer",
                       padding: "5px 10px",
@@ -470,7 +431,7 @@ export function ClassesTabContent() {
                     onClick={() => handleLessonDone(cls)}
                     style={{
                       display: "flex", alignItems: "center", gap: 5,
-                      background: lessonDoneLoading === cls.id ? "var(--border)" : "#2563eb",
+                      background: lessonDoneLoading === cls.id ? "var(--border)" : "var(--blue)",
                       color: lessonDoneLoading === cls.id ? "var(--text-3)" : "#fff",
                       border: "none", borderRadius: 5, cursor: lessonDoneLoading ? "default" : "pointer",
                       padding: "5px 10px",
@@ -507,7 +468,7 @@ export function ClassesTabContent() {
                     }}
                   >
                     <MessageSquare size={10} strokeWidth={2} />
-                    → Proctor
+                    Proctor
                   </button>
                 </div>
               )}
@@ -516,18 +477,5 @@ export function ClassesTabContent() {
         })}
       </div>
     </>
-  );
-}
-
-export default function ClassesWidget() {
-  return (
-    <div className="widget">
-      <div className="widget-header">
-        <span className="widget-header-label">
-          <BookOpen size={13} strokeWidth={1.5} /> Classes
-        </span>
-      </div>
-      <ClassesTabContent />
-    </div>
   );
 }
