@@ -177,8 +177,8 @@ export default function CalendarPanel() {
     <div className="widget" style={view === "week" ? { display: "flex", flexDirection: "column" } : undefined}>
       <div className="widget-header">
         <span className="widget-header-label"><CalendarDays size={13} strokeWidth={1.5} /> Calendar</span>
-        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-3)" }}>
+        <div className="row" style={{ gap: 4 }}>
+          <span className="mono-xs">
             {loading ? "..." : `${todayEvents.length} today`}
           </span>
           {/* View toggle */}
@@ -204,7 +204,7 @@ export default function CalendarPanel() {
 
       {/* Inline new event form */}
       {showNewEvent && (
-        <div style={{ padding: "6px 16px", borderBottom: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: 4 }}>
+        <div className="form-section">
           <input
             ref={newEventRef}
             value={newEventTitle}

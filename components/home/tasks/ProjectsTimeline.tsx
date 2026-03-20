@@ -37,17 +37,17 @@ export default function ProjectsTimeline({ projects, trackColor, onProjectClick 
 
   if (loading && projects.length === 0) {
     return (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: 20, gap: 8 }}>
+      <div className="loading-row">
         <Loader2 size={14} strokeWidth={1.5} style={{ color: "var(--text-3)", animation: "spin 1s linear infinite" }} />
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-3)" }}>Loading projects...</span>
+        <span className="mono-xs">Loading projects...</span>
       </div>
     );
   }
 
   if (projects.length === 0) {
     return (
-      <div style={{ padding: 16, textAlign: "center" }}>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-3)" }}>No active projects</span>
+      <div className="empty-state">
+        <span className="mono-xs">No active projects</span>
       </div>
     );
   }

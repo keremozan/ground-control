@@ -668,6 +668,65 @@ button:focus {
 .contents { display: contents; }
 .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+/* --- Layout Utilities --- */
+
+.row { display: flex; align-items: center; }
+.row-between { display: flex; align-items: center; justify-content: space-between; }
+.row-center { display: flex; align-items: center; justify-content: center; }
+.col { display: flex; flex-direction: column; }
+.col-full { display: flex; flex-direction: column; height: 100%; }
+.flex-1 { flex: 1; min-width: 0; }
+
+/* --- Loading / Empty State --- */
+
+.loading-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-5);
+  gap: var(--sp-2);
+}
+
+.empty-state {
+  padding: var(--sp-4);
+  text-align: center;
+}
+
+/* --- Mono Label (xs dim) --- */
+
+.mono-xs {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+}
+
+/* --- Inline Form Section --- */
+
+.form-section {
+  padding: var(--sp-1) var(--sp-4);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+/* --- Mini input / select shared style --- */
+
+.field-input {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  padding: 3px var(--sp-1);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  outline: none;
+}
+
+/* --- Spinning loader icon (applied via className when possible) --- */
+
+.spinning { animation: spin 1s linear infinite; }
+
 .dashboard-grid {
   display: grid;
   grid-template-rows: 44px 1fr 1.4fr;

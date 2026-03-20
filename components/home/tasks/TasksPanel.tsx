@@ -351,7 +351,7 @@ export default function TasksPanel() {
             })).filter(t => t.id);
 
             return (
-              <div style={{ padding: "6px 16px", borderBottom: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: 4 }}>
+              <div className="form-section">
                 <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                   <input
                     ref={newTaskRef}

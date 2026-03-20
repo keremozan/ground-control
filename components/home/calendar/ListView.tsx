@@ -34,9 +34,9 @@ export default function ListView({
 }: ListViewProps) {
   if (loading && todayEvents.length === 0) {
     return (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: 20, gap: 8 }}>
+      <div className="loading-row">
         <Loader2 size={14} strokeWidth={1.5} style={{ color: "var(--text-3)", animation: "spin 1s linear infinite" }} />
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-3)" }}>Loading calendar...</span>
+        <span className="mono-xs">Loading calendar...</span>
       </div>
     );
   }

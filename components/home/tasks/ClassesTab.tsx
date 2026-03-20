@@ -279,8 +279,8 @@ export default function ClassesTab() {
 
   return (
     <>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "4px 16px", borderBottom: "1px solid var(--border)" }}>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-3)" }}>
+      <div className="row-between" style={{ padding: "4px var(--sp-4)", borderBottom: "1px solid var(--border)" }}>
+        <span className="mono-xs">
           {loading ? "..." : <><span style={{ color: "var(--green)", fontWeight: 600 }}>{totalPrepped}</span>/{classes.length} prepped</>}
         </span>
         <button className="widget-toolbar-btn" data-tip="Refresh" onClick={fetchClasses}>
@@ -290,15 +290,15 @@ export default function ClassesTab() {
 
       <div className="widget-body" style={{ padding: "6px 0" }}>
         {loading && classes.length === 0 && (
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: 20, gap: 8 }}>
+          <div className="loading-row">
             <Loader2 size={14} strokeWidth={1.5} style={{ color: "var(--text-3)", animation: "spin 1s linear infinite" }} />
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-3)" }}>Loading from Tana...</span>
+            <span className="mono-xs">Loading from Tana...</span>
           </div>
         )}
 
         {!loading && classes.length === 0 && (
-          <div style={{ padding: "16px", textAlign: "center" }}>
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-3)" }}>No upcoming classes</span>
+          <div className="empty-state">
+            <span className="mono-xs">No upcoming classes</span>
           </div>
         )}
 
@@ -397,10 +397,8 @@ export default function ClassesTab() {
               )}
 
               {isExpanded && cls.checklist.length === 0 && (
-                <div style={{ padding: "0 16px 10px 34px" }}>
-                  <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-3)" }}>
-                    No checklist.
-                  </span>
+                <div style={{ padding: "0 var(--sp-4) 10px 34px" }}>
+                  <span className="mono-xs">No checklist.</span>
                 </div>
               )}
 

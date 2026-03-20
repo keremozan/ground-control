@@ -78,14 +78,14 @@ export default function WeekView({
 
   if (loading && events.length === 0) {
     return (
-      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", padding: 24 }}>
+      <div className="loading-row">
         <Loader2 size={14} strokeWidth={1.5} style={{ color: "var(--text-3)", animation: "spin 1s linear infinite" }} />
       </div>
     );
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+    <div className="col-full">
       {/* Week navigation */}
       <div style={{
         display: "flex", alignItems: "center", justifyContent: "space-between",

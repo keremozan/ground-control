@@ -288,9 +288,9 @@ export default function TaskList({
   ];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", padding: "0 6px" }}>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-3)" }}>
+    <div className="col-full">
+      <div className="row" style={{ justifyContent: "flex-end", padding: "0 6px" }}>
+        <span className="mono-xs">
           {loading ? "..." : <><span style={{ color: "var(--blue)", fontWeight: 600 }}>{activeTasks}</span>/{totalFiltered}</>}
         </span>
       </div>
@@ -316,14 +316,14 @@ export default function TaskList({
 
       <div className="widget-body" style={{ padding: 0 }}>
         {loading && allTasks.length === 0 && (
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: 20, gap: 8 }}>
+          <div className="loading-row">
             <Loader2 size={14} strokeWidth={1.5} style={{ color: "var(--text-3)", animation: "spin 1s linear infinite" }} />
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-3)" }}>Loading from Tana...</span>
+            <span className="mono-xs">Loading from Tana...</span>
           </div>
         )}
         {!loading && trackKeys.length === 0 && (
-          <div style={{ padding: "16px", textAlign: "center" }}>
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-3)" }}>
+          <div className="empty-state">
+            <span className="mono-xs">
               {filterKey === "today" ? "Nothing due today" : filterKey === "week" ? "Nothing due this week" : `No ${filterKey}-priority tasks`}
             </span>
           </div>
