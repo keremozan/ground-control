@@ -30,7 +30,7 @@ export async function GET(req: Request) {
   }));
 
   // Check memory file
-  const memoryFile = (char as Record<string, unknown>).memoryFile as string || `${charName}.memory.md`;
+  const memoryFile = char.memoryFile || `${charName}.memory.md`;
   const memoryExists = fs.existsSync(path.join(CHARACTERS_DIR, char.tier, memoryFile));
 
   return Response.json({

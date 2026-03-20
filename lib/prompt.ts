@@ -84,8 +84,8 @@ export function buildCharacterPrompt(characterId: string, taskContext?: string, 
     prompt += `\n\n---\n\n${sharedKnowledge['tana-ids']}`;
   }
 
-  // Architect gets CHANGELOG so it knows what's already built
-  if (characterId === 'architect') {
+  // Inject CHANGELOG for characters that request it (e.g. architect)
+  if (char.injectChangelog) {
     try {
       const changelog = fs.readFileSync(
         path.join(process.cwd(), 'CHANGELOG.md'), 'utf-8'

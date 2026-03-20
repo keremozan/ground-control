@@ -8,6 +8,14 @@ import { mcpCall } from './tana';
 import { semanticSearch } from './semantic-search';
 import { TANA_INBOX_ID, GEMINI_API_KEY, SHARED_DIR } from './config';
 import { ASSIGNED_BY_NAME, PRIORITY_BY_NAME } from './tana-schema';
+import { getCharacterList } from './characters';
+
+function getCharacterLabelMap(): Record<string, string> {
+  const chars = getCharacterList();
+  const map: Record<string, string> = {};
+  for (const c of chars) map[c.id] = `${c.id}-routed`;
+  return map;
+}
 
 // ── Types ──
 
@@ -454,12 +462,6 @@ export async function processEmail(email: EmailInput): Promise<PipelineEntry> {
   });
 
   // ── Stage 5: Apply Gmail label based on routing ──
-  const CHARACTER_LABEL_MAP: Record<string, string> = {
-    proctor: 'Teaching', scholar: 'Research', clerk: 'Admin',
-    curator: 'Art', coach: 'Personal', doctor: 'Personal',
-    tutor: 'English', steward: 'Calendar', postman: 'General',
-    architect: 'System', engineer: 'System', archivist: 'Admin',
-  };
 
   // Determine label from routed character or subject patterns
   let routedCharacter = actions.find(a => a.character)?.character || '';
@@ -471,7 +473,7 @@ export async function processEmail(email: EmailInput): Promise<PipelineEntry> {
     else if (/kaf|suform|dekan|bordro|fatura/.test(subj)) routedCharacter = 'clerk';
     else if (/research|paper|conference|cfp|journal/.test(subj)) routedCharacter = 'scholar';
   }
-  const labelName = CHARACTER_LABEL_MAP[routedCharacter] || '';
+  const labelName = getCharacterLabelMap()[routedCharacter] || '';
   if (labelName && labelName !== 'General') {
     try {
       await applyLabel(email.account, email.id, labelName);
