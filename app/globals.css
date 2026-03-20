@@ -208,7 +208,7 @@ body {
 
 [data-fullscreen] .widget-footer {
   flex-shrink: 0;
-  padding-bottom: 16px;
+  padding-bottom: 28px;
   padding-left: 14px;
   padding-right: 14px;
 }
