@@ -143,8 +143,7 @@ export default function InboxPanel() {
         }),
       });
       const rawResult = await res.json();
-      const result = rawResult?.data ?? rawResult;
-      if (result.ok) {
+      if (rawResult.ok) {
         logAction({ widget: "inbox", action, target: `${email.from}: ${email.subject}`.slice(0, 80) });
         if (action === "archive" || action === "delete") {
           setLocalEmails(prev => prev.filter(e => e.id !== email.id));

@@ -210,7 +210,7 @@ export default function CrewPanel() {
       });
       const rawResult = await taskRes.json();
       const result = rawResult?.data ?? rawResult;
-      if (result.ok) {
+      if (rawResult.ok) {
         logAction({ widget: "crew", action: "tasks", target: `${char.name} (${tasks.length} tasks)`, character: char.name, detail: result.result ? `${Math.round(result.result.durationMs / 1000)}s` : undefined, jobId: result.result?.jobId });
       }
     } catch {} finally {

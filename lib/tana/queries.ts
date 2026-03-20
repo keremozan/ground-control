@@ -214,7 +214,8 @@ export async function getTanaTasks(): Promise<TanaTask[]> {
         .replace(/<span[^>]*>[^<]*<\/span>/g, '')
         .replace(/\s*—\s*$/, '')
         .trim();
-      // Strip Tana "show field in name" suffixes — Tana appends field values to node names
+      // Strip Tana "show field in name" suffixes — Tana appends field labels and/or values to node names
+      cleanName = cleanName.replace(/(?:assigned|status|priority|due date|track)\s*$/i, '').trim();
       if (fields.assigned) cleanName = cleanName.replace(new RegExp(fields.assigned.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*$', 'i'), '').trim();
       if (fields.status) cleanName = cleanName.replace(new RegExp(fields.status.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*$', 'i'), '').trim();
       if (fields.priority) cleanName = cleanName.replace(new RegExp(fields.priority.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*$', 'i'), '').trim();
