@@ -289,13 +289,7 @@ export default function TaskList({
 
   return (
     <div className="col-full">
-      <div className="row" style={{ justifyContent: "flex-end", padding: "0 6px" }}>
-        <span className="mono-xs">
-          {loading ? "..." : <><span style={{ color: "var(--blue)", fontWeight: 600 }}>{activeTasks}</span>/{totalFiltered}</>}
-        </span>
-      </div>
-
-      <div style={{ display: "flex", gap: 4, padding: "6px 16px 2px", borderBottom: "1px solid var(--border)" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "6px 16px 2px", borderBottom: "1px solid var(--border)" }}>
         {filterChips.map(({ key, label, dot }) => {
           const active = filterKey === key;
           return (
@@ -312,6 +306,10 @@ export default function TaskList({
             </button>
           );
         })}
+        <span style={{ flex: 1 }} />
+        <span className="mono-xs">
+          {loading ? "..." : <><span style={{ color: "var(--blue)", fontWeight: 600 }}>{activeTasks}</span>/{totalFiltered}</>}
+        </span>
       </div>
 
       <div className="widget-body" style={{ padding: 0 }}>
