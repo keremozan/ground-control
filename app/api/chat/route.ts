@@ -4,9 +4,10 @@ import { getCharacters } from '@/lib/characters';
 import { spawnSSEStream } from '@/lib/spawn';
 import { TANA_INBOX_ID } from '@/lib/config';
 import { wrapWithAutoReview, detectIntent, type AutoReviewConfig } from '@/lib/auto-review';
+import { apiError, apiStream } from '@/lib/api-helpers';
 
 const AUTONOMY_RULES = `
-CRITICAL AUTONOMY RULES \u2014 follow these without exception:
+CRITICAL AUTONOMY RULES — follow these without exception:
 - NEVER ask for confirmation, permission, or "OK?" before executing actions.
 - Execute ALL actions immediately: Tana operations, searches, file reads, draft creation.
 - Only pause for: sending emails (create drafts instead), sending WhatsApp messages, or destructive deletes.
@@ -39,7 +40,7 @@ export async function POST(req: Request) {
   const characters = getCharacters();
   const char = characters[characterId];
   if (!char) {
-    return new Response('Character not found', { status: 404 });
+    return apiError(404, 'Character not found');
   }
 
   // Build task content: history + message + optional context
@@ -92,11 +93,5 @@ export async function POST(req: Request) {
     ? wrapWithAutoReview(rawStream, characterId, autoReviewConfig, revisionBasePrompt, effectiveModel)
     : rawStream;
 
-  return new Response(stream, {
-    headers: {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive',
-    },
-  });
+  return apiStream(stream);
 }

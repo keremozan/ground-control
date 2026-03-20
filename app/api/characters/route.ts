@@ -2,6 +2,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 import { getCharacterList } from '@/lib/characters';
 import { SCHEDULE_JOBS } from '@/lib/scheduler';
+import { apiOk } from '@/lib/api-helpers';
 
 export function GET() {
   // Build config-level schedule map (charName → jobs)
@@ -37,5 +38,5 @@ export function GET() {
       suggestions: c.suggestions || [],
     };
   });
-  return Response.json({ characters });
+  return apiOk({ characters });
 }

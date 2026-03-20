@@ -1,7 +1,7 @@
 export const runtime = 'nodejs';
-import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
+import { apiOk } from "@/lib/api-helpers";
 
 export async function POST() {
   // Touch a watched file to trigger Next.js dev server hot reload
@@ -9,5 +9,5 @@ export async function POST() {
   const restartFile = path.join(process.cwd(), "lib", "restart-trigger.ts");
   const stamp = `// restart triggered at ${new Date().toISOString()}\nexport const RESTART_TS = ${Date.now()};\n`;
   fs.writeFileSync(restartFile, stamp);
-  return NextResponse.json({ ok: true, message: "Restarting..." });
+  return apiOk({ message: "Restarting..." });
 }

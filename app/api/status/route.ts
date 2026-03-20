@@ -5,6 +5,7 @@ import path from 'path';
 import type { JobResult } from '@/lib/scheduler';
 import { getGmailToken, getCalendarToken } from '@/lib/google-auth';
 import { TANA_MCP_URL, TANA_MCP_TOKEN, JOB_RESULTS_PATH, HOME } from '@/lib/config';
+import { apiOk } from '@/lib/api-helpers';
 
 const RESULTS_FILE = JOB_RESULTS_PATH;
 const MCP_URL = TANA_MCP_URL;
@@ -126,7 +127,7 @@ export async function GET() {
   const val = <T,>(r: PromiseSettledResult<T>, fallback: T): T =>
     r.status === 'fulfilled' ? r.value : fallback;
 
-  return Response.json({
+  return apiOk({
     tana: val(tanaResult, false),
     gmail: {
       personal: val(gmailPersonalResult, false),

@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import fs from 'fs';
 import path from 'path';
 import { SKILLS_DIR } from '@/lib/config';
+import { apiOk } from '@/lib/api-helpers';
 
 type SkillMeta = {
   name: string;
@@ -46,8 +47,8 @@ export async function GET() {
       } catch { /* skip unreadable */ }
     }
 
-    return Response.json({ skills });
+    return apiOk({ skills });
   } catch {
-    return Response.json({ skills: [] });
+    return apiOk({ skills: [] });
   }
 }

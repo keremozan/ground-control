@@ -2,6 +2,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 import fs from 'fs';
 import path from 'path';
+import { apiOk, apiError } from '@/lib/api-helpers';
 
 type PlanFile = {
   name: string;
@@ -44,10 +45,10 @@ export async function GET(req: Request) {
 
   if (withContent) {
     const file = plans.find(p => p.name === withContent);
-    if (!file) return Response.json({ error: 'Not found' }, { status: 404 });
+    if (!file) return apiError(404, 'Not found');
     const content = fs.readFileSync(file.path, 'utf-8');
-    return Response.json({ file, content });
+    return apiOk({ file, content });
   }
 
-  return Response.json({ plans });
+  return apiOk({ plans });
 }

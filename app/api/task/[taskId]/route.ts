@@ -1,6 +1,7 @@
 export const runtime = 'nodejs';
 import { TASKS } from '@/lib/tasks';
 import { spawnSSEStream } from '@/lib/spawn';
+import { apiError, apiStream } from '@/lib/api-helpers';
 
 export async function POST(
   _req: Request,
@@ -9,7 +10,7 @@ export async function POST(
   const { taskId } = await params;
   const task = TASKS[taskId];
   if (!task) {
-    return new Response('Task not found', { status: 404 });
+    return apiError(404, 'Task not found');
   }
 
   const stream = spawnSSEStream({
@@ -20,11 +21,5 @@ export async function POST(
     characterId: task.character,
   });
 
-  return new Response(stream, {
-    headers: {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive',
-    },
-  });
+  return apiStream(stream);
 }

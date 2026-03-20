@@ -1,12 +1,13 @@
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 import { readTasks, createTask, deleteTask } from '@/lib/scheduled-tasks';
+import { apiOk, apiError, requireFields } from '@/lib/api-helpers';
 
 export async function GET() {
   const tasks = readTasks().sort(
     (a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime()
   );
-  return Response.json({ tasks });
+  return apiOk({ tasks });
 }
 
 export async function POST(req: Request) {
@@ -17,34 +18,30 @@ export async function POST(req: Request) {
     scheduledAt?: string;
   };
 
-  if (!body.charName || !body.seedPrompt || !body.label || !body.scheduledAt) {
-    return Response.json(
-      { error: 'Missing required fields: charName, seedPrompt, label, scheduledAt' },
-      { status: 400 }
-    );
-  }
+  const missing = requireFields(body, ['charName', 'seedPrompt', 'label', 'scheduledAt']);
+  if (missing) return apiError(400, missing);
 
   const task = createTask({
-    charName: body.charName,
-    seedPrompt: body.seedPrompt,
-    label: body.label,
-    scheduledAt: body.scheduledAt,
+    charName: body.charName!,
+    seedPrompt: body.seedPrompt!,
+    label: body.label!,
+    scheduledAt: body.scheduledAt!,
   });
 
-  return Response.json({ task }, { status: 201 });
+  return apiOk({ task }, 201);
 }
 
 export async function DELETE(req: Request) {
   const { searchParams } = new URL(req.url);
   const id = searchParams.get('id');
   if (!id) {
-    return Response.json({ error: 'Missing id parameter' }, { status: 400 });
+    return apiError(400, 'Missing id parameter');
   }
 
   const found = deleteTask(id);
   if (!found) {
-    return Response.json({ error: 'Task not found' }, { status: 404 });
+    return apiError(404, 'Task not found');
   }
 
-  return Response.json({ ok: true });
+  return apiOk();
 }

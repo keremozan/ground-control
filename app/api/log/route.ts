@@ -4,6 +4,7 @@ import fs from "fs";
 import { appendFile } from "fs/promises";
 import { join } from "path";
 import { HOME } from "@/lib/config";
+import { apiOk } from "@/lib/api-helpers";
 
 const LOG_PATH = join(HOME, ".claude/logs/tiny-log.jsonl");
 
@@ -16,9 +17,9 @@ export async function GET() {
       .slice(-50)
       .map((l) => { try { return JSON.parse(l); } catch { return null; } })
       .filter(Boolean);
-    return Response.json({ entries });
+    return apiOk({ entries });
   } catch {
-    return Response.json({ entries: [] });
+    return apiOk({ entries: [] });
   }
 }
 
@@ -33,8 +34,8 @@ export async function POST(req: Request) {
       // Log dir may not exist — that's fine, client buffer still works
     }
 
-    return Response.json({ ok: true });
+    return apiOk();
   } catch {
-    return Response.json({ ok: true }); // Don't fail on log errors
+    return apiOk(); // Don't fail on log errors
   }
 }

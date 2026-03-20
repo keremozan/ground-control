@@ -5,6 +5,8 @@ import { readFile, writeFile, appendFile, mkdir } from "fs/promises";
 import { existsSync } from "fs";
 import { join, dirname } from "path";
 import { HOME } from "@/lib/config";
+import { apiOk, apiError } from "@/lib/api-helpers";
+import { captureError } from "@/lib/errors";
 
 const FILE_PATH = join(HOME, ".claude/logs/flagged-conversations.jsonl");
 
@@ -29,7 +31,7 @@ async function readEntries(): Promise<Record<string, unknown>[]> {
 // GET — list pending flagged conversations
 export async function GET() {
   const entries = await readEntries();
-  return Response.json({ entries });
+  return apiOk({ entries });
 }
 
 // POST — save a flagged conversation
@@ -40,9 +42,10 @@ export async function POST(req: Request) {
     const entry = { id, ts: new Date().toISOString(), ...body };
     await ensureDir();
     await appendFile(FILE_PATH, JSON.stringify(entry) + "\n", "utf-8");
-    return Response.json({ ok: true, id });
+    return apiOk({ id });
   } catch (e) {
-    return Response.json({ ok: false, error: String(e) }, { status: 500 });
+    captureError('flag-conversation/POST', e);
+    return apiError(500, String(e));
   }
 }
 
@@ -51,7 +54,7 @@ export async function DELETE(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
-    if (!id) return Response.json({ ok: false, error: "id required" }, { status: 400 });
+    if (!id) return apiError(400, "id required");
     const entries = await readEntries();
     const remaining = entries.filter((e) => e.id !== id);
     await ensureDir();
@@ -60,8 +63,9 @@ export async function DELETE(req: Request) {
       remaining.map((e) => JSON.stringify(e)).join("\n") + (remaining.length ? "\n" : ""),
       "utf-8"
     );
-    return Response.json({ ok: true });
+    return apiOk();
   } catch (e) {
-    return Response.json({ ok: false, error: String(e) }, { status: 500 });
+    captureError('flag-conversation/DELETE', e);
+    return apiError(500, String(e));
   }
 }

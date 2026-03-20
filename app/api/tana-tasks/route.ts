@@ -1,6 +1,8 @@
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 import { getTanaTasks, getTanaPhases, resolveCharacter, type TanaPhase } from '@/lib/tana';
+import { apiOk, apiError } from '@/lib/api-helpers';
+import { captureError } from '@/lib/errors';
 
 export async function GET() {
   try {
@@ -62,8 +64,9 @@ export async function GET() {
       (phasesByTrack[phase.track] ||= []).push(phase);
     }
 
-    return Response.json({ tasks: grouped, phases: phasesByTrack });
+    return apiOk({ tasks: grouped, phases: phasesByTrack });
   } catch (e) {
-    return Response.json({ error: String(e), tasks: {}, phases: {} }, { status: 500 });
+    captureError('tana-tasks', e);
+    return apiError(500, String(e));
   }
 }

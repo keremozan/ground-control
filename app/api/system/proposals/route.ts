@@ -3,6 +3,8 @@ export const dynamic = 'force-dynamic';
 import { readFile, writeFile, access, rename } from 'fs/promises';
 import { join } from 'path';
 import { createTask } from '@/lib/tana';
+import { apiOk, apiError } from '@/lib/api-helpers';
+import { captureError } from '@/lib/errors';
 
 const HOME = process.env.HOME || '/tmp';
 const PROPOSALS_PATH = join(HOME, '.claude/characters/proposals.json');
@@ -142,20 +144,20 @@ export async function GET() {
     data.dismissed = pruneDismissed(data.dismissed);
     // Only return pending proposals
     const pending = data.proposals.filter(p => p.status === 'pending');
-    return Response.json({ proposals: pending });
+    return apiOk({ proposals: pending });
   } catch {
-    return Response.json({ proposals: [] });
+    return apiOk({ proposals: [] });
   }
 }
 
 export async function POST(req: Request) {
-  const body = await req.json() as { action: 'approve' | 'dismiss'; id: string };
-  const { action, id } = body;
-
   try {
+    const body = await req.json() as { action: 'approve' | 'dismiss'; id: string };
+    const { action, id } = body;
+
     const data = await loadProposals();
     const idx = data.proposals.findIndex(p => p.id === id);
-    if (idx === -1) return Response.json({ error: 'not found' }, { status: 404 });
+    if (idx === -1) return apiError(404, 'not found');
 
     const proposal = data.proposals[idx];
 
@@ -170,7 +172,7 @@ export async function POST(req: Request) {
       // Remove from active proposals
       data.proposals.splice(idx, 1);
       await saveProposals(data);
-      return Response.json({ ok: true });
+      return apiOk();
     }
 
     // Approve: create a task for Engineer in Tana, mark approved
@@ -193,8 +195,9 @@ export async function POST(req: Request) {
       // Task creation failure shouldn't block the approval
     }
 
-    return Response.json({ ok: true, approved: true, title: proposal.title });
-  } catch {
-    return Response.json({ error: 'failed' }, { status: 500 });
+    return apiOk({ approved: true, title: proposal.title });
+  } catch (e) {
+    captureError('system/proposals/POST', e);
+    return apiError(500, 'failed');
   }
 }

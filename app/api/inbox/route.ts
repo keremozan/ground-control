@@ -1,6 +1,8 @@
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 import { getRecentThreads, getUnreadCount, type EmailSummary } from '@/lib/gmail';
+import { apiOk, apiError } from '@/lib/api-helpers';
+import { captureError } from '@/lib/errors';
 
 export async function GET() {
   try {
@@ -41,11 +43,12 @@ export async function GET() {
       new Date(b.date).getTime() - new Date(a.date).getTime()
     );
 
-    return Response.json({
+    return apiOk({
       emails,
       unread: { personal: unreadPersonal, school: unreadSchool },
     });
   } catch (e) {
-    return Response.json({ error: String(e), emails: [], unread: { personal: 0, school: 0 } }, { status: 500 });
+    captureError('inbox', e);
+    return apiError(500, String(e));
   }
 }

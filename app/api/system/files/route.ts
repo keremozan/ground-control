@@ -4,18 +4,16 @@ import fs from 'fs';
 import path from 'path';
 import { getCharacters } from '@/lib/characters';
 import { SKILLS_DIR, SHARED_DIR, CHARACTERS_DIR } from '@/lib/config';
-
-const SAFE = /^[a-z0-9-]+$/;
+import { apiOk, apiError, validateName } from '@/lib/api-helpers';
 
 export async function GET(req: Request) {
   const charName = new URL(req.url).searchParams.get('char');
-  if (!charName || !SAFE.test(charName)) {
-    return Response.json({ error: 'Invalid character name' }, { status: 400 });
-  }
+  const nameErr = validateName(charName || '');
+  if (!charName || nameErr) return apiError(400, nameErr || 'Invalid character name');
 
   const chars = getCharacters();
   const char = chars[charName];
-  if (!char) return Response.json({ error: 'Not found' }, { status: 404 });
+  if (!char) return apiError(404, 'Not found');
 
   // Check which skill files actually exist
   const skills = (char.skills || []).map((name: string) => ({
@@ -33,7 +31,7 @@ export async function GET(req: Request) {
   const memoryFile = char.memoryFile || `${charName}.memory.md`;
   const memoryExists = fs.existsSync(path.join(CHARACTERS_DIR, char.tier, memoryFile));
 
-  return Response.json({
+  return apiOk({
     status: { skills, knowledge, memoryExists },
   });
 }

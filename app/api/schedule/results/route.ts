@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import fs from 'fs';
 import { JOB_RESULTS_PATH } from '@/lib/config';
 import type { JobResult } from '@/lib/scheduler';
+import { apiOk } from '@/lib/api-helpers';
 
 const RESULTS_FILE = JOB_RESULTS_PATH;
 
@@ -13,5 +14,5 @@ export async function GET() {
   } catch {
     // No results yet
   }
-  return Response.json({ results });
+  return apiOk({ results });
 }

@@ -1,26 +1,29 @@
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 import { readSkill, writeSkill } from '@/lib/skills';
-
-const SAFE = /^[a-z0-9-]+$/;
+import { apiOk, apiError, validateName } from '@/lib/api-helpers';
+import { captureError } from '@/lib/errors';
 
 export async function GET(req: Request) {
   const name = new URL(req.url).searchParams.get('name');
-  if (!name || !SAFE.test(name)) return Response.json({ error: 'Invalid skill name' }, { status: 400 });
+  const nameErr = validateName(name || '');
+  if (!name || nameErr) return apiError(400, nameErr || 'Invalid skill name');
   const content = readSkill(name);
-  if (content === null) return Response.json({ error: 'Not found' }, { status: 404 });
-  return Response.json({ content });
+  if (content === null) return apiError(404, 'Not found');
+  return apiOk({ content });
 }
 
 export async function PUT(req: Request) {
   const name = new URL(req.url).searchParams.get('name');
-  if (!name || !SAFE.test(name)) return Response.json({ error: 'Invalid skill name' }, { status: 400 });
+  const nameErr = validateName(name || '');
+  if (!name || nameErr) return apiError(400, nameErr || 'Invalid skill name');
   const { content } = await req.json() as { content: string };
-  if (typeof content !== 'string') return Response.json({ error: 'Missing content' }, { status: 400 });
+  if (typeof content !== 'string') return apiError(400, 'Missing content');
   try {
     writeSkill(name, content);
-    return Response.json({ ok: true });
+    return apiOk();
   } catch (e) {
-    return Response.json({ error: String(e) }, { status: 500 });
+    captureError('system/skill/PUT', e);
+    return apiError(500, String(e));
   }
 }

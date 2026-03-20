@@ -5,6 +5,8 @@ import {
 } from '@/lib/tana';
 import { buildCharacterPrompt } from '@/lib/prompt';
 import { spawnSSEStream } from '@/lib/spawn';
+import { apiOk, apiError, apiStream } from '@/lib/api-helpers';
+import { captureError } from '@/lib/errors';
 
 export async function POST(req: Request) {
   const body = await req.json();
@@ -21,21 +23,22 @@ export async function POST(req: Request) {
   // --- Create task (no nodeId needed) ---
   if (action === 'create') {
     const { title, priority, trackId: wsId } = body as { title?: string; priority?: string; trackId?: string };
-    if (!title?.trim()) return Response.json({ error: 'title required' }, { status: 400 });
+    if (!title?.trim()) return apiError(400, 'title required');
     try {
       if (wsId) {
         await createTaskInWorkstream(wsId, { title: title.trim(), priority: priority || 'medium' });
       } else {
         await createTask({ title: title.trim(), priority: priority || 'medium' });
       }
-      return Response.json({ ok: true, message: 'Task created' });
+      return apiOk({ message: 'Task created' });
     } catch (e) {
-      return Response.json({ error: String(e) }, { status: 500 });
+      captureError('tana-tasks/action/create', e);
+      return apiError(500, String(e));
     }
   }
 
   if (!nodeId || !action) {
-    return Response.json({ error: 'nodeId and action required' }, { status: 400 });
+    return apiError(400, 'nodeId and action required');
   }
 
   // --- Simple mutations (no AI, return JSON) ---
@@ -43,49 +46,54 @@ export async function POST(req: Request) {
   if (action === 'open') {
     try {
       await openNode(nodeId);
-      return Response.json({ ok: true, message: 'Opened in Tana' });
+      return apiOk({ message: 'Opened in Tana' });
     } catch (e) {
-      return Response.json({ error: String(e) }, { status: 500 });
+      captureError('tana-tasks/action/open', e);
+      return apiError(500, String(e));
     }
   }
 
   if (action === 'done') {
     try {
       await markTaskDone(nodeId);
-      return Response.json({ ok: true, message: 'Marked as done' });
+      return apiOk({ message: 'Marked as done' });
     } catch (e) {
-      return Response.json({ error: String(e) }, { status: 500 });
+      captureError('tana-tasks/action/done', e);
+      return apiError(500, String(e));
     }
   }
 
   if (action === 'delete') {
     try {
       await trashTask(nodeId);
-      return Response.json({ ok: true, message: 'Deleted' });
+      return apiOk({ message: 'Deleted' });
     } catch (e) {
-      return Response.json({ error: String(e) }, { status: 500 });
+      captureError('tana-tasks/action/delete', e);
+      return apiError(500, String(e));
     }
   }
 
   if (action === 'archive') {
     try {
       await archiveTask(nodeId, taskName || 'Task', trackId || null);
-      return Response.json({ ok: true, message: 'Archived to log' });
+      return apiOk({ message: 'Archived to log' });
     } catch (e) {
-      return Response.json({ error: String(e) }, { status: 500 });
+      captureError('tana-tasks/action/archive', e);
+      return apiError(500, String(e));
     }
   }
 
   if (action === 'set-priority') {
     const { priority } = body as { priority?: string };
     if (!priority || !['high', 'medium', 'low'].includes(priority)) {
-      return Response.json({ error: 'priority must be high, medium, or low' }, { status: 400 });
+      return apiError(400, 'priority must be high, medium, or low');
     }
     try {
       await setTaskPriority(nodeId, priority as 'high' | 'medium' | 'low');
-      return Response.json({ ok: true, message: `Priority set to ${priority}` });
+      return apiOk({ message: `Priority set to ${priority}` });
     } catch (e) {
-      return Response.json({ error: String(e) }, { status: 500 });
+      captureError('tana-tasks/action/set-priority', e);
+      return apiError(500, String(e));
     }
   }
 
@@ -104,15 +112,10 @@ export async function POST(req: Request) {
         label: `Reschedule: ${taskName || 'Task'}`,
         characterId: 'steward',
       });
-      return new Response(stream, {
-        headers: {
-          'Content-Type': 'text/event-stream',
-          'Cache-Control': 'no-cache',
-          'Connection': 'keep-alive',
-        },
-      });
+      return apiStream(stream);
     } catch (e) {
-      return Response.json({ error: String(e) }, { status: 500 });
+      captureError('tana-tasks/action/reschedule', e);
+      return apiError(500, String(e));
     }
   }
 
@@ -124,9 +127,10 @@ export async function POST(req: Request) {
       const context = md || taskName || 'Unknown task';
       const char = resolveCharacter(assigned || null, track || '', taskName || '');
       await setTaskInProgress(nodeId, char);
-      return Response.json({ ok: true, context, character: char });
+      return apiOk({ context, character: char });
     } catch (e) {
-      return Response.json({ error: String(e) }, { status: 500 });
+      captureError('tana-tasks/action/prepare', e);
+      return apiError(500, String(e));
     }
   }
 
@@ -156,17 +160,12 @@ export async function POST(req: Request) {
         characterId: char,
       });
 
-      return new Response(stream, {
-        headers: {
-          'Content-Type': 'text/event-stream',
-          'Cache-Control': 'no-cache',
-          'Connection': 'keep-alive',
-        },
-      });
+      return apiStream(stream);
     } catch (e) {
-      return Response.json({ error: String(e) }, { status: 500 });
+      captureError('tana-tasks/action/start', e);
+      return apiError(500, String(e));
     }
   }
 
-  return Response.json({ error: `Unknown action: ${action}` }, { status: 400 });
+  return apiError(400, `Unknown action: ${action}`);
 }

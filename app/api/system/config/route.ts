@@ -12,6 +12,7 @@ import {
   CALENDAR_COLOR_PATTERNS,
 } from '@/lib/config';
 import { MCP_SERVER_ICON_MAP } from '@/lib/mcp-icons';
+import { apiOk } from '@/lib/api-helpers';
 
 export async function GET() {
   // List characters
@@ -82,7 +83,7 @@ export async function GET() {
     }));
   } catch {}
 
-  return Response.json({
+  return apiOk({
     paths: [
       { label: 'Characters', value: CHARACTERS_DIR },
       { label: 'Skills', value: SKILLS_DIR },

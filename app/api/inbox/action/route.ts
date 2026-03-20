@@ -2,6 +2,8 @@ export const runtime = 'nodejs';
 import { archiveEmail, trashEmail, getEmailBody, getEmailImages } from '@/lib/gmail';
 import { createTask } from '@/lib/tana';
 import { spawnAndCollect } from '@/lib/spawn';
+import { apiOk, apiError } from '@/lib/api-helpers';
+import { captureError } from '@/lib/errors';
 
 export async function POST(req: Request) {
   const body = await req.json() as {
@@ -16,41 +18,42 @@ export async function POST(req: Request) {
   const { action, emailId, threadId, account, from, subject, text } = body;
 
   if (!action) {
-    return Response.json({ error: 'action required' }, { status: 400 });
+    return apiError(400, 'action required');
   }
 
   // Text-only actions (no email context needed)
   if (action === 'summarize-text') {
-    if (!text) return Response.json({ error: 'text required' }, { status: 400 });
+    if (!text) return apiError(400, 'text required');
     try {
       const prompt = `Compress this conversation into a concise summary. Keep key facts, decisions, and context. Be brief.\n\n${text}`;
       const { response } = await spawnAndCollect({ prompt, model: 'haiku', maxTurns: 1, label: 'Compress chat' });
-      return Response.json({ ok: true, summary: response });
+      return apiOk({ summary: response });
     } catch (e) {
-      return Response.json({ error: String(e) }, { status: 500 });
+      captureError('inbox/action/summarize-text', e);
+      return apiError(500, String(e));
     }
   }
 
   if (!emailId || !account) {
-    return Response.json({ error: 'emailId and account required' }, { status: 400 });
+    return apiError(400, 'emailId and account required');
   }
 
   try {
     if (action === 'archive') {
       // Use threadId for thread-level archive, fall back to emailId
       await archiveEmail(account, threadId || emailId);
-      return Response.json({ ok: true, message: 'Archived' });
+      return apiOk({ message: 'Archived' });
     }
 
     if (action === 'delete') {
       // Use threadId for thread-level trash, fall back to emailId
       await trashEmail(account, threadId || emailId);
-      return Response.json({ ok: true, message: 'Deleted' });
+      return apiOk({ message: 'Deleted' });
     }
 
     if (action === 'body') {
       const body = await getEmailBody(account, emailId);
-      return Response.json({ ok: true, body });
+      return apiOk({ body });
     }
 
     if (action === 'summarize') {
@@ -63,7 +66,7 @@ export async function POST(req: Request) {
           prompt, model: 'haiku', maxTurns: 1,
           label: `Summarize: ${subject}`,
         });
-        return Response.json({ ok: true, summary: response });
+        return apiOk({ summary: response });
       }
 
       // 2. Not enough text — try extracting images (attachments, inline, HTML URLs)
@@ -76,7 +79,7 @@ export async function POST(req: Request) {
           prompt, model: 'sonnet', maxTurns: 3,
           label: `Summarize: ${subject}`,
         });
-        return Response.json({ ok: true, summary: response });
+        return apiOk({ summary: response });
       }
 
       // 3. No text, no images — last resort: agent with MCP tools
@@ -87,7 +90,7 @@ export async function POST(req: Request) {
         prompt, model: 'sonnet', maxTurns: 5,
         label: `Summarize: ${subject}`,
       });
-      return Response.json({ ok: true, summary: response });
+      return apiOk({ summary: response });
     }
 
     if (action === 'postman') {
@@ -99,11 +102,12 @@ export async function POST(req: Request) {
         assigned: 'postman',
         priority: 'medium',
       });
-      return Response.json({ ok: true, message: 'Task created' });
+      return apiOk({ message: 'Task created' });
     }
 
-    return Response.json({ error: `Unknown direct action: ${action}` }, { status: 400 });
+    return apiError(400, `Unknown direct action: ${action}`);
   } catch (e) {
-    return Response.json({ error: String(e) }, { status: 500 });
+    captureError('inbox/action', e);
+    return apiError(500, String(e));
   }
 }

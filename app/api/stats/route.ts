@@ -4,6 +4,8 @@ export const dynamic = 'force-dynamic';
 import fs from 'fs';
 import { join } from 'path';
 import { HOME } from '@/lib/config';
+import { apiOk, apiError } from '@/lib/api-helpers';
+import { captureError } from '@/lib/errors';
 
 const LOG_PATH = join(HOME, '.claude/logs/tiny-log.jsonl');
 
@@ -50,7 +52,7 @@ export async function GET() {
       e.action?.startsWith('trigger:') || e.action === 'action'
     ).length;
 
-    return Response.json({
+    return apiOk({
       skillCounts,
       charActions,
       routingAccuracy: totalRouted > 0
@@ -65,6 +67,7 @@ export async function GET() {
       },
     });
   } catch (e) {
-    return Response.json({ error: String(e) }, { status: 500 });
+    captureError('stats', e);
+    return apiError(500, String(e));
   }
 }

@@ -1,12 +1,15 @@
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 import { getClassNodes } from '@/lib/tana';
+import { apiOk, apiError } from '@/lib/api-helpers';
+import { captureError } from '@/lib/errors';
 
 export async function GET() {
   try {
     const classes = await getClassNodes();
-    return Response.json({ classes });
+    return apiOk({ classes });
   } catch (e) {
-    return Response.json({ error: String(e), classes: [] }, { status: 500 });
+    captureError('class-prep', e);
+    return apiError(500, String(e));
   }
 }

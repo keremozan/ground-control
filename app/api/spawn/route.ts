@@ -1,9 +1,10 @@
 export const runtime = 'nodejs';
-import { NextResponse } from 'next/server';
 import { validateSpawn, getCharacters } from '@/lib/characters';
 import { buildCharacterPrompt } from '@/lib/prompt';
 import { spawnAndCollect } from '@/lib/spawn';
 import { serverLog } from '@/lib/server-log';
+import { apiOk, apiError, requireFields } from '@/lib/api-helpers';
+import { captureError } from '@/lib/errors';
 
 export async function POST(req: Request) {
   const body = await req.json() as {
@@ -17,13 +18,12 @@ export async function POST(req: Request) {
 
   const { characterId, task, callerCharacterId, model, maxTurns = 15, depth = 0 } = body;
 
-  if (!characterId || !task) {
-    return NextResponse.json({ ok: false, error: 'characterId and task are required' }, { status: 400 });
-  }
+  const missing = requireFields(body, ['characterId', 'task']);
+  if (missing) return apiError(400, missing);
 
   const validation = validateSpawn(callerCharacterId, characterId, depth);
   if (!validation.ok) {
-    return NextResponse.json({ ok: false, error: validation.error }, { status: 403 });
+    return apiError(403, validation.error!);
   }
 
   const characters = getCharacters();
@@ -59,14 +59,14 @@ export async function POST(req: Request) {
       outputLength: response.length,
     });
 
-    return NextResponse.json({
-      ok: true,
+    return apiOk({
       output: response,
       character: characterId,
       durationMs,
     });
   } catch (err) {
+    captureError('spawn', err);
     const message = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ ok: false, error: message }, { status: 500 });
+    return apiError(500, message);
   }
 }

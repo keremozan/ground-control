@@ -11,6 +11,8 @@ import {
 import { markJobRun, markJobStarted } from '@/lib/job-state';
 import fs from 'fs';
 import path from 'path';
+import { apiOk, apiError } from '@/lib/api-helpers';
+import { captureError } from '@/lib/errors';
 
 const RESULTS_FILE = JOB_RESULTS_PATH;
 const MAX_RESULTS = MAX_JOB_RESULTS;
@@ -116,7 +118,7 @@ export async function POST(req: Request) {
   if (body.jobId) {
     const job = SCHEDULE_JOBS.find(j => j.id === body.jobId);
     if (!job) {
-      return Response.json({ ok: false, error: 'Job not found' }, { status: 404 });
+      return apiError(404, 'Job not found');
     }
     charName = job.charName;
     displayName = job.displayName;
@@ -137,14 +139,14 @@ export async function POST(req: Request) {
     label = body.label || `${displayName} ad-hoc`;
     mode = undefined;
   } else {
-    return Response.json({ ok: false, error: 'Provide jobId or charName+seedPrompt' }, { status: 400 });
+    return apiError(400, 'Provide jobId or charName+seedPrompt');
   }
 
   // ── dedup guard: reject if same jobId started within DEDUP_WINDOW_MS ──
   const now = Date.now();
   const lastStarted = IN_FLIGHT.get(jobId);
   if (lastStarted && now - lastStarted < DEDUP_WINDOW_MS) {
-    return Response.json({ ok: false, error: 'duplicate: job already running' }, { status: 409 });
+    return apiError(409, 'duplicate: job already running');
   }
   IN_FLIGHT.set(jobId, now);
   // clean up stale entries
@@ -168,7 +170,7 @@ export async function POST(req: Request) {
 
   const char = characters[charName];
   if (!char) {
-    return Response.json({ ok: false, error: 'Character not found' }, { status: 404 });
+    return apiError(404, 'Character not found');
   }
 
   const scheduledAutonomy = await buildScheduledAutonomy();
@@ -202,11 +204,12 @@ export async function POST(req: Request) {
     markJobRun(jobId, 'success');
     IN_FLIGHT.delete(jobId);
 
-    return Response.json({ ok: true, result });
+    return apiOk({ result });
   } catch (err) {
     markJobRun(jobId, 'error');
     IN_FLIGHT.delete(jobId);
-    return Response.json({ ok: false, error: String(err) }, { status: 500 });
+    captureError('schedule/run', err);
+    return apiError(500, String(err));
   }
 }
 
@@ -242,7 +245,8 @@ async function handleProcessTasks(
   } catch (err) {
     markJobRun(jobId, 'error');
     IN_FLIGHT.delete(jobId);
-    return Response.json({ ok: false, error: `Task fetch failed: ${err}` }, { status: 500 });
+    captureError('schedule/run/process-tasks', err);
+    return apiError(500, `Task fetch failed: ${err}`);
   }
 
   const chars = Object.entries(charTasks);
@@ -259,7 +263,7 @@ async function handleProcessTasks(
     writeResults([result, ...existing]);
     markJobRun(jobId, 'success');
     IN_FLIGHT.delete(jobId);
-    return Response.json({ ok: true, result });
+    return apiOk({ result });
   }
 
   // Spawn each character sequentially
@@ -338,5 +342,5 @@ async function handleProcessTasks(
   markJobRun(jobId, 'success');
   IN_FLIGHT.delete(jobId);
 
-  return Response.json({ ok: true, result: mainResult });
+  return apiOk({ result: mainResult });
 }

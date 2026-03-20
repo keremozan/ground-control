@@ -7,6 +7,7 @@ import { getCharacters } from '@/lib/characters';
 import { spawnAndCollect } from '@/lib/spawn';
 import type { JobResult } from '@/lib/scheduler';
 import { JOB_RESULTS_PATH, MAX_JOB_RESULTS } from '@/lib/config';
+import { apiOk } from '@/lib/api-helpers';
 
 const SCHEDULED_AUTONOMY = `
 CRITICAL: This is an AUTOMATED scheduled task. You are running unattended — there is no human to answer questions.
@@ -35,7 +36,7 @@ function writeResults(results: JobResult[]) {
 export async function POST() {
   const overdue = claimOverdueTasks();
   if (overdue.length === 0) {
-    return Response.json({ ran: 0, tasks: [] });
+    return apiOk({ ran: 0, tasks: [] });
   }
 
   const characters = getCharacters();
@@ -87,5 +88,5 @@ export async function POST() {
 
   }
 
-  return Response.json({ ran: ranLabels.length, tasks: ranLabels });
+  return apiOk({ ran: ranLabels.length, tasks: ranLabels });
 }

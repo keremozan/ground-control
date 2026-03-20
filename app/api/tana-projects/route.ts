@@ -1,6 +1,8 @@
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 import { getTanaProjects } from '@/lib/tana';
+import { apiOk, apiError } from '@/lib/api-helpers';
+import { captureError } from '@/lib/errors';
 
 export async function GET() {
   try {
@@ -14,8 +16,9 @@ export async function GET() {
       return a.name.localeCompare(b.name);
     });
 
-    return Response.json({ projects });
+    return apiOk({ projects });
   } catch (e) {
-    return Response.json({ error: String(e), projects: [] }, { status: 500 });
+    captureError('tana-projects', e);
+    return apiError(500, String(e));
   }
 }

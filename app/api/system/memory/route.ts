@@ -4,9 +4,10 @@ import fs from 'fs';
 import path from 'path';
 import { getCharacters, clearCharacterCache } from '@/lib/characters';
 import { CHARACTERS_DIR } from '@/lib/config';
+import { apiOk, apiError, validateName } from '@/lib/api-helpers';
+import { captureError } from '@/lib/errors';
 
 const CHARS_DIR = CHARACTERS_DIR;
-const SAFE = /^[a-z0-9-]+$/;
 
 function memPath(charName: string): string | null {
   const chars = getCharacters();
@@ -17,29 +18,32 @@ function memPath(charName: string): string | null {
 
 export async function GET(req: Request) {
   const name = new URL(req.url).searchParams.get('char');
-  if (!name || !SAFE.test(name)) return Response.json({ error: 'Invalid character' }, { status: 400 });
+  const nameErr = validateName(name || '');
+  if (!name || nameErr) return apiError(400, nameErr || 'Invalid character');
   const p = memPath(name);
-  if (!p) return Response.json({ error: 'Character not found' }, { status: 404 });
+  if (!p) return apiError(404, 'Character not found');
   try {
     const content = fs.readFileSync(p, 'utf-8');
-    return Response.json({ content });
+    return apiOk({ content });
   } catch {
-    return Response.json({ content: '' });
+    return apiOk({ content: '' });
   }
 }
 
 export async function PUT(req: Request) {
   const name = new URL(req.url).searchParams.get('char');
-  if (!name || !SAFE.test(name)) return Response.json({ error: 'Invalid character' }, { status: 400 });
+  const nameErr = validateName(name || '');
+  if (!name || nameErr) return apiError(400, nameErr || 'Invalid character');
   const p = memPath(name);
-  if (!p) return Response.json({ error: 'Character not found' }, { status: 404 });
+  if (!p) return apiError(404, 'Character not found');
   const { content } = await req.json() as { content: string };
-  if (typeof content !== 'string') return Response.json({ error: 'Missing content' }, { status: 400 });
+  if (typeof content !== 'string') return apiError(400, 'Missing content');
   try {
     fs.writeFileSync(p, content, 'utf-8');
     clearCharacterCache();
-    return Response.json({ ok: true });
+    return apiOk();
   } catch (e) {
-    return Response.json({ error: String(e) }, { status: 500 });
+    captureError('system/memory/PUT', e);
+    return apiError(500, String(e));
   }
 }

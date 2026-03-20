@@ -1,5 +1,6 @@
 export const runtime = 'nodejs';
 import { TASKS } from '@/lib/tasks';
+import { apiOk } from '@/lib/api-helpers';
 
 export function GET() {
   const tasks = Object.entries(TASKS).map(([id, t]) => ({
@@ -10,5 +11,5 @@ export function GET() {
     character: t.character,
     model: t.model,
   }));
-  return Response.json({ tasks });
+  return apiOk({ tasks });
 }

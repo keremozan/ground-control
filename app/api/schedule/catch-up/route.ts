@@ -2,6 +2,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 import { SCHEDULE_JOBS } from '@/lib/scheduler';
 import { readJobState } from '@/lib/job-state';
+import { apiOk } from '@/lib/api-helpers';
 
 /** Parse a simple cron string like "08:00 daily" or "Monday 08:00" into expected interval in ms */
 function expectedIntervalMs(cron: string): number {
@@ -68,7 +69,7 @@ export async function POST(req: Request) {
   const missed = getMissedJobs();
 
   if (!body.run) {
-    return Response.json({ missed, count: missed.length });
+    return apiOk({ missed, count: missed.length });
   }
 
   // Sequential execution: run each missed job one at a time
@@ -104,7 +105,7 @@ export async function POST(req: Request) {
   const failed = results.filter(r => !r.ok).length;
   const totalMs = results.reduce((sum, r) => sum + r.durationMs, 0);
 
-  return Response.json({
+  return apiOk({
     caught_up: true,
     total: results.length,
     succeeded,
@@ -117,5 +118,5 @@ export async function POST(req: Request) {
 // GET: quick check without running (for dashboard polling)
 export async function GET() {
   const missed = getMissedJobs();
-  return Response.json({ missed, count: missed.length });
+  return apiOk({ missed, count: missed.length });
 }

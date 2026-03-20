@@ -1,13 +1,17 @@
 export const runtime = 'nodejs';
 import { checkRemainingPrepItems } from '@/lib/tana';
+import { apiOk, apiError, requireFields } from '@/lib/api-helpers';
+import { captureError } from '@/lib/errors';
 
 export async function POST(req: Request) {
   try {
-    const { classNodeId } = await req.json();
-    if (!classNodeId) return Response.json({ error: 'classNodeId required' }, { status: 400 });
-    const checked = await checkRemainingPrepItems(classNodeId);
-    return Response.json({ ok: true, checked });
+    const body = await req.json();
+    const missing = requireFields(body, ['classNodeId']);
+    if (missing) return apiError(400, missing);
+    const checked = await checkRemainingPrepItems(body.classNodeId);
+    return apiOk({ checked });
   } catch (e) {
-    return Response.json({ error: String(e) }, { status: 500 });
+    captureError('class-prep/lesson-done', e);
+    return apiError(500, String(e));
   }
 }

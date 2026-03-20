@@ -1,15 +1,18 @@
 export const runtime = 'nodejs';
 import { toggleClassItem } from '@/lib/tana';
+import { apiOk, apiError } from '@/lib/api-helpers';
+import { captureError } from '@/lib/errors';
 
 export async function POST(req: Request) {
   try {
-    const { nodeId, checked } = await req.json();
-    if (!nodeId || typeof checked !== 'boolean') {
-      return Response.json({ error: 'nodeId and checked required' }, { status: 400 });
+    const body = await req.json();
+    if (!body.nodeId || typeof body.checked !== 'boolean') {
+      return apiError(400, 'nodeId and checked required');
     }
-    await toggleClassItem(nodeId, checked);
-    return Response.json({ ok: true });
+    await toggleClassItem(body.nodeId, body.checked);
+    return apiOk();
   } catch (e) {
-    return Response.json({ error: String(e) }, { status: 500 });
+    captureError('class-prep/toggle', e);
+    return apiError(500, String(e));
   }
 }

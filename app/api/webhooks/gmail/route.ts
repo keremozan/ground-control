@@ -4,6 +4,7 @@ import { getHistoryChanges, getMessage, getProfile } from '@/lib/gmail';
 import { readHistoryState, writeHistoryId } from '@/lib/job-state';
 import { processEmail } from '@/lib/gmail-pipeline';
 import { GMAIL_ACCOUNTS } from '@/lib/config';
+import { apiOk } from '@/lib/api-helpers';
 
 // Debounce: collect notifications for 2 seconds before processing
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -100,7 +101,7 @@ export async function POST(req: Request) {
   } catch {}
 
   // Always 200 to prevent Pub/Sub retries
-  return Response.json({ ok: true });
+  return apiOk();
 }
 
 // GET: Manual catch-up (startup, dashboard button)
@@ -119,5 +120,5 @@ export async function GET() {
     results.push({ account, ...result });
   }
 
-  return Response.json({ ok: true, results });
+  return apiOk({ results });
 }

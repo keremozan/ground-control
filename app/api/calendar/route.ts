@@ -1,6 +1,8 @@
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 import { getTodayEvents, getWeekEvents, getFullWeekEvents, getMonthEvents } from '@/lib/google-calendar';
+import { apiOk, apiError } from '@/lib/api-helpers';
+import { captureError } from '@/lib/errors';
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -21,8 +23,9 @@ export async function GET(req: Request) {
     } else {
       events = await getTodayEvents();
     }
-    return Response.json({ events });
+    return apiOk({ events });
   } catch (e) {
-    return Response.json({ error: String(e), events: [] }, { status: 500 });
+    captureError('calendar', e);
+    return apiError(500, String(e));
   }
 }

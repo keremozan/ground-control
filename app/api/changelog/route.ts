@@ -3,6 +3,8 @@ import { exec } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { promisify } from 'util';
+import { apiOk, apiError, requireFields } from '@/lib/api-helpers';
+import { captureError } from '@/lib/errors';
 
 const execAsync = promisify(exec);
 
@@ -18,35 +20,38 @@ function insertUnderCurrentVersion(content: string, entry: string): string {
 }
 
 export async function POST(req: Request) {
-  const { entry, isPrivate } = await req.json() as { entry: string; isPrivate?: boolean };
-  if (!entry?.trim()) {
-    return Response.json({ error: 'entry required' }, { status: 400 });
-  }
-  const cwd = process.cwd();
-  const filename = isPrivate ? 'CHANGELOG.private.md' : 'CHANGELOG.md';
-  const file = path.join(cwd, filename);
   try {
+    const body = await req.json() as { entry: string; isPrivate?: boolean };
+    const missing = requireFields(body, ['entry']);
+    if (missing) return apiError(400, missing);
+
+    if (!body.entry.trim()) return apiError(400, 'entry is required');
+
+    const cwd = process.cwd();
+    const filename = body.isPrivate ? 'CHANGELOG.private.md' : 'CHANGELOG.md';
+    const file = path.join(cwd, filename);
     const content = fs.readFileSync(file, 'utf-8');
-    const updated = insertUnderCurrentVersion(content, entry.trim());
+    const updated = insertUnderCurrentVersion(content, body.entry.trim());
     fs.writeFileSync(file, updated, 'utf-8');
     const vLine = content.match(/^## v([\d.]+)/m);
     const version = vLine?.[1] ?? '?';
     await execAsync(`git add ${filename} && git commit -m "docs: update changelog v${version}"`, { cwd });
-    return Response.json({ ok: true, version });
+    return apiOk({ version });
   } catch (err) {
-    return Response.json({ error: String(err) }, { status: 500 });
+    captureError('changelog/POST', err);
+    return apiError(500, String(err));
   }
 }
 
 export async function GET() {
-  const cwd = process.cwd();
-  const pubFile = path.join(cwd, 'CHANGELOG.md');
-  const privFile = path.join(cwd, 'CHANGELOG.private.md');
   try {
+    const cwd = process.cwd();
+    const pubFile = path.join(cwd, 'CHANGELOG.md');
+    const privFile = path.join(cwd, 'CHANGELOG.private.md');
     const pubContent = fs.existsSync(pubFile) ? fs.readFileSync(pubFile, 'utf-8') : '';
     const privContent = fs.existsSync(privFile) ? fs.readFileSync(privFile, 'utf-8') : '';
-    return Response.json({ content: pubContent, privateContent: privContent });
+    return apiOk({ content: pubContent, privateContent: privContent });
   } catch {
-    return Response.json({ content: 'No changelog found.', privateContent: '' });
+    return apiOk({ content: 'No changelog found.', privateContent: '' });
   }
 }
