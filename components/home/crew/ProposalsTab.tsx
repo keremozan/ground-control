@@ -60,22 +60,23 @@ export default function ProposalsTab({ hideHeader }: { hideHeader?: boolean }) {
 
   const fetch_ = useCallback(() => {
     setLoading(true);
-    fetch("/api/system/proposals").then(r => r.json()).then(d => setProposals(d.proposals || [])).catch(() => {}).finally(() => setLoading(false));
+    fetch("/api/system/proposals").then(r => r.json()).then(raw => { const d = raw?.data ?? raw; setProposals(d.proposals || []); }).catch(() => {}).finally(() => setLoading(false));
   }, []);
   useEffect(() => { fetch_(); }, [fetch_]);
-  useEffect(() => { fetch("/api/system/plans").then(r => r.json()).then(d => setPlans(d.plans || [])).catch(() => {}); }, []);
+  useEffect(() => { fetch("/api/system/plans").then(r => r.json()).then(raw => { const d = raw?.data ?? raw; setPlans(d.plans || []); }).catch(() => {}); }, []);
 
   const handleExpandPlan = async (name: string) => {
     if (expandedPlan === name) { setExpandedPlan(null); setPlanContent(null); return; }
     setExpandedPlan(name); setPlanContent(null);
-    try { const res = await fetch(`/api/system/plans?content=${encodeURIComponent(name)}`); const data = await res.json(); setPlanContent(data.content || null); } catch {}
+    try { const res = await fetch(`/api/system/plans?content=${encodeURIComponent(name)}`); const raw = await res.json(); const data = raw?.data ?? raw; setPlanContent(data.content || null); } catch {}
   };
 
   const handleAction = async (id: string, action: "approve" | "dismiss") => {
     setBusy(prev => new Set(prev).add(id));
     try {
       const res = await fetch("/api/system/proposals", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, id }) });
-      const data = await res.json();
+      const raw = await res.json();
+      const data = raw?.data ?? raw;
       if (action === "approve" && data.approved) { setToast(`Approved: ${data.title}`); setTimeout(() => setToast(null), 3000); }
       else if (action === "approve" && data.error) { setToast(`Failed: ${data.error}`); setTimeout(() => setToast(null), 4000); }
       else if (action === "dismiss") { setToast("Dismissed"); setTimeout(() => setToast(null), 2000); }

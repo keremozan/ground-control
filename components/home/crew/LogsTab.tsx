@@ -46,7 +46,7 @@ export default function LogsTab({
 
     fetch("/api/schedule/results")
       .then(r => r.json())
-      .then((data: { results?: import("@/lib/scheduler").JobResult[] }) => {
+      .then((raw: any) => { const data = (raw?.data ?? raw) as { results?: import("@/lib/scheduler").JobResult[] };
         const results = data.results || [];
         // Re-read from localStorage at resolution time to avoid React StrictMode double-inject
         let fresh: Set<string>;
@@ -84,7 +84,8 @@ export default function LogsTab({
 
     try {
       const res = await fetch("/api/schedule/results");
-      const data = await res.json();
+      const raw = await res.json();
+      const data = raw?.data ?? raw;
       const results = (data.results || []) as JobResult[];
       const match = results.find(r => r.jobId === entry.jobId);
       if (match) onShowResult(match);

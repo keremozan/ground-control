@@ -43,7 +43,7 @@ export default function ChatForm({
   const [skillFilter, setSkillFilter] = useState("");
 
   useEffect(() => {
-    fetch("/api/system/skills").then(r => r.json()).then(d => setSkillList(d.skills || [])).catch(() => {});
+    fetch("/api/system/skills").then(r => r.json()).then(raw => { const d = raw?.data ?? raw; setSkillList(d.skills || []); }).catch(() => {});
   }, []);
 
   const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
@@ -79,7 +79,7 @@ export default function ChatForm({
       setSkillPicker(true);
       setSkillFilter("");
       if (skillList.length === 0) {
-        fetch("/api/system/skills").then(r => r.json()).then(d => setSkillList(d.skills || [])).catch(() => {});
+        fetch("/api/system/skills").then(r => r.json()).then(raw => { const d = raw?.data ?? raw; setSkillList(d.skills || []); }).catch(() => {});
       }
     } else if (v.startsWith("/") && skillPicker) {
       setSkillFilter(v.slice(1).toLowerCase());

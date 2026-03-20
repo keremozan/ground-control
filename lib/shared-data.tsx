@@ -29,9 +29,12 @@ export function SharedDataProvider({ children }: { children: ReactNode }) {
     Promise.all([
       fetch("/api/characters").then(r => r.json()).catch(() => ({ characters: [] })),
       fetch("/api/system/config").then(r => r.json()).catch(() => ({})),
-    ]).then(([charData, configData]) => {
-      setCharacters(charData.characters || []);
-      setConfig(configData);
+    ]).then(([charRes, configRes]) => {
+      // Unwrap { ok, data } envelope from standardized API routes
+      const charData = charRes?.data ?? charRes;
+      const configData = configRes?.data ?? configRes;
+      setCharacters(charData?.characters || []);
+      setConfig(configData || {});
       setLoading(false);
     });
   }, []);

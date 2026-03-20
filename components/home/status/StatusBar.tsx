@@ -63,7 +63,8 @@ export default function StatusBar() {
   const openChangelog = useCallback(async () => {
     if (!changelog) {
       const res = await fetch("/api/changelog");
-      const data = await res.json();
+      const raw = await res.json();
+      const data = raw?.data ?? raw;
       const pub = parseChangelog(data.content || "");
       const priv = parseChangelog(data.privateContent || "");
       // Merge: for matching versions (same heading), combine sections.

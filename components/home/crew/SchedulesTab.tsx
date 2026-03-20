@@ -38,12 +38,12 @@ export default function SchedulesTab({
   const enabledJobs = SCHEDULE_JOBS.filter(j => j.enabled);
 
   const fetchScheduledTasks = useCallback(() => {
-    fetch("/api/schedule/tasks").then(r => r.json()).then(d => setScheduledTasks(d.tasks || [])).catch(() => {});
+    fetch("/api/schedule/tasks").then(r => r.json()).then(raw => { const d = raw?.data ?? raw; setScheduledTasks(d.tasks || []); }).catch(() => {});
   }, []);
   useEffect(() => { fetchScheduledTasks(); }, [fetchScheduledTasks]);
 
   const fetchJobOverrides = useCallback(() => {
-    fetch("/api/schedule/jobs").then(r => r.json()).then(d => {
+    fetch("/api/schedule/jobs").then(r => r.json()).then(raw => { const d = raw?.data ?? raw;
       const map: Record<string, string> = {};
       for (const j of (d.jobs || [])) { if (j.hasOverride) map[j.id] = j.seedPrompt; }
       setJobOverrides(map);
@@ -61,7 +61,7 @@ export default function SchedulesTab({
 
   useEffect(() => {
     fetch('/api/schedule/catch-up', { method: 'POST' }).then(r => r.json())
-      .then(async (data: { missed: { jobId: string; label: string }[] }) => {
+      .then(async (raw: any) => { const data = (raw?.data ?? raw) as { missed: { jobId: string; label: string }[] };
         for (const job of data.missed) {
           try { await fetch('/api/schedule/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jobId: job.jobId }) }); } catch {}
         }
@@ -91,7 +91,8 @@ export default function SchedulesTab({
     setPhase("checking tasks...");
     try {
       const res = await fetch("/api/tana-tasks");
-      const data = await res.json();
+      const rawTasks = await res.json();
+      const data = rawTasks?.data ?? rawTasks;
       const allTasks: TanaTask[] = Object.values(data.tasks as Record<string, TanaTask[]>).flat();
       for (const task of allTasks.filter(t => t.status !== "done")) {
         const char = (task.assigned || "").toLowerCase();
@@ -106,9 +107,10 @@ export default function SchedulesTab({
       setPhase(`${displayName} (${i + 1}/${entries.length})...`);
       try {
         const taskList = tasks.map(t => `- [${t.id}] ${t.name} (${t.status}, ${t.track})`).join("\n");
-        const data = await (await fetch("/api/schedule/run", { method: "POST", headers: { "Content-Type": "application/json" },
+        const rawRun = await (await fetch("/api/schedule/run", { method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ charName, seedPrompt: `You have ${tasks.length} pending task(s).\n\nFor EACH task:\n1. read_node with the node ID\n2. Do the work\n3. Use check_node to mark it done (checkbox drives status)\n\nTasks:\n${taskList}`, label: `${displayName} tasks` }),
         })).json();
+        const data = rawRun?.data ?? rawRun;
         if (data.ok) { completed++; logAction({ widget: "scheduler", action: actionName, target: `${displayName} (${tasks.length} tasks)`, character: displayName, detail: data.result ? `${Math.round(data.result.durationMs / 1000)}s` : undefined, jobId: data.result?.jobId }); }
         else errors++;
       } catch { errors++; }
@@ -125,7 +127,8 @@ export default function SchedulesTab({
     let postmanOk = false;
     try {
       const res = await fetch("/api/schedule/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ jobId: "postman-morning" }) });
-      const data = await res.json();
+      const rawCycle = await res.json();
+      const data = rawCycle?.data ?? rawCycle;
       if (data.ok) { postmanOk = true; logAction({ widget: "scheduler", action: "cycle", target: "Postman full scan", character: "Postman", detail: data.result ? `${Math.round(data.result.durationMs / 1000)}s` : undefined, jobId: "postman-morning" }); }
       else errors++;
     } catch { errors++; }

@@ -39,7 +39,11 @@ export function useFetchAPI<T>(
       if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
       const json = await res.json();
       if (!mountedRef.current) return;
-      setData(transformRef.current ? transformRef.current(json) : json);
+      // Auto-unwrap { ok, data } envelope from standardized API routes
+      const payload = json && typeof json === "object" && "ok" in json && "data" in json
+        ? json.data
+        : json;
+      setData(transformRef.current ? transformRef.current(payload) : payload);
     } catch (e) {
       if (!mountedRef.current) return;
       setError(e instanceof Error ? e.message : String(e));

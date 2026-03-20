@@ -51,8 +51,8 @@ export default function CalendarPanel() {
   const fetchListEvents = useCallback(() => {
     setLoading(true);
     Promise.all([
-      fetch("/api/calendar").then(r => r.json()),
-      fetch("/api/calendar?range=week").then(r => r.json()),
+      fetch("/api/calendar").then(r => r.json()).then(raw => raw?.data ?? raw),
+      fetch("/api/calendar?range=week").then(r => r.json()).then(raw => raw?.data ?? raw),
     ])
       .then(([today, week]) => {
         setTodayEvents(today.events || []);
@@ -68,7 +68,7 @@ export default function CalendarPanel() {
     setLoadingWeek(true);
     fetch(`/api/calendar?range=full-week&offset=${offset}`)
       .then(r => r.json())
-      .then(d => { setFullWeekEvents(d.events || []); setLoadingWeek(false); })
+      .then(raw => { const d = raw?.data ?? raw; setFullWeekEvents(d.events || []); setLoadingWeek(false); })
       .catch(() => setLoadingWeek(false));
   }, []);
 
@@ -77,7 +77,7 @@ export default function CalendarPanel() {
     setLoadingMonth(true);
     fetch(`/api/calendar?range=month&year=${year}&month=${month}`)
       .then(r => r.json())
-      .then(d => { setMonthEvents(d.events || []); setLoadingMonth(false); })
+      .then(raw => { const d = raw?.data ?? raw; setMonthEvents(d.events || []); setLoadingMonth(false); })
       .catch(() => setLoadingMonth(false));
   }, []);
 
@@ -156,7 +156,8 @@ export default function CalendarPanel() {
           start: event.start,
         }),
       });
-      const data = await res.json();
+      const raw = await res.json();
+      const data = raw?.data ?? raw;
       if (data.ok && action === "delete") {
         setTodayEvents(prev => prev.filter(e => e.id !== event.id));
         setWeekEvents(prev => prev.filter(e => e.id !== event.id));

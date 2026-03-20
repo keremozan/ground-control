@@ -135,7 +135,7 @@ export default function ClassesTab() {
     setLoading(true);
     fetch("/api/class-prep")
       .then(r => r.json())
-      .then(d => {
+      .then(raw => { const d = raw?.data ?? raw;
         const list = (d.classes || []) as ClassPrepNode[];
         setClasses(list);
         if (list.length > 0) setExpanded(new Set([list[0].id]));

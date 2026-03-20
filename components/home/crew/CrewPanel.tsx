@@ -72,7 +72,7 @@ export default function CrewPanel() {
   useEffect(() => subscribeLog(() => setRecentLogs([...getLog()])), []);
 
   const fetchProcesses = useCallback(() => {
-    fetch("/api/processes").then(r => r.json()).then(d => setProcesses(d.processes || [])).catch(() => {});
+    fetch("/api/processes").then(r => r.json()).then(raw => { const d = raw?.data ?? raw; setProcesses(d.processes || []); }).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -103,7 +103,7 @@ export default function CrewPanel() {
   }, [sharedChars]);
 
   useEffect(() => {
-    fetch("/api/schedule/results").then(r => r.json()).then(data => {
+    fetch("/api/schedule/results").then(r => r.json()).then(raw => { const data = raw?.data ?? raw;
       const map: Record<string, JobResult> = {};
       for (const r of (data.results || []) as JobResult[]) { if (!map[r.jobId]) map[r.jobId] = r; }
       setLastRuns(map);
@@ -111,7 +111,7 @@ export default function CrewPanel() {
   }, []);
 
   const fetchProposalCount = useCallback(() => {
-    fetch("/api/system/proposals").then(r => r.json()).then(d => setProposalCount((d.proposals || []).length)).catch(() => {});
+    fetch("/api/system/proposals").then(r => r.json()).then(raw => { const d = raw?.data ?? raw; setProposalCount((d.proposals || []).length); }).catch(() => {});
   }, []);
   useEffect(() => { fetchProposalCount(); }, [fetchProposalCount]);
 
@@ -125,7 +125,8 @@ export default function CrewPanel() {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ jobId }),
       });
-      const data = await res.json();
+      const raw = await res.json();
+      const data = raw?.data ?? raw;
       if (data.ok && data.result) {
         setLastRuns(prev => ({ ...prev, [jobId]: data.result }));
         logAction({ widget: "scheduler", action: "run", target: job?.label || jobId, character: job?.displayName, detail: `${Math.round(data.result.durationMs / 1000)}s`, jobId });
@@ -147,7 +148,8 @@ export default function CrewPanel() {
         headers: body ? { "Content-Type": "application/json" } : undefined,
         body: body ? JSON.stringify(body) : undefined,
       });
-      const data = await res.json();
+      const raw = await res.json();
+      const data = raw?.data ?? raw;
       logAction({ widget: "crew", action: "endpoint", target: `${charName} ${action}`, character: charName, detail: JSON.stringify(data.report || data.task || data) });
     } catch {} finally {
       runningRef.current.delete(key);
@@ -165,7 +167,8 @@ export default function CrewPanel() {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ charName: charName.toLowerCase(), seedPrompt, label: `${charName} ${action}` }),
       });
-      const data = await res.json();
+      const raw = await res.json();
+      const data = raw?.data ?? raw;
       if (data.ok && data.result) {
         logAction({ widget: "scheduler", action: "run", target: `${charName} ${action}`, character: charName, detail: `${Math.round(data.result.durationMs / 1000)}s`, jobId: data.result.jobId });
       }
@@ -182,9 +185,10 @@ export default function CrewPanel() {
     setRunningActions(prev => new Set(prev).add(key));
     try {
       const res = await fetch("/api/tana-tasks");
-      const data = await res.json();
+      const rawTasks = await res.json();
+      const dataTasks = rawTasks?.data ?? rawTasks;
       type TanaTask = { id: string; name: string; status: string; assigned: string | null; track: string };
-      const allTasks: TanaTask[] = Object.values(data.tasks as Record<string, TanaTask[]>).flat();
+      const allTasks: TanaTask[] = Object.values(dataTasks.tasks as Record<string, TanaTask[]>).flat();
       const tasks = allTasks.filter(t => t.status !== "done" && (t.assigned || "").toLowerCase() === char.id);
       if (tasks.length === 0) {
         logAction({ widget: "crew", action: "tasks", target: `${char.name}: no pending tasks`, character: char.name });
@@ -204,7 +208,8 @@ export default function CrewPanel() {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ charName: char.id, seedPrompt, label: `${char.name} tasks`, maxTurns: 100 }),
       });
-      const result = await taskRes.json();
+      const rawResult = await taskRes.json();
+      const result = rawResult?.data ?? rawResult;
       if (result.ok) {
         logAction({ widget: "crew", action: "tasks", target: `${char.name} (${tasks.length} tasks)`, character: char.name, detail: result.result ? `${Math.round(result.result.durationMs / 1000)}s` : undefined, jobId: result.result?.jobId });
       }

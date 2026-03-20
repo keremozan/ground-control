@@ -96,7 +96,8 @@ export default function ChatPanel({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'summarize-text', text: historyText }),
       });
-      const data = await res.json();
+      const raw = await res.json();
+      const data = raw?.data ?? raw;
       if (data.summary) {
         const compressedMsg: ChatMessageType = {
           role: 'assistant',
@@ -137,7 +138,7 @@ export default function ChatPanel({
 
   // Pre-fetch skill list
   useEffect(() => {
-    fetch("/api/system/skills").then(r => r.json()).then(d => setSkillList(d.skills || [])).catch(() => {});
+    fetch("/api/system/skills").then(r => r.json()).then(raw => { const d = raw?.data ?? raw; setSkillList(d.skills || []); }).catch(() => {});
   }, []);
 
   // Auto-scroll

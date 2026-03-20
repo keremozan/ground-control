@@ -142,7 +142,8 @@ export default function InboxPanel() {
           subject: email.subject,
         }),
       });
-      const result = await res.json();
+      const rawResult = await res.json();
+      const result = rawResult?.data ?? rawResult;
       if (result.ok) {
         logAction({ widget: "inbox", action, target: `${email.from}: ${email.subject}`.slice(0, 80) });
         if (action === "archive" || action === "delete") {
@@ -176,7 +177,8 @@ export default function InboxPanel() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "body", emailId: email.id, account: email.account }),
       });
-      const bodyData = await res.json();
+      const rawBody = await res.json();
+      const bodyData = rawBody?.data ?? rawBody;
       const body = bodyData.body || email.snippet;
       const context = `Email Message ID: ${email.id} (${email.account} account) — use read_email to see full thread if needed.\nThread ID: ${email.threadId}\nFrom: ${email.from}\nSubject: ${email.subject}\n\n${body}`;
       const charName = opts?.charOverride || capitalize(mapping.defaultChar);
@@ -201,7 +203,8 @@ export default function InboxPanel() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "body", emailId: email.id, account: email.account }),
       });
-      const bodyData = await res.json();
+      const rawBody2 = await res.json();
+      const bodyData = rawBody2?.data ?? rawBody2;
       const body = bodyData.body || email.snippet;
       const context = `Email Message ID: ${email.id} (${email.account} account) — use read_email to see full thread if needed.\nThread ID: ${email.threadId}\nFrom: ${email.from}\nSubject: ${email.subject}\n\n${body}`;
       const replyChar = capitalize(ACTION_DEFAULTS.reply);
@@ -228,7 +231,8 @@ export default function InboxPanel() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "summarize", emailId: email.id, account: email.account, from: email.from, subject: email.subject }),
       });
-      const result = await res.json();
+      const rawSummary = await res.json();
+      const result = rawSummary?.data ?? rawSummary;
       setSummaryText(result.summary || "Failed to generate summary.");
       logAction({ widget: "inbox", action: "summarize", target: `${email.from}: ${email.subject}`.slice(0, 80), character: capitalize(ACTION_DEFAULTS.summarize) });
     } catch {

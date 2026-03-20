@@ -70,13 +70,13 @@ export default function TasksPanel() {
     }
     fetch("/api/tana-tasks")
       .then(r => r.json())
-      .then(d => {
-        const raw = (d.tasks || {}) as Record<string, Task[]>;
+      .then(raw => { const d = raw?.data ?? raw;
+        const rawTasks = (d.tasks || {}) as Record<string, Task[]>;
         const cutoff = new Date();
         cutoff.setDate(cutoff.getDate() + 30);
         const cutoffStr = cutoff.toISOString().slice(0, 10);
         const result: Record<string, Task[]> = {};
-        for (const [track, tasks] of Object.entries(raw)) {
+        for (const [track, tasks] of Object.entries(rawTasks)) {
           const kept = tasks.filter(t => {
             if (removedIdsRef.current.has(t.id)) return false;
             if (t.dueDate && t.dueDate > cutoffStr) return false;
@@ -93,7 +93,7 @@ export default function TasksPanel() {
   const fetchProjects = useCallback(() => {
     fetch("/api/tana-projects")
       .then(r => r.json())
-      .then(d => setProjects(d.projects || []))
+      .then(raw => { const d = raw?.data ?? raw; setProjects(d.projects || []); })
       .catch(() => {});
   }, []);
 
@@ -152,7 +152,8 @@ export default function TasksPanel() {
           fetchTasks();
         }
       } else {
-        const data = await res.json().catch(() => ({}));
+        const rawErr = await res.json().catch(() => ({}));
+        const data = rawErr?.data ?? rawErr;
         console.error(`Task ${action} failed:`, data.error || res.statusText);
         logAction({
           widget: "tasks",
@@ -212,7 +213,8 @@ export default function TasksPanel() {
           trackId: task.trackId, assigned: task.assigned,
         }),
       });
-      const data = await res.json();
+      const rawPrepare = await res.json();
+      const data = rawPrepare?.data ?? rawPrepare;
       if (!data.ok) return;
 
       const displayName = charOverride || ((data.character || "postman").charAt(0).toUpperCase() + (data.character || "postman").slice(1));
