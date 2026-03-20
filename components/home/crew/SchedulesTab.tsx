@@ -111,7 +111,7 @@ export default function SchedulesTab({
           body: JSON.stringify({ charName, seedPrompt: `You have ${tasks.length} pending task(s).\n\nFor EACH task:\n1. read_node with the node ID\n2. Do the work\n3. Use check_node to mark it done (checkbox drives status)\n\nTasks:\n${taskList}`, label: `${displayName} tasks` }),
         })).json();
         const data = rawRun?.data ?? rawRun;
-        if (data.ok) { completed++; logAction({ widget: "scheduler", action: actionName, target: `${displayName} (${tasks.length} tasks)`, character: displayName, detail: data.result ? `${Math.round(data.result.durationMs / 1000)}s` : undefined, jobId: data.result?.jobId }); }
+        if (rawRun.ok) { completed++; logAction({ widget: "scheduler", action: actionName, target: `${displayName} (${tasks.length} tasks)`, character: displayName, detail: data.result ? `${Math.round(data.result.durationMs / 1000)}s` : undefined, jobId: data.result?.jobId }); }
         else errors++;
       } catch { errors++; }
     }
@@ -129,7 +129,7 @@ export default function SchedulesTab({
       const res = await fetch("/api/schedule/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ jobId: "postman-morning" }) });
       const rawCycle = await res.json();
       const data = rawCycle?.data ?? rawCycle;
-      if (data.ok) { postmanOk = true; logAction({ widget: "scheduler", action: "cycle", target: "Postman full scan", character: "Postman", detail: data.result ? `${Math.round(data.result.durationMs / 1000)}s` : undefined, jobId: "postman-morning" }); }
+      if (rawCycle.ok) { postmanOk = true; logAction({ widget: "scheduler", action: "cycle", target: "Postman full scan", character: "Postman", detail: data.result ? `${Math.round(data.result.durationMs / 1000)}s` : undefined, jobId: "postman-morning" }); }
       else errors++;
     } catch { errors++; }
     const r = await runTaskDispatch(characters, setCyclePhase, "cycle");

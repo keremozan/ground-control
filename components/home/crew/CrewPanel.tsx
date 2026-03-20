@@ -127,7 +127,7 @@ export default function CrewPanel() {
       });
       const raw = await res.json();
       const data = raw?.data ?? raw;
-      if (data.ok && data.result) {
+      if (raw.ok && data.result) {
         setLastRuns(prev => ({ ...prev, [jobId]: data.result }));
         logAction({ widget: "scheduler", action: "run", target: job?.label || jobId, character: job?.displayName, detail: `${Math.round(data.result.durationMs / 1000)}s`, jobId });
       }
@@ -169,7 +169,7 @@ export default function CrewPanel() {
       });
       const raw = await res.json();
       const data = raw?.data ?? raw;
-      if (data.ok && data.result) {
+      if (raw.ok && data.result) {
         logAction({ widget: "scheduler", action: "run", target: `${charName} ${action}`, character: charName, detail: `${Math.round(data.result.durationMs / 1000)}s`, jobId: data.result.jobId });
       }
     } catch {} finally {

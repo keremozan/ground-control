@@ -214,8 +214,8 @@ export default function TasksPanel() {
         }),
       });
       const rawPrepare = await res.json();
+      if (!rawPrepare.ok) return;
       const data = rawPrepare?.data ?? rawPrepare;
-      if (!data.ok) return;
 
       const displayName = charOverride || ((data.character || "postman").charAt(0).toUpperCase() + (data.character || "postman").slice(1));
       const seed = userPrompt

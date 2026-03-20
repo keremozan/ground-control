@@ -157,8 +157,7 @@ export default function CalendarPanel() {
         }),
       });
       const raw = await res.json();
-      const data = raw?.data ?? raw;
-      if (data.ok && action === "delete") {
+      if (raw.ok && action === "delete") {
         setTodayEvents(prev => prev.filter(e => e.id !== event.id));
         setWeekEvents(prev => prev.filter(e => e.id !== event.id));
       }
