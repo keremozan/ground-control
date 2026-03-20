@@ -37,9 +37,9 @@
   --lcd-bg: #ebebea;
   --lcd-text: #1a1a1a;
   --lcd-dim: #b5b3b1;
-  --led-green: #2a7d4f;
-  --led-red: #c93c2a;
-  --led-amber: #a16207;
+  --led-green: #4ade80;
+  --led-red: #f87171;
+  --led-amber: #fbbf24;
   --bezel: #dcdcda;
   --bezel-dark: #c4c4c2;
   --cmd-bg: #1b1b1b;
@@ -208,9 +208,9 @@ body {
 
 [data-fullscreen] .widget-footer {
   flex-shrink: 0;
-  padding-bottom: 28px;
-  padding-left: 14px;
-  padding-right: 14px;
+  padding-bottom: 28px !important;
+  padding-left: 14px !important;
+  padding-right: 14px !important;
 }
 
 .widget-footer {
