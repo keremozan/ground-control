@@ -45,7 +45,7 @@ export default function CharDetailDrawer({ character, open, onClose, contained }
 
   useEffect(() => {
     if (open && tab === "memory" && memContent === null)
-      fetch(`/api/system/memory?char=${character.id}`).then(r => r.json()).then(d => setMemContent(d.content || "")).catch(() => setMemContent(""));
+      fetch(`/api/system/memory?char=${character.id}`).then(r => r.json()).then(raw => { const d = raw?.data ?? raw; setMemContent(d.content || ""); }).catch(() => setMemContent(""));
   }, [open, tab, character.id, memContent]);
 
   if (!open) return null;
@@ -56,7 +56,7 @@ export default function CharDetailDrawer({ character, open, onClose, contained }
 
   const fetchAndSet = async (url: string, setter: (v: string) => void, loadSetter: (v: boolean) => void) => {
     loadSetter(true);
-    try { const r = await fetch(url); const d = await r.json(); setter(d.content ?? ""); } catch { setter(""); } finally { loadSetter(false); }
+    try { const r = await fetch(url); const raw = await r.json(); const d = raw?.data ?? raw; setter(d.content ?? ""); } catch { setter(""); } finally { loadSetter(false); }
   };
   const saveAndClear = async (url: string, content: string, setter: (v: string) => void, closer: (v: null) => void) => {
     await fetch(url, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content }) });
