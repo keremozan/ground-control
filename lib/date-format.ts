@@ -77,15 +77,18 @@ export function formatCalendarWhen(iso: string, allDay: boolean): string {
   return allDay ? base : `${base} ${formatTime(iso)}`;
 }
 
+export type UrgencyLevel = "overdue" | "today" | "soon" | "none";
+
 export type DateUrgency = {
   color: string;
   dot: boolean;
+  level: UrgencyLevel;
 };
 
-const URGENCY_OVERDUE = { color: "#dc2626", dot: true };
-const URGENCY_TODAY = { color: "#d97706", dot: true };
-const URGENCY_SOON = { color: "#0d9488", dot: true };
-const URGENCY_NONE: DateUrgency = { color: "var(--text-3)", dot: false };
+const URGENCY_OVERDUE: DateUrgency = { color: "var(--red)", dot: true, level: "overdue" };
+const URGENCY_TODAY: DateUrgency = { color: "var(--amber)", dot: true, level: "today" };
+const URGENCY_SOON: DateUrgency = { color: "var(--teal)", dot: true, level: "soon" };
+const URGENCY_NONE: DateUrgency = { color: "var(--text-3)", dot: false, level: "none" };
 
 /**
  * Get urgency styling for a date.
