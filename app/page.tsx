@@ -7,7 +7,7 @@ import CalendarWidget from "@/components/home/CalendarWidget";
 import TasksWidget from "@/components/home/TasksWidget";
 import CrewWidget from "@/components/home/CrewWidget";
 import ChatWidget from "@/components/home/ChatWidget";
-import StatusBar from "@/components/home/StatusBar";
+import StatusBar from "@/components/home/status";
 
 export default function Home() {
   return (
