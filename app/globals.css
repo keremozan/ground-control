@@ -198,15 +198,17 @@ body {
   min-height: 0;
 }
 
-[data-fullscreen] .widget-body {
+[data-fullscreen] .widget-body,
+[data-fullscreen] .widget-footer {
   max-width: 760px;
   margin-left: auto;
   margin-right: auto;
+  width: 100%;
 }
 
 [data-fullscreen] .widget-footer {
-  padding-left: calc(50% - 380px);
-  padding-right: calc(50% - 380px);
+  flex-shrink: 0;
+  padding-bottom: 16px;
 }
 
 .widget-footer {
