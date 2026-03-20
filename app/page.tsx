@@ -5,8 +5,8 @@ import { WidgetErrorBoundary } from "@/components/ui/WidgetErrorBoundary";
 import InboxWidget from "@/components/home/inbox";
 import CalendarWidget from "@/components/home/calendar";
 import TasksWidget from "@/components/home/tasks";
-import CrewWidget from "@/components/home/CrewWidget";
-import ChatWidget from "@/components/home/ChatWidget";
+import CrewWidget from "@/components/home/crew";
+import ChatWidget from "@/components/home/chat";
 import StatusBar from "@/components/home/status";
 
 export default function Home() {
