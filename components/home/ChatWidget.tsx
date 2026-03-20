@@ -131,21 +131,21 @@ function splitMessage(text: string): { thinking: string; output: string } {
 }
 
 const EMOJI_MAP: Record<string, { label: string; color: string; bg: string }> = {
-  "\u2705": { label: "OK", color: "#16a34a", bg: "#16a34a18" },
-  "\u2714\uFE0F": { label: "OK", color: "#16a34a", bg: "#16a34a18" },
-  "\u274C": { label: "X", color: "#dc2626", bg: "#dc262618" },
-  "\u274E": { label: "X", color: "#dc2626", bg: "#dc262618" },
-  "\u26A0\uFE0F": { label: "!", color: "#d97706", bg: "#d9770618" },
-  "\u2139\uFE0F": { label: "i", color: "#2563eb", bg: "#2563eb18" },
-  "\u{1F4E7}": { label: "MAIL", color: "#6366f1", bg: "#6366f118" },
-  "\u{1F4DD}": { label: "NOTE", color: "#8b5cf6", bg: "#8b5cf618" },
-  "\u{1F4CB}": { label: "LIST", color: "#0891b2", bg: "#0891b218" },
-  "\u{1F4CC}": { label: "PIN", color: "#dc2626", bg: "#dc262618" },
-  "\u{1F50D}": { label: "FIND", color: "#6366f1", bg: "#6366f118" },
-  "\u{1F4C1}": { label: "DIR", color: "#d97706", bg: "#d9770618" },
-  "\u{1F4C4}": { label: "FILE", color: "#6b7280", bg: "#6b728018" },
-  "\u{1F6D1}": { label: "STOP", color: "#dc2626", bg: "#dc262618" },
-  "\u{1F680}": { label: "GO", color: "#2563eb", bg: "#2563eb18" },
+  "\u2705": { label: "OK", color: "var(--green)", bg: "var(--green-bg)" },
+  "\u2714\uFE0F": { label: "OK", color: "var(--green)", bg: "var(--green-bg)" },
+  "\u274C": { label: "X", color: "var(--red)", bg: "var(--red-bg)" },
+  "\u274E": { label: "X", color: "var(--red)", bg: "var(--red-bg)" },
+  "\u26A0\uFE0F": { label: "!", color: "var(--amber)", bg: "var(--amber-bg)" },
+  "\u2139\uFE0F": { label: "i", color: "var(--blue)", bg: "var(--blue-bg)" },
+  "\u{1F4E7}": { label: "MAIL", color: "var(--indigo)", bg: "var(--blue-bg)" },
+  "\u{1F4DD}": { label: "NOTE", color: "var(--purple)", bg: "var(--blue-bg)" },
+  "\u{1F4CB}": { label: "LIST", color: "var(--teal)", bg: "var(--green-bg)" },
+  "\u{1F4CC}": { label: "PIN", color: "var(--red)", bg: "var(--red-bg)" },
+  "\u{1F50D}": { label: "FIND", color: "var(--indigo)", bg: "var(--blue-bg)" },
+  "\u{1F4C1}": { label: "DIR", color: "var(--amber)", bg: "var(--amber-bg)" },
+  "\u{1F4C4}": { label: "FILE", color: "var(--text-3)", bg: "var(--surface-2)" },
+  "\u{1F6D1}": { label: "STOP", color: "var(--red)", bg: "var(--red-bg)" },
+  "\u{1F680}": { label: "GO", color: "var(--blue)", bg: "var(--blue-bg)" },
 };
 const EMOJI_KEYS = Object.keys(EMOJI_MAP);
 const EMOJI_RE = new RegExp(`(${EMOJI_KEYS.map(e => e.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'gu');
@@ -291,7 +291,7 @@ function ChatMarkdown({ text, accent, onQuickReply }: { text: string; accent?: s
       }
       if (p.startsWith('==') && p.endsWith('==')) {
         nodes.push(<mark key={j} style={{
-          background: 'linear-gradient(transparent 60%, #fde68a 60%)',
+          background: 'linear-gradient(transparent 60%, var(--highlight) 60%)',
           color: 'var(--text)', padding: 0, borderRadius: 0,
         }}>{p.slice(2, -2)}</mark>);
         return;
@@ -1203,7 +1203,7 @@ function ChatPanel({
             <div style={{
               height: "100%", borderRadius: 2,
               width: `${Math.min(contextPct * 100, 100)}%`,
-              background: contextPct >= COMPRESS_THRESHOLD ? "#dc2626" : "#d97706",
+              background: contextPct >= COMPRESS_THRESHOLD ? "var(--red)" : "var(--amber)",
               transition: "width 0.3s",
             }} />
           </div>
@@ -1414,7 +1414,7 @@ function ChatPanel({
               transition: "background 0.12s",
             }}
           >
-            <Square size={10} strokeWidth={2} style={{ color: "#dc2626", fill: "#dc2626" }} />
+            <Square size={10} strokeWidth={2} style={{ color: "var(--red)", fill: "var(--red)" }} />
           </button>
         ) : (
           <button
@@ -1732,7 +1732,7 @@ export default function ChatWidget() {
     <div className="widget" data-fullscreen={fullscreen || undefined} style={fullscreen ? {
       position: "fixed", inset: 0, zIndex: 1000,
       height: "100vh", width: "100vw",
-      borderRadius: 0, overflow: "visible",
+      borderRadius: 0, overflow: "hidden",
     } : { position: "relative", height: "100%", overflow: "visible" }}>
       {/* Header */}
       <div className="widget-header">
