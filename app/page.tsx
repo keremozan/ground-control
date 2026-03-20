@@ -2,8 +2,8 @@
 import { ChatProvider } from "@/lib/chat-store";
 import { SharedDataProvider } from "@/lib/shared-data";
 import { WidgetErrorBoundary } from "@/components/ui/WidgetErrorBoundary";
-import InboxWidget from "@/components/home/InboxWidget";
-import CalendarWidget from "@/components/home/CalendarWidget";
+import InboxWidget from "@/components/home/inbox";
+import CalendarWidget from "@/components/home/calendar";
 import TasksWidget from "@/components/home/TasksWidget";
 import CrewWidget from "@/components/home/CrewWidget";
 import ChatWidget from "@/components/home/ChatWidget";
