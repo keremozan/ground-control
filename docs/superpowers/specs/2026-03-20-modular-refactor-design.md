@@ -31,9 +31,9 @@ export interface Task {
   id: string;
   name: string;
   status: "backlog" | "in-progress" | "done";
-  priority: "high" | "medium" | "low" | null;
+  priority: "high" | "medium" | "low";
   track: string;
-  trackId: string;
+  trackId: string | null;
   assigned: string | null;
   dueDate: string | null;
   phaseId?: string;
@@ -129,21 +129,21 @@ export interface ProcessEntry {
 export interface ProjectPhase {
   id: string;
   name: string;
-  status: string;
+  status: "pending" | "active" | "completed";
   taskCount: number;
   doneCount: number;
-  startDate?: string;
-  endDate?: string;
+  startDate: string | null;
+  endDate: string | null;
 }
 
 export interface Project {
   id: string;
   name: string;
-  trackId?: string;
-  startDate?: string;
-  deadline?: string;
+  trackId: string;
+  startDate: string | null;
+  deadline: string | null;
   phases: ProjectPhase[];
-  lastActivity?: string;
+  lastActivity: { date: string; summary: string } | null;
 }
 
 // --- Chat types ---
@@ -180,10 +180,10 @@ export interface ActionLogEntry {
 // --- System ---
 
 export interface SystemConfig {
-  trackColorPatterns: Record<string, string>;
-  emailColorPatterns: Record<string, string>;
-  emailLabelColors: Record<string, string>;
-  calendarColorPatterns: Record<string, string>;
+  trackColorPatterns?: Record<string, string>;
+  emailColorPatterns?: Record<string, string>;
+  emailLabelColors?: Record<string, { color: string; bg: string }>;
+  calendarColorPatterns?: Record<string, string>;
 }
 
 // --- API response envelope ---
@@ -223,7 +223,7 @@ export interface Character {
   canSpawn?: string[];
   trackPatterns?: string[];
   routingKeywords?: string[];
-  schedules?: ScheduleJob[];
+  schedules?: { id: string; displayName: string; seedPrompt: string; cron: string; label: string; enabled: boolean }[];
   groups?: string[];
   // Config-driven flags (replace hardcoded character name checks)
   injectChangelog?: boolean;
@@ -235,10 +235,12 @@ export interface TanaTask {
   id: string;
   name: string;
   status: string;   // raw from Tana, mapped to union at API boundary
-  priority: string | null;
+  priority: string;
   track: string;
-  trackId: string;
+  trackId: string | null;
   assigned: string | null;
+  phaseId?: string;
+  phaseName?: string;
   dueDate: string | null;
 }
 
@@ -254,11 +256,19 @@ export interface TanaPhase {
 export interface TanaProject {
   id: string;
   name: string;
-  trackId?: string;
-  startDate?: string;
-  deadline?: string;
-  phases: TanaPhase[];
-  lastActivity?: string;
+  trackId: string;
+  startDate: string | null;
+  deadline: string | null;
+  phases: {
+    id: string;
+    name: string;
+    status: "pending" | "active" | "completed";
+    taskCount: number;
+    doneCount: number;
+    startDate: string | null;
+    endDate: string | null;
+  }[];
+  lastActivity: { date: string; summary: string } | null;
 }
 
 export interface EmailInput {
