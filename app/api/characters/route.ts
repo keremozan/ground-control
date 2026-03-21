@@ -36,6 +36,8 @@ export function GET() {
       gates: c.gates || [],
       seeds: c.seeds || {},
       suggestions: c.suggestions || [],
+      internal: c.internal || false,
+      parentChar: c.parentChar || null,
     };
   });
   return apiOk({ characters });
