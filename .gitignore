@@ -55,3 +55,5 @@ mcp-tasks.json
 
 # private system changelog (skills, characters, Tana schema — not for GitHub)
 CHANGELOG.private.md
+.claude/
+tools/

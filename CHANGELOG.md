@@ -1,5 +1,19 @@
 # Changelog
 
+## v3.0.1 — 2026-03-22
+
+### Fixes
+- [fix] API envelope unwrap in all component fetch calls (rawResult.ok check before unwrap)
+- [fix] Task names stripped of Tana "show field in name" suffixes (assigned, status, priority labels)
+- [fix] Task counter moved inline with filter chips (no wasted row)
+- [fix] Inbox archive and delete buttons restored
+- [fix] Project-level permissions for spawned character sessions
+
+### System
+- [new] Triple backup system for agent files (git hook + daily cron + iCloud sync)
+- [new] Recovery script on Desktop for ~/.claude/ wipe recovery
+- [new] Gmail labels and filter XML for AI character emails (AI/Coach, AI/Curator, AI/Kybernetes, AI/Oracle, AI/Doctor, AI/Architect, AI/Watcher)
+
 ## v3.0.0 — 2026-03-20
 
 ### Architecture
