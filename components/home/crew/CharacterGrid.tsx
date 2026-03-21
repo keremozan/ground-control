@@ -17,14 +17,15 @@ type CharacterInfo = {
   domain?: string; groups?: string[];
   actions?: ActionInfo[]; seeds?: Record<string, string>;
   skills?: string[]; routingKeywords?: string[]; sharedKnowledge?: string[];
+  internal?: boolean; parentChar?: string;
 };
 
 const CREW_FILTERS: { label: string; ids: string[] }[] = [
-  { label: "Research", ids: ["scholar", "scribe", "prober", "auditor", "curator"] },
+  { label: "Research", ids: ["scholar", "scribe", "curator"] },
   { label: "Teaching", ids: ["proctor", "scribe"] },
   { label: "Admin", ids: ["clerk", "steward", "archivist", "postman"] },
   { label: "Personal", ids: ["coach", "doctor", "tutor"] },
-  { label: "System", ids: ["architect", "engineer", "watcher", "kybernetes", "oracle"] },
+  { label: "System", ids: ["architect", "kybernetes", "oracle"] },
 ];
 
 export default function CharacterGrid({
@@ -54,8 +55,9 @@ export default function CharacterGrid({
   };
 
   const selectedChar = characters.find(c => c.id === selectedCharId) || characters[0] || null;
+  const mainChars = characters.filter(c => !c.internal);
   const activeFilter = CREW_FILTERS.find(f => f.label === crewFilter);
-  const filtered = activeFilter ? characters.filter(c => activeFilter.ids.includes(c.id)) : characters;
+  const filtered = activeFilter ? mainChars.filter(c => activeFilter.ids.includes(c.id)) : mainChars;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -82,12 +84,13 @@ export default function CharacterGrid({
       </div>
 
       {/* Roster grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 2 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 2 }}>
         {filtered.map(char => {
           const Icon = resolveIcon(char.icon);
           const isSelected = selectedChar?.id === char.id;
           const charBusy = [...runningActions].some(k => k.startsWith(`${char.name}:`));
           const hasRecentLog = recentLogs.some(e => e.character?.toLowerCase() === char.name.toLowerCase());
+          const internalChildren = characters.filter(c => c.internal && c.parentChar === char.id);
           return (
             <button key={char.id} onClick={() => selectChar(char.id)} style={{
               display: "flex", alignItems: "center", gap: 4, padding: "3px 5px",
@@ -96,14 +99,36 @@ export default function CharacterGrid({
               cursor: "pointer", transition: "all 0.12s", overflow: "hidden",
             }}>
               {charBusy
-                ? <Loader2 size={9} strokeWidth={2} style={{ color: char.color, animation: "spin 1s linear infinite", flexShrink: 0 }} />
-                : <Icon size={9} strokeWidth={1.5} style={{ color: char.color, flexShrink: 0, opacity: (charBusy || hasRecentLog) ? 1 : 0.5 }} />
+                ? <Loader2 size={11} strokeWidth={2} style={{ color: char.color, animation: "spin 1s linear infinite", flexShrink: 0 }} />
+                : <Icon size={11} strokeWidth={1.5} style={{ color: char.color, flexShrink: 0, opacity: (charBusy || hasRecentLog) ? 1 : 0.5 }} />
               }
               <span style={{
-                fontFamily: "var(--font-mono)", fontSize: 9,
+                fontFamily: "var(--font-mono)", fontSize: 10,
                 color: isSelected ? char.color : "var(--text-2)",
                 overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
               }}>{char.name}</span>
+              {internalChildren.length > 0 && (
+                <span style={{ display: "inline-flex", gap: 2, marginLeft: "auto", flexShrink: 0 }}>
+                  {internalChildren.map(child => {
+                    const ChildIcon = resolveIcon(child.icon);
+                    return (
+                      <span
+                        key={child.id}
+                        title={child.name}
+                        onClick={(e) => { e.stopPropagation(); selectChar(child.id); }}
+                        style={{
+                          width: 14, height: 14, borderRadius: 2,
+                          background: child.color,
+                          display: "inline-flex", alignItems: "center", justifyContent: "center",
+                          cursor: "pointer",
+                        }}
+                      >
+                        <ChildIcon size={8} strokeWidth={1.5} style={{ color: "white" }} />
+                      </span>
+                    );
+                  })}
+                </span>
+              )}
             </button>
           );
         })}

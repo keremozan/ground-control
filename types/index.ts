@@ -24,6 +24,8 @@ export interface CharacterInfo {
   skills?: string[];
   routingKeywords?: string[];
   sharedKnowledge?: string[];
+  internal?: boolean;
+  parentChar?: string;
 }
 
 export interface SystemConfig {
