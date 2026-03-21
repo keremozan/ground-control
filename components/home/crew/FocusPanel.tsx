@@ -129,18 +129,17 @@ export default function FocusPanel({
             const children = allCharacters.filter(c => c.internal && c.parentChar === selectedChar.id);
             if (children.length === 0) return null;
             return (
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 6, marginLeft: 10 }}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 4, marginLeft: 8 }}>
                 {children.map(child => {
                   const ChildIcon = resolveIcon(child.icon);
                   return (
                     <span key={child.id} title={child.name} style={{
                       display: "inline-flex", alignItems: "center", gap: 3,
-                      padding: "1px 5px", borderRadius: 3,
-                      border: `1px solid ${child.color}30`,
-                      background: child.color + "08",
+                      padding: "2px 6px", borderRadius: 3,
+                      border: "1px solid var(--border)",
                     }}>
-                      <ChildIcon size={10} strokeWidth={1.5} style={{ color: child.color }} />
-                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 500, color: child.color, opacity: 0.8 }}>{child.name}</span>
+                      <ChildIcon size={9} strokeWidth={1.5} style={{ color: child.color }} />
+                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 500, color: "var(--text-2)" }}>{child.name}</span>
                     </span>
                   );
                 })}
