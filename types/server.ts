@@ -38,6 +38,8 @@ export type Character = {
   }[];
   injectChangelog?: boolean;
   autoReviewConfig?: { skillPatterns: Record<string, string> };
+  internal?: boolean;
+  parentChar?: string;
 };
 
 // ── Tana ──

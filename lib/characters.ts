@@ -28,6 +28,8 @@ export type Character = {
   memoryFile?: string;
   injectChangelog?: boolean;
   autoReviewConfig?: { skillPatterns: Record<string, string> };
+  internal?: boolean;
+  parentChar?: string;
 };
 
 export function validateSpawn(
