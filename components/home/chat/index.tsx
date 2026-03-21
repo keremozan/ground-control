@@ -22,6 +22,7 @@ type CharacterInfo = {
   defaultModel?: string;
   model?: string;
   suggestions?: string[];
+  internal?: boolean;
 };
 
 type TabMeta = {
@@ -541,7 +542,7 @@ export default function ChatWidget() {
               display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 3,
               width: 180,
             }}>
-              {characters.map(c => {
+              {characters.filter(c => !c.internal).map(c => {
                 const CIcon = charIcon[c.name] || BookOpen;
                 return (
                   <button

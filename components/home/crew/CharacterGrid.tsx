@@ -90,7 +90,6 @@ export default function CharacterGrid({
           const isSelected = selectedChar?.id === char.id;
           const charBusy = [...runningActions].some(k => k.startsWith(`${char.name}:`));
           const hasRecentLog = recentLogs.some(e => e.character?.toLowerCase() === char.name.toLowerCase());
-          const internalChildren = characters.filter(c => c.internal && c.parentChar === char.id);
           return (
             <button key={char.id} onClick={() => selectChar(char.id)} style={{
               display: "flex", alignItems: "center", gap: 4, padding: "3px 5px",
@@ -107,28 +106,6 @@ export default function CharacterGrid({
                 color: isSelected ? char.color : "var(--text-2)",
                 overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
               }}>{char.name}</span>
-              {internalChildren.length > 0 && (
-                <span style={{ display: "inline-flex", gap: 2, marginLeft: "auto", flexShrink: 0 }}>
-                  {internalChildren.map(child => {
-                    const ChildIcon = resolveIcon(child.icon);
-                    return (
-                      <span
-                        key={child.id}
-                        title={child.name}
-                        onClick={(e) => { e.stopPropagation(); selectChar(child.id); }}
-                        style={{
-                          width: 14, height: 14, borderRadius: 2,
-                          background: child.color,
-                          display: "inline-flex", alignItems: "center", justifyContent: "center",
-                          cursor: "pointer",
-                        }}
-                      >
-                        <ChildIcon size={8} strokeWidth={1.5} style={{ color: "white" }} />
-                      </span>
-                    );
-                  })}
-                </span>
-              )}
             </button>
           );
         })}
@@ -138,6 +115,7 @@ export default function CharacterGrid({
       {selectedChar && (
         <FocusPanel
           selectedChar={selectedChar}
+          allCharacters={characters}
           runningActions={runningActions}
           recentLogs={recentLogs}
           lastRuns={lastRuns}

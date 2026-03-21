@@ -15,6 +15,7 @@ type ActionInfo = {
 type CharacterInfo = {
   id: string; name: string; tier: string; icon: string; color: string;
   domain?: string; actions?: ActionInfo[]; seeds?: Record<string, string>;
+  internal?: boolean; parentChar?: string;
 };
 
 function groupActionsByPrefix(actions: ActionInfo[]): ActionInfo[][] {
@@ -27,10 +28,11 @@ function groupActionsByPrefix(actions: ActionInfo[]): ActionInfo[][] {
 }
 
 export default function FocusPanel({
-  selectedChar, runningActions, recentLogs, lastRuns, runningJobs,
+  selectedChar, allCharacters, runningActions, recentLogs, lastRuns, runningJobs,
   onDrawerOpen, onTabSwitch, runEndpoint, runAutonomous, handleCharTasks, handleDoNow,
 }: {
   selectedChar: CharacterInfo;
+  allCharacters?: CharacterInfo[];
   runningActions: Set<string>;
   recentLogs: ActionLogEntry[];
   lastRuns: Record<string, JobResult>;
@@ -123,6 +125,28 @@ export default function FocusPanel({
         <div style={{ flex: 1, minWidth: 0 }}>
           <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 600, color: "var(--text)" }}>{selectedChar.name}</span>
           <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "var(--text-3)", marginLeft: 6 }}>{selectedChar.domain || selectedChar.tier}</span>
+          {allCharacters && (() => {
+            const children = allCharacters.filter(c => c.internal && c.parentChar === selectedChar.id);
+            if (children.length === 0) return null;
+            return (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6, marginLeft: 10 }}>
+                {children.map(child => {
+                  const ChildIcon = resolveIcon(child.icon);
+                  return (
+                    <span key={child.id} title={child.name} style={{
+                      display: "inline-flex", alignItems: "center", gap: 3,
+                      padding: "1px 5px", borderRadius: 3,
+                      border: `1px solid ${child.color}30`,
+                      background: child.color + "08",
+                    }}>
+                      <ChildIcon size={10} strokeWidth={1.5} style={{ color: child.color }} />
+                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 500, color: child.color, opacity: 0.8 }}>{child.name}</span>
+                    </span>
+                  );
+                })}
+              </span>
+            );
+          })()}
         </div>
         <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
           <button onClick={() => setTrigger({ charName: selectedChar.name, seedPrompt: '', action: 'chat', openOnly: true })} data-tip="Open chat" style={{ display: "flex", alignItems: "center", gap: 4, fontFamily: "var(--font-mono)", fontSize: 10, color: selectedChar.color, background: selectedChar.color + "12", border: `1px solid ${selectedChar.color}30`, borderRadius: 4, padding: "4px 8px", cursor: "pointer", transition: "all 0.12s" }}>
