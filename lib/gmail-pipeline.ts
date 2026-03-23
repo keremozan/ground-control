@@ -4,6 +4,7 @@ import { quickFilter } from './email-filters';
 import { geminiJSON } from './gemini';
 import { logPipelineEntry, isMessageProcessed, getPipelineLog, type StageResult, type PipelineEntry } from './pipeline-log';
 import { spawnOnce } from './spawn';
+import { styleGate } from './style-gate';
 import { mcpCall } from './tana';
 import { semanticSearch } from './semantic-search';
 import { TANA_INBOX_ID, GEMINI_API_KEY, SHARED_DIR } from './config';
@@ -430,10 +431,11 @@ export async function processEmail(email: EmailInput): Promise<PipelineEntry> {
           }
           // Generate reply with Claude (single turn)
           const body = await getEmailBody(email.account, email.id);
-          const replyText = await spawnOnce({
+          const rawReply = await spawnOnce({
             prompt: `Draft a brief, professional email reply.\n\nOriginal email from ${email.from}:\nSubject: ${email.subject}\n\n${body.slice(0, 1500)}\n\nReply intent: ${action.intent}\n\nWrite only the reply body, no subject line, no greeting analysis. Be direct and concise. Match the language of the original email (Turkish or English).`,
             model: 'sonnet',
           });
+          const replyText = await styleGate(rawReply);
           const draftId = await createDraft(email.account, {
             to: fromEmail,
             subject: email.subject.startsWith('Re:') ? email.subject : `Re: ${email.subject}`,

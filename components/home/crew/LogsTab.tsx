@@ -57,7 +57,8 @@ export default function LogsTab({
         }
         let changed = false;
         for (const r of results) {
-          if (fresh.has(r.jobId)) continue;
+          const key = r.jobId + ":" + r.timestamp;
+          if (fresh.has(key)) continue;
           logAction({
             widget: "scheduler",
             action: "run",
@@ -67,7 +68,7 @@ export default function LogsTab({
             jobId: r.jobId,
             timestamp: r.timestamp,
           });
-          fresh.add(r.jobId);
+          fresh.add(key);
           changed = true;
         }
         if (changed) {
