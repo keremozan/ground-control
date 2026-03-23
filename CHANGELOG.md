@@ -1,5 +1,20 @@
 # Changelog
 
+## v3.1.0 — 2026-03-23
+
+### New
+- [new] Style gate: post-processing filter on all scheduled job outputs catches AI writing tropes before they reach the user. Uses Sonnet single-turn pass with rules from CLAUDE.md + tropes reference file. Fail-open design.
+- [new] Internal agent badges in crew FocusPanel (Prober, Auditor, Engineer, Watcher shown as mini-pills)
+- [new] Internal agents filtered from chat tab picker and character grid
+
+### Fixes
+- [fix] LogsTab dedup bug: scheduler job results now use jobId:timestamp key instead of jobId alone, so repeated runs of the same job appear correctly
+- [fix] Morning brief email disabled (redundant with Coach morning WhatsApp)
+
+### Pipeline
+- [improved] Morning pipeline reordered: Kybernetes context (07:12) runs before Coach morning (07:18), so Coach reads fresh verified data
+- [improved] Style gate integrated into spawnAndCollect (all scheduled jobs) and Gmail pipeline draft replies
+
 ## v3.0.1 — 2026-03-22
 
 ### Fixes
