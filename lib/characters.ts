@@ -32,6 +32,7 @@ export type Character = {
   parentChar?: string;
   allowedTools?: string[];
   extendedThinking?: boolean;
+  styleGate?: boolean;
 };
 
 export function validateSpawn(

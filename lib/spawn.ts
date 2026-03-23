@@ -2,6 +2,7 @@ import { spawn } from 'child_process';
 import { HOME, CLAUDE_BIN, MCP_TASKS_CONFIG as MCP_CONFIG } from './config';
 import { registerProcess } from './process-registry';
 import { styleGate } from './style-gate';
+import { getCharacters } from './characters';
 
 export type SSEEvent =
   | { event: 'status'; data: { state: string; label: string; character?: string } }
@@ -111,7 +112,9 @@ export function spawnAndCollect(opts: {
     proc.on('close', async (code) => {
       if (buffer.trim()) processLine(buffer);
       const raw = textParts.join('\n');
-      const response = await styleGate(raw);
+      const charId = opts.characterId;
+      const needsGate = charId ? getCharacters()[charId]?.styleGate === true : false;
+      const response = needsGate ? await styleGate(raw) : raw;
       resolve({
         response,
         durationMs: Date.now() - start,
