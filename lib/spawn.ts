@@ -49,6 +49,8 @@ export function spawnAndCollect(opts: {
   maxTurns: number;
   label: string;
   characterId?: string;
+  allowedTools?: string[];
+  extendedThinking?: boolean;
 }): Promise<{ response: string; durationMs: number }> {
   const { prompt, model, maxTurns } = opts;
 
@@ -56,6 +58,9 @@ export function spawnAndCollect(opts: {
     const start = Date.now();
     const env = { ...process.env };
     delete env.CLAUDECODE;
+    if (opts.extendedThinking) {
+      env.CLAUDE_EXTEND_THINKING = '1';
+    }
 
     const args = [
       '-p', prompt,
@@ -66,6 +71,10 @@ export function spawnAndCollect(opts: {
       '--dangerously-skip-permissions',
       '--mcp-config', MCP_CONFIG,
     ];
+
+    if (opts.allowedTools?.length) {
+      args.push('--allowedTools', ...opts.allowedTools);
+    }
 
     const proc = spawn(CLAUDE_BIN, args, {
       cwd: HOME,
@@ -197,6 +206,8 @@ export function spawnSSEStream(opts: {
   characterId?: string;
   signal?: AbortSignal;
   images?: Array<{ mediaType: string; data: string }>;
+  allowedTools?: string[];
+  extendedThinking?: boolean;
 }): ReadableStream<Uint8Array> {
   const { prompt, model, maxTurns, label, characterId, signal, images } = opts;
   const hasImages = !!images && images.length > 0;
@@ -215,6 +226,9 @@ export function spawnSSEStream(opts: {
 
       const env = { ...process.env };
       delete env.CLAUDECODE;
+      if (opts.extendedThinking) {
+        env.CLAUDE_EXTEND_THINKING = '1';
+      }
 
       const args = hasImages ? [
         '-p',
@@ -234,6 +248,10 @@ export function spawnSSEStream(opts: {
         '--dangerously-skip-permissions',
         '--mcp-config', MCP_CONFIG,
       ];
+
+      if (opts.allowedTools?.length) {
+        args.push('--allowedTools', ...opts.allowedTools);
+      }
 
       proc = spawn(CLAUDE_BIN, args, { cwd: HOME, env: env as NodeJS.ProcessEnv, stdio: [hasImages ? 'pipe' : 'ignore', 'pipe', 'pipe'] });
       registerProcess(proc, { charName: characterId || 'chat', label });

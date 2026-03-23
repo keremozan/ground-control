@@ -186,6 +186,8 @@ export async function POST(req: Request) {
       maxTurns,
       label,
       characterId: charName,
+      allowedTools: char.allowedTools,
+      extendedThinking: char.extendedThinking,
     });
 
     const result: JobResult = {

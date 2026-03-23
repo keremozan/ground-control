@@ -30,6 +30,8 @@ export type Character = {
   autoReviewConfig?: { skillPatterns: Record<string, string> };
   internal?: boolean;
   parentChar?: string;
+  allowedTools?: string[];
+  extendedThinking?: boolean;
 };
 
 export function validateSpawn(
