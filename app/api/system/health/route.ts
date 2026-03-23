@@ -24,6 +24,10 @@ const SYSTEM_CONTEXT_FILES = new Set([
   'work-patterns.md',
   'health-knowledge.md',
   'ground-control.md',
+  'scholar-context.md',
+  'work-patterns.md',
+  'scribe-practices.md',
+  'commit-rules.md',
 ]);
 
 export async function GET() {
@@ -50,12 +54,19 @@ export async function GET() {
       const content = fs.readFileSync(skillMdPath, 'utf-8');
       const refs = new Set<string>();
 
-      // Match shared/something.md or bare filenames that exist
-      const sharedPattern = /shared\/([a-zA-Z0-9_-]+\.(?:md|json))/g;
+      // Match Read/Load `~/.claude/shared/X.md` patterns
+      const pathPattern = /(?:Read|Load)\s+`?~?\/?\.claude\/shared\/([^`\s]+\.(?:md|json))`?/gi;
       let m: RegExpExecArray | null;
+      while ((m = pathPattern.exec(content)) !== null) {
+        if (m[1].includes('{')) continue;
+        refs.add(m[1]);
+      }
+      // Match shared/something.md
+      const sharedPattern = /shared\/([a-zA-Z0-9_-]+\.(?:md|json))/g;
       while ((m = sharedPattern.exec(content)) !== null) {
         refs.add(m[1]);
       }
+      // Match bare filenames that exist on disk
       const barePattern = /([a-zA-Z0-9_-]+\.md)/g;
       while ((m = barePattern.exec(content)) !== null) {
         if (m[1].includes('{') || m[1].includes('}')) continue;

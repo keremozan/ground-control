@@ -1,5 +1,23 @@
 # Changelog
 
+## v3.2.0 — 2026-03-23
+
+### New
+- [new] Health badges on crew character cards (red dot for broken links, amber for unused knowledge). Real-time from `/api/system/health` endpoint.
+- [new] Graph tab in CharDetailDrawer: per-character ReactFlow diagram showing skills, knowledge files, and schedules with orthogonal edges and diagnostic coloring.
+- [new] `/api/system/health`: lightweight per-character health summary (broken, unused, skill/knowledge/schedule counts).
+- [new] `/api/system/graph/detail`: detailed node info (skill procedure steps, character config, knowledge preview, last run data).
+
+### Fixes
+- [fix] LogsTab timestamps now show dates: "yesterday 19:03" or "22 Mar 19:03" for older entries.
+- [fix] Evening-tasks summary shows first meaningful line of each character's response instead of just task counts.
+- [fix] System health scanner aligned with graph API (same regex patterns, same exclusion list).
+- [fix] Gemini spend cap: daily Deep Research curiosity scan disabled. Weekly scholar-educate only.
+
+### Pipeline
+- [improved] Playwright replaced with Chrome DevTools MCP connecting to Dia browser on port 9222. No more zombie Chromium processes.
+- [improved] WhatsApp context captures grouped under one parent node per scan instead of separate day-page nodes.
+
 ## v3.1.0 — 2026-03-23
 
 ### New

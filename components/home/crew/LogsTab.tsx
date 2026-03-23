@@ -19,7 +19,16 @@ const actionColor: Record<string, string> = {
 
 function formatTime(iso: string): string {
   const d = new Date(iso);
-  return d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  const now = new Date();
+  const isToday = d.toDateString() === now.toDateString();
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const isYesterday = d.toDateString() === yesterday.toDateString();
+
+  const time = d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  if (isToday) return time;
+  if (isYesterday) return `yesterday ${time.slice(0, 5)}`;
+  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short" }) + " " + time.slice(0, 5);
 }
 
 export default function LogsTab({

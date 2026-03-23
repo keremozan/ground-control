@@ -321,7 +321,9 @@ async function handleProcessTasks(
         durationMs,
       };
       charResults.push(charResult);
-      summaryParts.push(`${dn}: ${tasks.length} tasks (${Math.round(durationMs / 1000)}s)`);
+      // Extract first meaningful line from response for summary
+      const firstLine = response.split('\n').find(l => l.trim() && !l.startsWith('#') && !l.startsWith('Running') && !l.startsWith('Reading') && l.trim().length > 10)?.trim().slice(0, 120) || '';
+      summaryParts.push(`**${dn}** (${tasks.length} tasks, ${Math.round(durationMs / 1000)}s): ${firstLine}`);
     } catch {
       summaryParts.push(`${dn}: failed`);
     }
