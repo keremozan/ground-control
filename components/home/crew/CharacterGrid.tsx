@@ -1,10 +1,12 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { resolveIcon } from "@/lib/icon-map";
 import { type ActionLogEntry } from "@/lib/action-log";
 import { type JobResult } from "@/lib/scheduler";
 import { Loader2 } from "lucide-react";
 import FocusPanel from "./FocusPanel";
+
+type CharHealth = { broken: number; unused: number; skills: number; knowledge: number; schedules: number };
 
 type ActionInfo = {
   label: string; icon: string; description: string;
@@ -48,6 +50,14 @@ export default function CharacterGrid({
     try { return localStorage.getItem("crew-selected-char") || ""; } catch { return ""; }
   });
   const [crewFilter, setCrewFilter] = useState<string | null>(null);
+  const [health, setHealth] = useState<Record<string, CharHealth>>({});
+
+  useEffect(() => {
+    fetch("/api/system/health")
+      .then(r => r.json())
+      .then(raw => { const d = raw?.data ?? raw; setHealth(d.characters || {}); })
+      .catch(() => {});
+  }, []);
 
   const selectChar = (id: string) => {
     setSelectedCharId(id);
@@ -90,6 +100,8 @@ export default function CharacterGrid({
           const isSelected = selectedChar?.id === char.id;
           const charBusy = [...runningActions].some(k => k.startsWith(`${char.name}:`));
           const hasRecentLog = recentLogs.some(e => e.character?.toLowerCase() === char.name.toLowerCase());
+          const h = health[char.id];
+          const healthColor = h ? (h.broken > 0 ? "#ef4444" : h.unused > 0 ? "#f59e0b" : undefined) : undefined;
           return (
             <button key={char.id} onClick={() => selectChar(char.id)} style={{
               display: "flex", alignItems: "center", gap: 4, padding: "3px 5px",
@@ -105,7 +117,14 @@ export default function CharacterGrid({
                 fontFamily: "var(--font-mono)", fontSize: 10,
                 color: isSelected ? char.color : "var(--text-2)",
                 overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                flex: 1,
               }}>{char.name}</span>
+              {healthColor && (
+                <span style={{
+                  width: 5, height: 5, borderRadius: "50%",
+                  background: healthColor, flexShrink: 0,
+                }} />
+              )}
             </button>
           );
         })}

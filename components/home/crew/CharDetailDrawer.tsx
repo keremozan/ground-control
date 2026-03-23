@@ -1,16 +1,182 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
-import { X, Brain, Route, BookOpen, FileText, Plus } from "lucide-react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { X, Brain, Route, BookOpen, FileText, Plus, GitBranch } from "lucide-react";
+import {
+  ReactFlow,
+  useNodesState,
+  useEdgesState,
+  Controls,
+  Background,
+  type Node,
+  type Edge,
+} from "@xyflow/react";
+import "@xyflow/react/dist/style.css";
+import Dagre from "@dagrejs/dagre";
 import FileEditorModal from "./FileEditorModal";
+import SkillGraphNode from "@/components/system/SkillGraphNode";
+import KnowledgeGraphNode from "@/components/system/KnowledgeGraphNode";
+import ScheduleGraphNode from "@/components/system/ScheduleGraphNode";
 
 type CharacterInfo = { id: string; name: string; color: string; skills?: string[]; routingKeywords?: string[]; sharedKnowledge?: string[] };
-type Tab = "skills" | "keywords" | "knowledge" | "memory";
+type Tab = "skills" | "keywords" | "knowledge" | "memory" | "graph";
 const TABS: { key: Tab; label: string; icon: typeof Brain }[] = [
   { key: "skills", label: "Skills", icon: Brain }, { key: "keywords", label: "Keywords", icon: Route },
   { key: "knowledge", label: "Knowledge", icon: BookOpen }, { key: "memory", label: "Memory", icon: FileText },
+  { key: "graph", label: "Graph", icon: GitBranch },
 ];
 const mono = (size: number, extra?: React.CSSProperties): React.CSSProperties => ({ fontFamily: "var(--font-mono)", fontSize: size, ...extra });
 const Empty = ({ text }: { text: string }) => <span style={mono(10, { color: "var(--text-3)" })}>{text}</span>;
+
+const NODE_TYPES = {
+  skill: SkillGraphNode,
+  knowledge: KnowledgeGraphNode,
+  schedule: ScheduleGraphNode,
+};
+
+const NODE_DIMS: Record<string, { w: number; h: number }> = {
+  skill: { w: 160, h: 34 },
+  knowledge: { w: 140, h: 42 },
+  schedule: { w: 130, h: 38 },
+};
+
+const EDGE_STATUS_COLORS: Record<string, string> = {
+  ok: "#22c55e",
+  broken: "#ef4444",
+  unused: "#f59e0b",
+};
+
+type GraphApiNode = {
+  id: string;
+  type: string;
+  label: string;
+  metadata: Record<string, unknown>;
+};
+type GraphApiEdge = {
+  source: string;
+  target: string;
+  type: string;
+  status: string;
+};
+
+function layoutGraph(nodes: Node[], edges: Edge[]): Node[] {
+  const g = new Dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
+  g.setGraph({ rankdir: "LR", nodesep: 20, ranksep: 60, edgesep: 10 });
+  for (const n of nodes) {
+    const dims = NODE_DIMS[n.type || "skill"] || { w: 150, h: 36 };
+    g.setNode(n.id, { width: dims.w, height: dims.h });
+  }
+  for (const e of edges) g.setEdge(e.source, e.target);
+  Dagre.layout(g);
+  return nodes.map(n => {
+    const pos = g.node(n.id);
+    const dims = NODE_DIMS[n.type || "skill"] || { w: 150, h: 36 };
+    return { ...n, position: { x: pos.x - dims.w / 2, y: pos.y - dims.h / 2 } };
+  });
+}
+
+function buildCharacterGraph(
+  charId: string,
+  apiNodes: GraphApiNode[],
+  apiEdges: GraphApiEdge[],
+  charColor: string,
+): { nodes: Node[]; edges: Edge[] } {
+  const charNodeId = `char:${charId}`;
+
+  // Collect skill IDs owned by this character
+  const ownedSkillIds = new Set<string>();
+  for (const e of apiEdges) {
+    if (e.source === charNodeId && e.type === "owns") ownedSkillIds.add(e.target);
+  }
+
+  // Collect knowledge IDs declared by this character or read by its skills
+  const knowledgeIds = new Set<string>();
+  for (const e of apiEdges) {
+    if (e.source === charNodeId && e.type === "declares") knowledgeIds.add(e.target);
+    if (ownedSkillIds.has(e.source) && e.type === "reads") knowledgeIds.add(e.target);
+  }
+
+  // Collect schedule IDs that trigger this character
+  const scheduleIds = new Set<string>();
+  for (const e of apiEdges) {
+    if (e.target === charNodeId && e.type === "triggers") scheduleIds.add(e.source);
+  }
+
+  const relevantNodeIds = new Set([...ownedSkillIds, ...knowledgeIds, ...scheduleIds]);
+  const nodeMap = new Map(apiNodes.map(n => [n.id, n]));
+
+  const rfNodes: Node[] = [];
+  for (const id of relevantNodeIds) {
+    const n = nodeMap.get(id);
+    if (!n) continue;
+    const data: Record<string, unknown> = {};
+    if (n.type === "skill") {
+      data.name = n.label;
+      data.ownerColor = charColor;
+      data.missingDeps = Array.isArray(n.metadata.missingDeps) && (n.metadata.missingDeps as string[]).length > 0;
+    } else if (n.type === "knowledge") {
+      data.name = n.label;
+      const declared = (n.metadata.declaredBy as string[]) || [];
+      const readBy = (n.metadata.readBy as string[]) || [];
+      data.declaredByCount = declared.length;
+      data.readByCount = readBy.length;
+      data.status = declared.length > 0 && readBy.length === 0 ? "unused" : "ok";
+    } else if (n.type === "schedule") {
+      data.cron = n.metadata.cron || "";
+      data.label = n.label;
+      data.enabled = true;
+    }
+    rfNodes.push({ id, type: n.type, data, position: { x: 0, y: 0 } });
+  }
+
+  // Build edges between relevant nodes (skip edges involving the character node itself)
+  const rfEdges: Edge[] = [];
+  for (const e of apiEdges) {
+    if (!relevantNodeIds.has(e.source) && !relevantNodeIds.has(e.target)) continue;
+    // Include edges between two relevant nodes, or from char to skill (remap to schedule->skill, skill->knowledge)
+    if (e.source === charNodeId || e.target === charNodeId) {
+      // Skip the character node edges (owns, declares, triggers) -- we link schedule->skill and skill->knowledge directly
+      if (e.type === "triggers" && scheduleIds.has(e.source)) {
+        // For each schedule, connect it to each owned skill
+        for (const skillId of ownedSkillIds) {
+          rfEdges.push({
+            id: `${e.source}->${skillId}`,
+            source: e.source,
+            target: skillId,
+            type: "smoothstep",
+            style: { stroke: EDGE_STATUS_COLORS[e.status] || "#666", strokeWidth: 1.5 },
+          });
+        }
+      }
+      continue;
+    }
+    if (relevantNodeIds.has(e.source) && relevantNodeIds.has(e.target)) {
+      rfEdges.push({
+        id: `${e.source}->${e.target}`,
+        source: e.source,
+        target: e.target,
+        type: "smoothstep",
+        style: { stroke: EDGE_STATUS_COLORS[e.status] || "#666", strokeWidth: 1.5 },
+      });
+    }
+  }
+
+  // If no schedules, connect skills directly (they're entry points)
+  // Also ensure skill->knowledge edges from owns+declares
+  for (const skillId of ownedSkillIds) {
+    for (const e of apiEdges) {
+      if (e.source === charNodeId && e.type === "declares") {
+        // Connect skill to declared knowledge
+        const edgeId = `${skillId}->${e.target}:declared`;
+        if (!rfEdges.some(re => re.id === edgeId) && knowledgeIds.has(e.target) && !rfEdges.some(re => re.source === skillId && re.target === e.target)) {
+          // Only add if no reads edge already covers it
+        }
+      }
+    }
+  }
+
+  const laidOut = layoutGraph(rfNodes, rfEdges);
+  return { nodes: laidOut, edges: rfEdges };
+}
 
 function ListButton({ label, hint, color, onClick }: { label: string; hint: string; color: string; onClick: () => void }) {
   return (
@@ -18,6 +184,78 @@ function ListButton({ label, hint, color, onClick }: { label: string; hint: stri
       onMouseEnter={e => (e.currentTarget.style.borderColor = color + "40")} onMouseLeave={e => (e.currentTarget.style.borderColor = "transparent")}>
       <span>{label}</span><span style={{ fontSize: 9, color, opacity: 0.7 }}>{hint}</span>
     </button>
+  );
+}
+
+function CharacterGraph({
+  character,
+  onSkillClick,
+  onKnowledgeClick,
+}: {
+  character: CharacterInfo;
+  onSkillClick: (name: string) => void;
+  onKnowledgeClick: (key: string) => void;
+}) {
+  const [graphData, setGraphData] = useState<{ apiNodes: GraphApiNode[]; apiEdges: GraphApiEdge[] } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [nodes, setNodes, onNodesChange] = useNodesState([] as Node[]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([] as Edge[]);
+
+  useEffect(() => {
+    setLoading(true);
+    fetch("/api/system/graph")
+      .then(r => r.json())
+      .then(raw => {
+        const d = raw?.data ?? raw;
+        setGraphData({ apiNodes: d.nodes || [], apiEdges: d.edges || [] });
+      })
+      .catch(() => setGraphData({ apiNodes: [], apiEdges: [] }))
+      .finally(() => setLoading(false));
+  }, [character.id]);
+
+  useEffect(() => {
+    if (!graphData) return;
+    const { nodes: n, edges: e } = buildCharacterGraph(
+      character.id,
+      graphData.apiNodes,
+      graphData.apiEdges,
+      character.color,
+    );
+    setNodes(n);
+    setEdges(e);
+  }, [graphData, character.id, character.color, setNodes, setEdges]);
+
+  const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
+    if (node.type === "skill") {
+      const name = (node.data as Record<string, unknown>).name as string;
+      onSkillClick(name);
+    } else if (node.type === "knowledge") {
+      const name = (node.data as Record<string, unknown>).name as string;
+      // Knowledge name in the graph is without .md extension
+      onKnowledgeClick(name.replace(/\.md$/, ""));
+    }
+  }, [onSkillClick, onKnowledgeClick]);
+
+  if (loading) return <Empty text="Loading graph..." />;
+  if (nodes.length === 0) return <Empty text="No graph data for this character" />;
+
+  return (
+    <div style={{ flex: 1, minHeight: 300, width: "100%" }}>
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        nodeTypes={NODE_TYPES}
+        onNodeClick={onNodeClick}
+        fitView
+        proOptions={{ hideAttribution: true }}
+        style={{ width: "100%", height: "100%" }}
+      >
+        <Controls showInteractive={false} style={{ transform: "scale(0.75)", transformOrigin: "bottom left" }} />
+        <Background gap={16} size={0.5} />
+      </ReactFlow>
+    </div>
   );
 }
 
@@ -77,6 +315,15 @@ export default function CharDetailDrawer({ character, open, onClose, contained }
     setMemContent(content); setEditing(false);
   };
 
+  const handleGraphSkillClick = (name: string) => {
+    setTab("skills");
+    handleSkillClick(name);
+  };
+  const handleGraphKnowledgeClick = (key: string) => {
+    setTab("knowledge");
+    handleKnowledgeClick(key);
+  };
+
   return (
     <>
       <div onClick={onClose} style={{ position: pos, inset: 0, zIndex: z, background: "rgba(0,0,0,0.2)" }} />
@@ -100,7 +347,7 @@ export default function CharDetailDrawer({ character, open, onClose, contained }
           ); })}
         </div>
         {/* Content */}
-        <div style={{ flex: 1, overflow: "auto", padding: "12px 16px" }}>
+        <div style={{ flex: 1, overflow: tab === "graph" ? "hidden" : "auto", padding: tab === "graph" ? 0 : "12px 16px", display: "flex", flexDirection: "column" }}>
           {tab === "skills" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
               {skills.length === 0 && <Empty text="No skills configured" />}
@@ -145,6 +392,13 @@ export default function CharDetailDrawer({ character, open, onClose, contained }
                 <FileText size={10} strokeWidth={1.5} /> Edit memory
               </button>
             </div>
+          )}
+          {tab === "graph" && (
+            <CharacterGraph
+              character={character}
+              onSkillClick={handleGraphSkillClick}
+              onKnowledgeClick={handleGraphKnowledgeClick}
+            />
           )}
         </div>
       </div>

@@ -48,9 +48,11 @@ function scanFileReferences(body: string, knowledgeFiles: Set<string>): string[]
   const refs = new Set<string>();
 
   // Match patterns: Read `~/.claude/shared/X.md`, Load `~/.claude/shared/X.md`, shared/X.md
+  // Skip template variables like {id}-practices.md, {charId}-practices.md
   const pathPattern = /(?:Read|Load)\s+`?~?\/?\.claude\/shared\/([^`\s]+\.md)`?/gi;
   let m: RegExpExecArray | null;
   while ((m = pathPattern.exec(body)) !== null) {
+    if (m[1].includes('{')) continue;
     refs.add(m[1]);
   }
 
@@ -61,8 +63,10 @@ function scanFileReferences(body: string, knowledgeFiles: Set<string>): string[]
   }
 
   // Match bare .md filenames that exist in SHARED_DIR
+  // Skip template variables like {id}-practices.md
   const barePattern = /([a-zA-Z0-9_-]+\.md)/g;
   while ((m = barePattern.exec(body)) !== null) {
+    if (m[1].includes('{') || m[1].includes('}')) continue;
     if (knowledgeFiles.has(m[1])) {
       refs.add(m[1]);
     }
@@ -77,13 +81,25 @@ export async function GET() {
   const nodes: GraphNode[] = [];
   const edges: GraphEdge[] = [];
 
-  // ── 1. Knowledge files ────────────────────────────
+  // ── 1. Knowledge files (md + json) ─────────────────
   const knowledgeFiles = new Set<string>();
+  const allSharedFiles = new Set<string>();
   try {
     for (const f of fs.readdirSync(SHARED_DIR)) {
-      if (f.endsWith('.md')) knowledgeFiles.add(f);
+      if (f.endsWith('.md') || f.endsWith('.json')) {
+        knowledgeFiles.add(f);
+        // Also index without extension for matching sharedKnowledge entries
+        allSharedFiles.add(f.replace(/\.(md|json)$/, ''));
+      }
     }
   } catch {}
+
+  // System-context files loaded implicitly by all characters. Not a problem if no skill reads them explicitly.
+  const SYSTEM_CONTEXT_FILES = new Set([
+    'identity.md', 'writing-voice.md', 'daily-context.md', 'mind-patterns.md',
+    'contacts.md', 'tana-ids.md', 'routing-table.md', 'routing-overrides.md',
+    'tools.md', 'comms-ledger.json', 'work-patterns.md', 'health-knowledge.md', 'ground-control.md',
+  ]);
 
   const knowledgeDeclaredBy: Record<string, string[]> = {};
   const knowledgeReadBy: Record<string, string[]> = {};
@@ -113,7 +129,11 @@ export async function GET() {
 
     // "declares" edges: character -> knowledge
     for (const kName of char.sharedKnowledge || []) {
-      const kFile = kName.endsWith('.md') ? kName : `${kName}.md`;
+      // Resolve filename: try .md first, then .json
+      const baseName = kName.replace(/\.(md|json)$/, '');
+      const kFile = knowledgeFiles.has(`${baseName}.md`) ? `${baseName}.md`
+        : knowledgeFiles.has(`${baseName}.json`) ? `${baseName}.json`
+        : `${baseName}.md`; // fallback
       const exists = knowledgeFiles.has(kFile);
       edges.push({
         source: `char:${id}`,
@@ -122,6 +142,7 @@ export async function GET() {
         status: exists ? 'ok' : 'broken',
       });
       if (exists) {
+        if (!knowledgeDeclaredBy[kFile]) knowledgeDeclaredBy[kFile] = [];
         knowledgeDeclaredBy[kFile].push(id);
       }
     }
@@ -255,10 +276,11 @@ export async function GET() {
 
   // ── 8. Mark unused knowledge edges ────────────────
   // A "declares" edge is "unused" if the knowledge file has no skill reading it
+  // Exception: system-context files (identity, writing-voice, etc.) are loaded implicitly
   for (const edge of edges) {
     if (edge.type === 'declares' && edge.status === 'ok') {
-      const kId = edge.target; // knowledge:filename.md
-      const kFile = kId.replace('knowledge:', '');
+      const kFile = edge.target.replace('knowledge:', '');
+      if (SYSTEM_CONTEXT_FILES.has(kFile)) continue; // skip system context
       const readBy = knowledgeReadBy[kFile] || [];
       if (readBy.length === 0) {
         edge.status = 'unused';
@@ -269,7 +291,7 @@ export async function GET() {
   // ── 9. Diagnostics summary ────────────────────────
   const brokenEdges = edges.filter(e => e.status === 'broken').length;
   const unusedKnowledge = [...knowledgeFiles].filter(
-    f => (knowledgeDeclaredBy[f]?.length || 0) > 0 && (knowledgeReadBy[f]?.length || 0) === 0
+    f => !SYSTEM_CONTEXT_FILES.has(f) && (knowledgeDeclaredBy[f]?.length || 0) > 0 && (knowledgeReadBy[f]?.length || 0) === 0
   ).length;
   const missingFiles = nodes
     .filter(n => n.type === 'skill' && Array.isArray(n.metadata.missingDeps) && (n.metadata.missingDeps as string[]).length > 0)
