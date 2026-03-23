@@ -3,8 +3,64 @@ import fs from 'fs';
 import { getCharacters } from './characters';
 import { readSkill } from './skills';
 import { getSharedKnowledge } from './shared';
-import { CHARACTERS_DIR, USER_NAME } from './config';
+import { CHARACTERS_DIR, USER_NAME, HOME } from './config';
 import { serverLog } from './server-log';
+
+const INSTINCTS_DIR = path.join(HOME, '.claude', 'instincts');
+const MAX_INSTINCTS_PER_CHAR = 10;
+const MIN_CONFIDENCE = 0.5;
+
+/** Load instincts above confidence threshold for a character */
+function loadInstincts(characterId: string): string[] {
+  const lines: string[] = [];
+
+  const dirs = [
+    path.join(INSTINCTS_DIR, 'global'),
+    path.join(INSTINCTS_DIR, 'characters'),
+  ];
+
+  for (const dir of dirs) {
+    try {
+      if (!fs.existsSync(dir)) continue;
+      for (const file of fs.readdirSync(dir)) {
+        if (!file.endsWith('.yaml')) continue;
+        try {
+          const content = fs.readFileSync(path.join(dir, file), 'utf-8');
+          const parts = content.split('---');
+          if (parts.length < 3) continue;
+
+          // Parse frontmatter manually (avoid yaml dependency in lib)
+          const fm = parts[1];
+          const confMatch = fm.match(/confidence:\s*([\d.]+)/);
+          const confidence = confMatch ? parseFloat(confMatch[1]) : 0;
+          if (confidence < MIN_CONFIDENCE) continue;
+
+          // Check character scope
+          const charMatch = fm.match(/character:\s*(\S+)/);
+          const instinctChar = charMatch ? charMatch[1] : null;
+          if (instinctChar && instinctChar !== characterId) continue;
+
+          // Extract action
+          const body = parts.slice(2).join('---');
+          const actionMatch = body.match(/## Action\s*\n([^\n#]+)/);
+          const action = actionMatch ? actionMatch[1].trim() : null;
+          if (action) {
+            lines.push(`- [${confidence}] ${action}`);
+          }
+        } catch {}
+      }
+    } catch {}
+  }
+
+  // Sort by confidence descending, cap at max
+  lines.sort((a, b) => {
+    const ca = parseFloat(a.match(/\[([\d.]+)\]/)?.[1] || '0');
+    const cb = parseFloat(b.match(/\[([\d.]+)\]/)?.[1] || '0');
+    return cb - ca;
+  });
+
+  return lines.slice(0, MAX_INSTINCTS_PER_CHAR);
+}
 
 export function buildPrompt(skillName: string | null, extra?: string): string {
   const sharedKnowledge = getSharedKnowledge();
@@ -37,6 +93,12 @@ export function buildCharacterPrompt(characterId: string, taskContext?: string, 
 
   if (char.memory?.trim()) {
     prompt += `\n\n---\n\n## Memory\n${char.memory}`;
+  }
+
+  // Load instincts (learned behaviors from user corrections)
+  const instinctLines = loadInstincts(characterId);
+  if (instinctLines.length > 0) {
+    prompt += `\n\n---\n\n## Learned Behaviors\nThese patterns were learned from your corrections. Follow them.\n${instinctLines.join('\n')}`;
   }
 
   if (char.knowledgeFile) {
