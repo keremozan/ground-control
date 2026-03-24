@@ -5,6 +5,18 @@ import { spawnSSEStream } from '@/lib/spawn';
 import { TANA_INBOX_ID } from '@/lib/config';
 import { wrapWithAutoReview, detectIntent, type AutoReviewConfig } from '@/lib/auto-review';
 import { apiError, apiStream } from '@/lib/api-helpers';
+import { recordOutcome } from '@/lib/outcome-tracker';
+import { recordUsage } from '@/lib/usage-analytics';
+
+const CORRECTION_PATTERNS = [
+  /^no[,.\s]/i, /^wrong/i, /^not that/i, /^instead[,.\s]/i,
+  /^make it/i, /^change (it|this|that) to/i,
+  /I (said|already told|asked)/i, /^don't /i, /^stop /i,
+];
+
+function detectCorrection(userMsg: string): boolean {
+  return CORRECTION_PATTERNS.some(p => p.test(userMsg.trim()));
+}
 
 const AUTONOMY_RULES = `
 CRITICAL AUTONOMY RULES — follow these without exception:
@@ -69,6 +81,22 @@ export async function POST(req: Request) {
   }
   taskContent = `${taskContent}\n\n---\n\n${AUTONOMY_RULES}`;
 
+  // Detect corrections in conversation history
+  if (history && history.length >= 2) {
+    if (detectCorrection(message)) {
+      const lastAssistantMsg = [...history].reverse().find(m => m.role === 'assistant');
+      recordOutcome({
+        character: characterId,
+        signalType: 'chat-correction',
+        outcome: 'negative',
+        details: {
+          correction: message.slice(0, 200),
+          assistantSaid: lastAssistantMsg?.content?.slice(0, 200) || '',
+        },
+      });
+    }
+  }
+
   // Detect active skill for characters with autoReviewConfig on first messages only
   const autoReviewConfig = char.autoReviewConfig as AutoReviewConfig | undefined;
   let activeSkill: string | undefined;
@@ -93,5 +121,6 @@ export async function POST(req: Request) {
     ? wrapWithAutoReview(rawStream, characterId, autoReviewConfig, revisionBasePrompt, effectiveModel)
     : rawStream;
 
+  recordUsage({ type: 'chat-start', character: characterId });
   return apiStream(stream);
 }
