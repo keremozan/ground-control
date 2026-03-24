@@ -112,6 +112,14 @@ export async function sendMessage(
   return lastMessage!;
 }
 
+export async function sendChatAction(chatId: number, action = 'typing'): Promise<void> {
+  await fetch(buildApiUrl(TELEGRAM_BOT_TOKEN, 'sendChatAction'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chat_id: chatId, action }),
+  });
+}
+
 export async function downloadFile(fileId: string, destPath: string): Promise<string> {
   const res = await fetch(buildApiUrl(TELEGRAM_BOT_TOKEN, 'getFile'), {
     method: 'POST',

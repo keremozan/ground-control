@@ -7,7 +7,7 @@
 import path from 'path';
 import fs from 'fs';
 import { TELEGRAM_GROUPS, TELEGRAM_USER_ID } from './config';
-import { TelegramUpdate, TelegramMessage, sendMessage, downloadFile } from './telegram';
+import { TelegramUpdate, TelegramMessage, sendMessage, sendChatAction, downloadFile } from './telegram';
 import { spawnAndCollect } from './spawn';
 import { getCharacters } from './characters';
 import { buildCharacterPrompt } from './prompt';
@@ -180,6 +180,9 @@ async function handleMessage(charName: string, msg: TelegramMessage): Promise<vo
   }
 
   const prompt = buildCharacterPrompt(charName, taskContent);
+
+  // Show typing indicator
+  sendChatAction(groupId).catch(() => {});
 
   // Log inbound
   logTelegramEntry({
