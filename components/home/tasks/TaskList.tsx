@@ -97,7 +97,7 @@ function TaskRow({
               return (<>
                 <span style={{ width: 4, height: 4, borderRadius: "50%", background: urgency?.dot ? urgency.color : "transparent", flexShrink: 0 }} />
                 <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: urgency?.color || "var(--text-3)", whiteSpace: "nowrap" }}>
-                  {formatWhen(task.dueDate, false)}
+                  {urgency?.level === "overdue" ? `overdue · ${formatWhen(task.dueDate, false)}` : formatWhen(task.dueDate, false)}
                 </span>
               </>);
             })()}
