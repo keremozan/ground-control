@@ -1,9 +1,12 @@
 import fs from 'fs';
 import path from 'path';
 
-const DATA_DIR = process.env.__TEST_DATA_DIR || path.join(process.cwd(), 'data');
-const OUTCOMES_PATH = path.join(DATA_DIR, 'outcomes.json');
 const MAX_AGE_DAYS = 90;
+
+function outcomesPath() {
+  const dir = process.env.__TEST_DATA_DIR || path.join(process.cwd(), 'data');
+  return path.join(dir, 'outcomes.json');
+}
 
 export type SignalType = 'chat-correction' | 'draft-outcome' | 'tana-outcome' | 'usage';
 
@@ -16,13 +19,14 @@ export type OutcomeEvent = {
 };
 
 function readOutcomes(): OutcomeEvent[] {
-  try { return JSON.parse(fs.readFileSync(OUTCOMES_PATH, 'utf-8')); }
+  try { return JSON.parse(fs.readFileSync(outcomesPath(), 'utf-8')); }
   catch { return []; }
 }
 
 function writeOutcomes(events: OutcomeEvent[]) {
-  fs.mkdirSync(path.dirname(OUTCOMES_PATH), { recursive: true });
-  fs.writeFileSync(OUTCOMES_PATH, JSON.stringify(events, null, 2));
+  const p = outcomesPath();
+  fs.mkdirSync(path.dirname(p), { recursive: true });
+  fs.writeFileSync(p, JSON.stringify(events, null, 2));
 }
 
 export function recordOutcome(event: Omit<OutcomeEvent, 'timestamp'>) {
@@ -35,7 +39,7 @@ export function getOutcomes(opts?: { character?: string; signalType?: SignalType
   let events = readOutcomes();
   if (opts?.character) events = events.filter(e => e.character === opts.character);
   if (opts?.signalType) events = events.filter(e => e.signalType === opts.signalType);
-  if (opts?.limit) events = events.slice(0, opts.limit);
+  if (opts?.limit !== undefined) events = events.slice(0, opts.limit);
   return events;
 }
 
