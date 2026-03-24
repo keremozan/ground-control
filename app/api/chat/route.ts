@@ -9,13 +9,18 @@ import { recordOutcome } from '@/lib/outcome-tracker';
 import { recordUsage } from '@/lib/usage-analytics';
 
 const CORRECTION_PATTERNS = [
-  /^no[,.\s]/i, /^wrong/i, /^not that/i, /^instead[,.\s]/i,
+  /^no[,.\s](?!problem|need|worries|rush)/i,
+  /^wrong/i, /^not that/i, /^instead[,.\s]/i,
   /^make it/i, /^change (it|this|that) to/i,
-  /I (said|already told|asked)/i, /^don't /i, /^stop /i,
+  /I (said|already told|asked)/i,
+  /^don't (?!forget|worry)/i, /^stop /i,
 ];
 
+/** Detect user corrections. Only flags short, terse messages (corrections tend to be brief). */
 function detectCorrection(userMsg: string): boolean {
-  return CORRECTION_PATTERNS.some(p => p.test(userMsg.trim()));
+  const trimmed = userMsg.trim();
+  if (trimmed.length > 300) return false; // Long messages are instructions, not corrections
+  return CORRECTION_PATTERNS.some(p => p.test(trimmed));
 }
 
 const AUTONOMY_RULES = `
