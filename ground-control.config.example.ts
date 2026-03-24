@@ -26,6 +26,16 @@ const config = {
     apiKey: "YOUR_GEMINI_API_KEY", // from https://aistudio.google.com/apikey
   },
 
+  telegram: {
+    botToken: "",           // Get from @BotFather on Telegram
+    userId: 0,              // Your Telegram user ID (security filter)
+    groups: {               // charName -> Telegram group chat ID
+      // postman: -1001234567001,
+      // scholar: -1001234567002,
+      // coach:   -1001234567003,
+    },
+  },
+
   scheduler: {
     skipTrackPattern: "",
     taskCharacters: ["scholar", "clerk", "architect", "archivist", "steward"] as string[],
