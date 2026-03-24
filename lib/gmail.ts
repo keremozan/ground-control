@@ -439,6 +439,42 @@ export async function searchDrafts(account: string, toEmail: string): Promise<{ 
   return results;
 }
 
+/** List all draft IDs for an account */
+export async function listDraftIds(account: string): Promise<string[]> {
+  const data = await gmailFetch('/drafts?maxResults=100', account);
+  return (data.drafts || []).map((d: { id: string }) => d.id);
+}
+
+/** Find the most recent sent message body in a thread */
+export async function getSentMessageByThread(account: string, threadId: string): Promise<{ id: string; body: string } | null> {
+  try {
+    const data = await gmailFetch(`/threads/${threadId}?format=full`, account);
+    const messages = (data.messages || []) as Record<string, unknown>[];
+
+    for (const msg of messages.reverse()) {
+      const labels = (msg.labelIds || []) as string[];
+      if (!labels.includes('SENT')) continue;
+
+      const payload = msg.payload as Record<string, unknown>;
+      if (!payload) continue;
+
+      function findPlain(part: Record<string, unknown>): string | null {
+        if (part.mimeType === 'text/plain' && part.body) {
+          const d = (part.body as Record<string, unknown>).data as string | undefined;
+          if (d) return Buffer.from(d, 'base64url').toString('utf-8');
+        }
+        const parts = part.parts as Record<string, unknown>[] | undefined;
+        if (parts) { for (const p of parts) { const r = findPlain(p); if (r) return r; } }
+        return null;
+      }
+
+      const body = findPlain(payload) || (msg.snippet as string) || '';
+      return { id: msg.id as string, body };
+    }
+  } catch {}
+  return null;
+}
+
 /** Create a Gmail draft */
 export async function createDraft(account: string, opts: {
   to: string;
