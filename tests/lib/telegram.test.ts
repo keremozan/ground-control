@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { splitMessage, buildApiUrl, stripMarkdown } from '../../lib/telegram';
+import { describe, it, expect } from 'vitest';
+import { splitMessage, buildApiUrl, stripMarkdown, markdownToTelegramHTML } from '../../lib/telegram';
 
 describe('telegram', () => {
   describe('buildApiUrl', () => {
@@ -42,6 +42,57 @@ describe('telegram', () => {
     });
   });
 
+  describe('markdownToTelegramHTML', () => {
+    it('converts bold', () => {
+      expect(markdownToTelegramHTML('**bold text**')).toBe('<b>bold text</b>');
+    });
+
+    it('converts italic', () => {
+      expect(markdownToTelegramHTML('*italic*')).toBe('<i>italic</i>');
+    });
+
+    it('converts inline code', () => {
+      expect(markdownToTelegramHTML('use `npm install`')).toBe('use <code>npm install</code>');
+    });
+
+    it('converts code blocks', () => {
+      const input = '```js\nconsole.log("hi")\n```';
+      const output = markdownToTelegramHTML(input);
+      expect(output).toContain('<pre><code class="language-js">');
+      expect(output).toContain('console.log("hi")');
+    });
+
+    it('converts links', () => {
+      expect(markdownToTelegramHTML('[click](https://example.com)')).toBe('<a href="https://example.com">click</a>');
+    });
+
+    it('converts headers to bold', () => {
+      expect(markdownToTelegramHTML('## Section Title')).toBe('<b>Section Title</b>');
+    });
+
+    it('converts strikethrough', () => {
+      expect(markdownToTelegramHTML('~~deleted~~')).toBe('<s>deleted</s>');
+    });
+
+    it('escapes HTML in plain text', () => {
+      expect(markdownToTelegramHTML('a < b & c > d')).toBe('a &lt; b &amp; c &gt; d');
+    });
+
+    it('preserves underscores in identifiers', () => {
+      const output = markdownToTelegramHTML('file_name_here');
+      expect(output).toBe('file_name_here');
+    });
+
+    it('handles mixed formatting', () => {
+      const input = '## Report\n\n**Status**: *good*\nSee `config.ts`';
+      const output = markdownToTelegramHTML(input);
+      expect(output).toContain('<b>Report</b>');
+      expect(output).toContain('<b>Status</b>');
+      expect(output).toContain('<i>good</i>');
+      expect(output).toContain('<code>config.ts</code>');
+    });
+  });
+
   describe('stripMarkdown', () => {
     it('strips bold markers', () => {
       expect(stripMarkdown('**bold text**')).toBe('bold text');
@@ -53,28 +104,6 @@ describe('telegram', () => {
 
     it('preserves underscores in identifiers', () => {
       expect(stripMarkdown('file_name_here')).toBe('file_name_here');
-    });
-
-    it('strips headers', () => {
-      expect(stripMarkdown('## Section Title')).toBe('Section Title');
-    });
-
-    it('strips inline code', () => {
-      expect(stripMarkdown('use `npm install`')).toBe('use npm install');
-    });
-
-    it('converts links', () => {
-      expect(stripMarkdown('[click here](https://example.com)')).toBe('click here (https://example.com)');
-    });
-
-    it('handles mixed formatting', () => {
-      const input = '## Report\n\n**Status**: *good*\nSee `config.ts`';
-      const output = stripMarkdown(input);
-      expect(output).not.toContain('**');
-      expect(output).not.toContain('##');
-      expect(output).not.toContain('`');
-      expect(output).toContain('Status');
-      expect(output).toContain('good');
     });
   });
 });

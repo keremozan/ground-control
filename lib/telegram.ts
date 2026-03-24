@@ -144,23 +144,74 @@ export async function downloadFile(fileId: string, destPath: string): Promise<st
 
 // ── Formatting ───────────────────────────────────
 
-/** Strip markdown formatting that Telegram renders as raw text */
+/** Escape HTML special characters for Telegram HTML parse mode */
+function escapeHTML(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+/**
+ * Convert markdown to Telegram HTML.
+ * Handles: bold, italic, strikethrough, code, code blocks, links, headers.
+ * Falls back gracefully (unrecognized markdown passes through as plain text).
+ */
+export function markdownToTelegramHTML(text: string): string {
+  // First, extract code blocks to protect them from other transformations
+  const codeBlocks: string[] = [];
+  let result = text.replace(/```(\w*)\n?([\s\S]*?)```/g, (_match, lang, code) => {
+    const idx = codeBlocks.length;
+    const langAttr = lang ? ` class="language-${escapeHTML(lang)}"` : '';
+    codeBlocks.push(`<pre><code${langAttr}>${escapeHTML(code.trimEnd())}</code></pre>`);
+    return `\x00CODEBLOCK${idx}\x00`;
+  });
+
+  // Extract inline code
+  const inlineCodes: string[] = [];
+  result = result.replace(/`([^`]+)`/g, (_match, code) => {
+    const idx = inlineCodes.length;
+    inlineCodes.push(`<code>${escapeHTML(code)}</code>`);
+    return `\x00INLINE${idx}\x00`;
+  });
+
+  // Now escape HTML in the remaining text
+  result = escapeHTML(result);
+
+  // Bold: **text** or __text__
+  result = result.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+  result = result.replace(/__(.+?)__/g, '<b>$1</b>');
+
+  // Italic: *text* or _text_ (not inside words)
+  result = result.replace(/(?<!\w)\*(.+?)\*(?!\w)/g, '<i>$1</i>');
+  result = result.replace(/(?<!\w)_(.+?)_(?!\w)/g, '<i>$1</i>');
+
+  // Strikethrough: ~~text~~
+  result = result.replace(/~~(.+?)~~/g, '<s>$1</s>');
+
+  // Links: [text](url)
+  result = result.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+
+  // Headers: ## text -> bold
+  result = result.replace(/^#{1,6}\s+(.+)$/gm, '<b>$1</b>');
+
+  // Restore code blocks and inline code
+  result = result.replace(/\x00CODEBLOCK(\d+)\x00/g, (_m, idx) => codeBlocks[Number(idx)]);
+  result = result.replace(/\x00INLINE(\d+)\x00/g, (_m, idx) => inlineCodes[Number(idx)]);
+
+  return result;
+}
+
+/** Strip markdown formatting (legacy, use markdownToTelegramHTML instead) */
 export function stripMarkdown(text: string): string {
   return text
-    // Bold: **text** or __text__
     .replace(/\*\*(.+?)\*\*/g, '$1')
     .replace(/__(.+?)__/g, '$1')
-    // Italic: *text* or _text_ (but not inside words like file_name)
     .replace(/(?<!\w)\*(.+?)\*(?!\w)/g, '$1')
     .replace(/(?<!\w)_(.+?)_(?!\w)/g, '$1')
-    // Strikethrough: ~~text~~
     .replace(/~~(.+?)~~/g, '$1')
-    // Inline code: `text`
     .replace(/`([^`]+)`/g, '$1')
-    // Headers: ## text
     .replace(/^#{1,6}\s+/gm, '')
-    // Bullet markers: - text (keep the dash, just remove leading formatting)
-    // Links: [text](url) -> text (url)
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1 ($2)');
 }
 
