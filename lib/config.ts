@@ -79,3 +79,15 @@ export const CALENDAR_COLOR_PATTERNS: Record<string, string> = (userConfig as Re
 // ── Gemini ──────────────────────────────────────
 
 export const GEMINI_API_KEY = ((userConfig as Record<string, unknown>).gemini as { apiKey?: string } | undefined)?.apiKey || '';
+
+// ── Telegram ─────────────────────────────────────
+
+const telegramConfig = (userConfig as Record<string, unknown>).telegram as {
+  botToken?: string;
+  userId?: number;
+  groups?: Record<string, number>;
+} | undefined;
+
+export const TELEGRAM_BOT_TOKEN = telegramConfig?.botToken || '';
+export const TELEGRAM_USER_ID = telegramConfig?.userId || 0;
+export const TELEGRAM_GROUPS: Record<string, number> = telegramConfig?.groups || {};
