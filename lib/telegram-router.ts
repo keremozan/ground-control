@@ -1,6 +1,7 @@
 /**
  * Telegram message router.
  * Maps group chat IDs to characters, queues messages, spawns sessions.
+ * Maintains per-character conversation history with 10-minute idle timeout.
  */
 
 import path from 'path';
@@ -9,9 +10,50 @@ import { TELEGRAM_GROUPS, TELEGRAM_USER_ID } from './config';
 import { TelegramUpdate, TelegramMessage, sendMessage, downloadFile } from './telegram';
 import { spawnAndCollect } from './spawn';
 import { getCharacters } from './characters';
+import { buildCharacterPrompt } from './prompt';
 import { logTelegramEntry } from './telegram-log';
 
 const MEDIA_DIR = '/tmp/telegram-media';
+const SESSION_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
+
+// ── Conversation History ─────────────────────────
+
+type HistoryEntry = { role: 'user' | 'assistant'; content: string };
+
+type CharSession = {
+  history: HistoryEntry[];
+  lastActivity: number;
+  timer: ReturnType<typeof setTimeout>;
+};
+
+const sessions = new Map<string, CharSession>();
+
+function getSession(charName: string): CharSession {
+  const existing = sessions.get(charName);
+  if (existing && Date.now() - existing.lastActivity < SESSION_TIMEOUT_MS) {
+    clearTimeout(existing.timer);
+    existing.lastActivity = Date.now();
+    existing.timer = setTimeout(() => sessions.delete(charName), SESSION_TIMEOUT_MS);
+    return existing;
+  }
+  // New session or expired
+  if (existing) clearTimeout(existing.timer);
+  const session: CharSession = {
+    history: [],
+    lastActivity: Date.now(),
+    timer: setTimeout(() => sessions.delete(charName), SESSION_TIMEOUT_MS),
+  };
+  sessions.set(charName, session);
+  return session;
+}
+
+export function clearSession(charName: string): void {
+  const session = sessions.get(charName);
+  if (session) {
+    clearTimeout(session.timer);
+    sessions.delete(charName);
+  }
+}
 
 // Per-character message queue to prevent concurrent sessions
 const queues = new Map<string, Array<() => Promise<void>>>();
@@ -38,6 +80,13 @@ export async function processUpdate(update: TelegramUpdate): Promise<void> {
 
   const charName = resolveCharacter(msg.chat.id);
   if (!charName) return;
+
+  // Handle /new command to reset session
+  if (msg.text?.trim().toLowerCase() === '/new') {
+    clearSession(charName);
+    await sendMessage(msg.chat.id, 'Session cleared.');
+    return;
+  }
 
   // Queue the message for sequential processing per character
   enqueue(charName, () => handleMessage(charName, msg));
@@ -73,7 +122,6 @@ async function processQueue(charName: string): Promise<void> {
 // ── Message Handling ─────────────────────────────
 
 async function handleMessage(charName: string, msg: TelegramMessage): Promise<void> {
-  const startTime = Date.now();
   const groupId = msg.chat.id;
 
   // Build the user's message text
@@ -108,16 +156,30 @@ async function handleMessage(charName: string, msg: TelegramMessage): Promise<vo
     console.error(`[telegram] Media download failed:`, err);
   }
 
-  // Build seed prompt
+  // Get or create conversation session
+  const session = getSession(charName);
   const characters = getCharacters();
   const char = characters[charName];
   const model = char?.defaultModel || 'sonnet';
   const maxTurns = 20;
 
-  let prompt = userText;
+  let currentMessage = userText;
   if (mediaPath) {
-    prompt += `\n\n[Attached ${mediaType}: ${mediaPath}]`;
+    currentMessage += `\n\n[Attached ${mediaType}: ${mediaPath}]`;
   }
+
+  // Build prompt with history (same pattern as dashboard /api/chat)
+  let taskContent = '';
+  if (session.history.length > 0) {
+    const historyText = session.history
+      .map(m => `${m.role === 'user' ? 'User' : 'You'}: ${m.content}`)
+      .join('\n\n');
+    taskContent = `## Conversation so far\n${historyText}\n\n## User's latest message\n${currentMessage}`;
+  } else {
+    taskContent = currentMessage;
+  }
+
+  const prompt = buildCharacterPrompt(charName, taskContent);
 
   // Log inbound
   logTelegramEntry({
@@ -141,6 +203,10 @@ async function handleMessage(charName: string, msg: TelegramMessage): Promise<vo
       allowedTools: char?.allowedTools,
     });
 
+    // Add to conversation history
+    session.history.push({ role: 'user', content: currentMessage });
+    session.history.push({ role: 'assistant', content: response });
+
     // Send response back to group
     if (response.trim()) {
       await sendMessage(groupId, response);
@@ -161,7 +227,6 @@ async function handleMessage(charName: string, msg: TelegramMessage): Promise<vo
     const errorMsg = err instanceof Error ? err.message : String(err);
     console.error(`[telegram] Spawn failed for ${charName}:`, errorMsg);
 
-    // Post error to group
     try {
       await sendMessage(groupId, `Session failed: ${errorMsg.slice(0, 200)}. Try again.`);
     } catch { /* best effort */ }
