@@ -222,7 +222,7 @@ Current:
 > When any character produces a report, ALWAYS email it to kerem.ozan@gmail.com...
 
 New:
-> When any character produces a report, ALWAYS post it to your Telegram group via POST http://localhost:3000/api/telegram/send with your charName and the report as markdown message.
+> When any character produces a report, ALWAYS post it to your Telegram group via POST http://localhost:3000/api/telegram/send with your charName and the report as a text message.
 
 ## Skill Changes
 
