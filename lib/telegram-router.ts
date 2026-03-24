@@ -7,7 +7,7 @@
 import path from 'path';
 import fs from 'fs';
 import { TELEGRAM_GROUPS, TELEGRAM_USER_ID } from './config';
-import { TelegramUpdate, TelegramMessage, sendMessage, sendChatAction, downloadFile } from './telegram';
+import { TelegramUpdate, TelegramMessage, sendMessage, sendChatAction, downloadFile, stripMarkdown } from './telegram';
 import { spawnAndCollect } from './spawn';
 import { getCharacters } from './characters';
 import { buildCharacterPrompt } from './prompt';
@@ -210,9 +210,9 @@ async function handleMessage(charName: string, msg: TelegramMessage): Promise<vo
     session.history.push({ role: 'user', content: currentMessage });
     session.history.push({ role: 'assistant', content: response });
 
-    // Send response back to group
+    // Send response back to group (strip markdown for clean plain text)
     if (response.trim()) {
-      await sendMessage(groupId, response);
+      await sendMessage(groupId, stripMarkdown(response));
     }
 
     // Log outbound

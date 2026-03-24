@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { TELEGRAM_GROUPS, TELEGRAM_BOT_TOKEN } from '@/lib/config';
-import { sendMessage } from '@/lib/telegram';
+import { sendMessage, stripMarkdown } from '@/lib/telegram';
 import { logTelegramEntry, TelegramLogEntry } from '@/lib/telegram-log';
 
 export const runtime = 'nodejs';
@@ -27,7 +27,8 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const result = await sendMessage(groupId, message, parseMode);
+    const cleanMessage = parseMode ? message : stripMarkdown(message);
+    const result = await sendMessage(groupId, cleanMessage, parseMode);
 
     const logEntry: TelegramLogEntry = {
       id: `out-${Date.now()}`,

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { splitMessage, buildApiUrl } from '../../lib/telegram';
+import { splitMessage, buildApiUrl, stripMarkdown } from '../../lib/telegram';
 
 describe('telegram', () => {
   describe('buildApiUrl', () => {
@@ -39,6 +39,42 @@ describe('telegram', () => {
       expect(chunks.length).toBe(2);
       expect(chunks[0].length).toBe(4096);
       expect(chunks[1].length).toBe(904);
+    });
+  });
+
+  describe('stripMarkdown', () => {
+    it('strips bold markers', () => {
+      expect(stripMarkdown('**bold text**')).toBe('bold text');
+    });
+
+    it('strips italic markers', () => {
+      expect(stripMarkdown('*italic*')).toBe('italic');
+    });
+
+    it('preserves underscores in identifiers', () => {
+      expect(stripMarkdown('file_name_here')).toBe('file_name_here');
+    });
+
+    it('strips headers', () => {
+      expect(stripMarkdown('## Section Title')).toBe('Section Title');
+    });
+
+    it('strips inline code', () => {
+      expect(stripMarkdown('use `npm install`')).toBe('use npm install');
+    });
+
+    it('converts links', () => {
+      expect(stripMarkdown('[click here](https://example.com)')).toBe('click here (https://example.com)');
+    });
+
+    it('handles mixed formatting', () => {
+      const input = '## Report\n\n**Status**: *good*\nSee `config.ts`';
+      const output = stripMarkdown(input);
+      expect(output).not.toContain('**');
+      expect(output).not.toContain('##');
+      expect(output).not.toContain('`');
+      expect(output).toContain('Status');
+      expect(output).toContain('good');
     });
   });
 });

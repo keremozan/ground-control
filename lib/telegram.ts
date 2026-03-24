@@ -142,6 +142,28 @@ export async function downloadFile(fileId: string, destPath: string): Promise<st
   return destPath;
 }
 
+// ── Formatting ───────────────────────────────────
+
+/** Strip markdown formatting that Telegram renders as raw text */
+export function stripMarkdown(text: string): string {
+  return text
+    // Bold: **text** or __text__
+    .replace(/\*\*(.+?)\*\*/g, '$1')
+    .replace(/__(.+?)__/g, '$1')
+    // Italic: *text* or _text_ (but not inside words like file_name)
+    .replace(/(?<!\w)\*(.+?)\*(?!\w)/g, '$1')
+    .replace(/(?<!\w)_(.+?)_(?!\w)/g, '$1')
+    // Strikethrough: ~~text~~
+    .replace(/~~(.+?)~~/g, '$1')
+    // Inline code: `text`
+    .replace(/`([^`]+)`/g, '$1')
+    // Headers: ## text
+    .replace(/^#{1,6}\s+/gm, '')
+    // Bullet markers: - text (keep the dash, just remove leading formatting)
+    // Links: [text](url) -> text (url)
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1 ($2)');
+}
+
 // ── Message Splitting ────────────────────────────
 
 export function splitMessage(text: string): string[] {
