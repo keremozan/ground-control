@@ -10,6 +10,7 @@ import { semanticSearch } from './semantic-search';
 import { TANA_INBOX_ID, GEMINI_API_KEY, SHARED_DIR } from './config';
 import { ASSIGNED_BY_NAME, PRIORITY_BY_NAME } from './tana-schema';
 import { getCharacterList } from './characters';
+import { trackDraft, hashBody } from './draft-checker';
 
 function getCharacterLabelMap(): Record<string, string> {
   const chars = getCharacterList();
@@ -443,6 +444,17 @@ export async function processEmail(email: EmailInput): Promise<PipelineEntry> {
             threadId: email.threadId,
           });
           details.push(`draft created: ${draftId}`);
+          // Track draft for outcome monitoring
+          trackDraft({
+            draftId,
+            account: email.account,
+            character: action.character || 'postman',
+            recipient: fromEmail,
+            threadId: email.threadId,
+            subject: email.subject,
+            originalBody: replyText,
+            bodyHash: hashBody(replyText),
+          });
           break;
         }
 

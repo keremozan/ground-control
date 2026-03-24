@@ -9,6 +9,7 @@ import {
   TASK_CHARACTERS as TASK_CHAR_LIST, SKIP_TRACK_PATTERN,
 } from '@/lib/config';
 import { markJobRun, markJobStarted } from '@/lib/job-state';
+import { recordOutcome } from '@/lib/outcome-tracker';
 import fs from 'fs';
 import path from 'path';
 import { apiOk, apiError } from '@/lib/api-helpers';
@@ -168,6 +169,38 @@ export async function POST(req: Request) {
     }
   }
 
+  // ── api-call: internal API endpoint (no character session) ──
+  if (job?.type === 'api-call' && job.endpoint) {
+    const start = Date.now();
+    try {
+      const baseUrl = `http://localhost:${process.env.PORT || 3000}`;
+      const method = job.endpoint.includes('extract-lessons') ? 'POST' : 'GET';
+      const res = await fetch(`${baseUrl}${job.endpoint}`, {
+        method,
+        ...(method === 'POST' ? { headers: { 'Content-Type': 'application/json' }, body: '{}' } : {}),
+      });
+      const data = await res.json();
+      const result: JobResult = {
+        jobId,
+        charName: charName || 'system',
+        displayName,
+        timestamp: new Date().toISOString(),
+        response: JSON.stringify(data.data ?? data, null, 2),
+        durationMs: Date.now() - start,
+      };
+      const existing = readResults();
+      writeResults([result, ...existing]);
+      markJobRun(jobId, 'success');
+      IN_FLIGHT.delete(jobId);
+      return apiOk({ result });
+    } catch (err) {
+      markJobRun(jobId, 'error');
+      IN_FLIGHT.delete(jobId);
+      captureError('schedule/run/api-call', err);
+      return apiError(500, String(err));
+    }
+  }
+
   const char = characters[charName];
   if (!char) {
     return apiError(404, 'Character not found');
@@ -204,11 +237,23 @@ export async function POST(req: Request) {
     writeResults([result, ...existing]);
 
     markJobRun(jobId, 'success');
+    recordOutcome({
+      character: charName,
+      signalType: 'usage',
+      outcome: 'completed',
+      details: { jobId, durationMs: result.durationMs, label },
+    });
     IN_FLIGHT.delete(jobId);
 
     return apiOk({ result });
   } catch (err) {
     markJobRun(jobId, 'error');
+    recordOutcome({
+      character: charName,
+      signalType: 'usage',
+      outcome: 'error',
+      details: { jobId, error: String(err), label },
+    });
     IN_FLIGHT.delete(jobId);
     captureError('schedule/run', err);
     return apiError(500, String(err));

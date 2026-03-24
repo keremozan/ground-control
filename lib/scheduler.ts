@@ -11,7 +11,8 @@ export type ScheduleJob = {
   label: string;
   group?: string;       // UI grouping: scanning, context, delivery, research, tasks, reviews, system
   mode?: string;
-  type?: 'single' | 'process-tasks';  // default: 'single'
+  type?: 'single' | 'process-tasks' | 'api-call';  // default: 'single'
+  endpoint?: string;  // for api-call type: local API path (e.g. '/api/outcomes/check-drafts')
   maxTurns?: number;  // override default maxTurns for this job
   enabled: boolean;
 };

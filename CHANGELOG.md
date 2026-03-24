@@ -1,5 +1,30 @@
 # Changelog
 
+## v3.3.0 — 2026-03-25
+
+### New
+- [new] Telegram crew channels: per-character Telegram groups for two-way communication. Bot polls for inbound messages, spawns character sessions, posts responses back. One bot, 11 groups.
+- [new] Conversation history in Telegram: follow-up messages retain context within a 10-minute idle window. `/new` command to reset.
+- [new] Typing indicator: bot shows "typing..." while character is processing.
+- [new] Telegram send endpoint (`POST /api/telegram/send`): characters post to their group via curl.
+- [new] Telegram polling control: start/stop/status endpoints under `/api/telegram/poll/`.
+- [new] Telegram log endpoint (`GET /api/telegram/log`): separate log from Gmail pipeline.
+- [new] Self-learning system: outcome tracking for draft edits, job completions, and chat corrections. Rolling 90-day retention.
+- [new] Draft outcome checker: classifies Kerem's edits to character drafts (accepted, light edit, heavy rewrite, discarded) using edit distance.
+- [new] Lesson extractor: detects behavioral patterns from outcomes and writes to character memory.
+- [new] Usage analytics and outcomes API.
+
+### Improvements
+- [improved] Style gate upgraded to two-pass (Haiku syntax + Sonnet tropes).
+- [improved] Style gate is now conditional per character (opt-in via `styleGate: true` in config).
+- [improved] Instinct system: learned behaviors loaded into character prompts automatically.
+- [improved] Spawn supports `allowedTools` and `extendedThinking` options.
+- [improved] API-call job type for lightweight cron tasks (no Claude session needed).
+
+### Fixes
+- [fix] Reduced false positives in chat correction detection.
+- [fix] Outcomes path resolved at call time, limit:0 edge case fixed.
+
 ## v3.2.0 — 2026-03-23
 
 ### New
