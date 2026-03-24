@@ -9,6 +9,7 @@ import {
   TASK_CHARACTERS as TASK_CHAR_LIST, SKIP_TRACK_PATTERN,
 } from '@/lib/config';
 import { markJobRun, markJobStarted } from '@/lib/job-state';
+import { recordOutcome } from '@/lib/outcome-tracker';
 import fs from 'fs';
 import path from 'path';
 import { apiOk, apiError } from '@/lib/api-helpers';
@@ -204,11 +205,23 @@ export async function POST(req: Request) {
     writeResults([result, ...existing]);
 
     markJobRun(jobId, 'success');
+    recordOutcome({
+      character: charName,
+      signalType: 'usage',
+      outcome: 'completed',
+      details: { jobId, durationMs: result.durationMs, label },
+    });
     IN_FLIGHT.delete(jobId);
 
     return apiOk({ result });
   } catch (err) {
     markJobRun(jobId, 'error');
+    recordOutcome({
+      character: charName,
+      signalType: 'usage',
+      outcome: 'error',
+      details: { jobId, error: String(err), label },
+    });
     IN_FLIGHT.delete(jobId);
     captureError('schedule/run', err);
     return apiError(500, String(err));
