@@ -130,7 +130,32 @@ const config = {
         label: 'Weekly advisory',
         enabled: true,
       },
-      // ── Self-learning ──
+      // ── Self-learning: outcome tracking ──
+      {
+        id: 'check-draft-outcomes',
+        charName: 'system',
+        displayName: 'Draft Checker',
+        seedPrompt: '',
+        description: 'Check Gmail for draft fates (sent, edited, deleted)',
+        cron: '10:00,14:00,18:00,22:00 daily',
+        label: 'Draft outcomes',
+        type: 'api-call' as const,
+        endpoint: '/api/outcomes/check-drafts',
+        enabled: true,
+      },
+      {
+        id: 'weekly-lesson-extraction',
+        charName: 'system',
+        displayName: 'Learning Review',
+        seedPrompt: '',
+        description: 'Extract behavioral lessons from outcome patterns and write to character memory',
+        cron: 'Sunday 21:30',
+        label: 'Weekly learning',
+        type: 'api-call' as const,
+        endpoint: '/api/outcomes/extract-lessons',
+        enabled: true,
+      },
+      // ── Self-learning: pattern collection ──
       {
         id: 'weekly-contact-patterns',
         charName: 'postman',
@@ -160,7 +185,8 @@ const config = {
       cron: string;
       label: string;
       mode?: string;
-      type?: 'single' | 'process-tasks';
+      type?: 'single' | 'process-tasks' | 'api-call';
+      endpoint?: string;
       maxTurns?: number;
       enabled: boolean;
     }[],

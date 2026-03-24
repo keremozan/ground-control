@@ -169,6 +169,38 @@ export async function POST(req: Request) {
     }
   }
 
+  // ── api-call: internal API endpoint (no character session) ──
+  if (job?.type === 'api-call' && job.endpoint) {
+    const start = Date.now();
+    try {
+      const baseUrl = `http://localhost:${process.env.PORT || 3000}`;
+      const method = job.endpoint.includes('extract-lessons') ? 'POST' : 'GET';
+      const res = await fetch(`${baseUrl}${job.endpoint}`, {
+        method,
+        ...(method === 'POST' ? { headers: { 'Content-Type': 'application/json' }, body: '{}' } : {}),
+      });
+      const data = await res.json();
+      const result: JobResult = {
+        jobId,
+        charName: charName || 'system',
+        displayName,
+        timestamp: new Date().toISOString(),
+        response: JSON.stringify(data.data ?? data, null, 2),
+        durationMs: Date.now() - start,
+      };
+      const existing = readResults();
+      writeResults([result, ...existing]);
+      markJobRun(jobId, 'success');
+      IN_FLIGHT.delete(jobId);
+      return apiOk({ result });
+    } catch (err) {
+      markJobRun(jobId, 'error');
+      IN_FLIGHT.delete(jobId);
+      captureError('schedule/run/api-call', err);
+      return apiError(500, String(err));
+    }
+  }
+
   const char = characters[charName];
   if (!char) {
     return apiError(404, 'Character not found');
