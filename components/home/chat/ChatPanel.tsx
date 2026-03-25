@@ -247,6 +247,10 @@ export default function ChatPanel({
               setStreamingText(fullText);
               setActiveTool(null);
             }
+            if (eventMatch[1] === 'gate') {
+              fullText = parsed.text;
+              setStreamingText(fullText);
+            }
             if (eventMatch[1] === 'tool_call') {
               setActiveTool(parsed.tool);
               setActiveToolInput(parsed.input || "");

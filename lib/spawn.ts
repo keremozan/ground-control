@@ -9,6 +9,7 @@ export type SSEEvent =
   | { event: 'text'; data: { text: string } }
   | { event: 'tool_call'; data: { tool: string; input: string } }
   | { event: 'tool_result'; data: { id: string; preview: string } }
+  | { event: 'gate'; data: { text: string } }
   | { event: 'done'; data: { code: number | null } };
 
 function handleMessage(msg: Record<string, unknown>, enqueue: (e: SSEEvent) => void) {
@@ -272,6 +273,13 @@ export function spawnSSEStream(opts: {
       }
 
       let buffer = '';
+      const collectedTextParts: string[] = [];
+
+      // Wrap enqueue to also collect text for post-stream style gate
+      const enqueueTracked = (e: SSEEvent) => {
+        if (e.event === 'text') collectedTextParts.push(e.data.text);
+        enqueue(e);
+      };
 
       // Kill subprocess when client disconnects
       if (signal) {
@@ -287,14 +295,28 @@ export function spawnSSEStream(opts: {
         buffer = lines.pop() || '';
         for (const line of lines) {
           if (!line.trim()) continue;
-          try { handleMessage(JSON.parse(line), enqueue); } catch {}
+          try { handleMessage(JSON.parse(line), enqueueTracked); } catch {}
         }
       });
 
-      proc.on('close', (code) => {
+      proc.on('close', async (code) => {
         if (buffer.trim()) {
-          try { handleMessage(JSON.parse(buffer), enqueue); } catch {}
+          try { handleMessage(JSON.parse(buffer), enqueueTracked); } catch {}
         }
+
+        // Style gate: apply post-processing for characters with styleGate: true (>= 200 words)
+        const needsGate = characterId ? getCharacters()[characterId]?.styleGate === true : false;
+        if (needsGate) {
+          const fullText = collectedTextParts.join('');
+          const wordCount = fullText.trim().split(/\s+/).filter(Boolean).length;
+          if (wordCount >= 200) {
+            try {
+              const gated = await styleGate(fullText);
+              if (gated) enqueue({ event: 'gate', data: { text: gated } });
+            } catch {}
+          }
+        }
+
         enqueue({ event: 'done', data: { code } });
         try { controller.close(); } catch {}
       });

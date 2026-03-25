@@ -13,6 +13,8 @@
 - [new] Draft outcome checker: classifies Kerem's edits to character drafts (accepted, light edit, heavy rewrite, discarded) using edit distance.
 - [new] Lesson extractor: detects behavioral patterns from outcomes and writes to character memory.
 - [new] Usage analytics and outcomes API.
+- [new] Style gate applies to interactive chat sessions for styleGate-enabled characters (>= 200 words, gate event replaces displayed text).
+- [new] /api/crew/[charName]/tasks endpoint: fetches pending assigned tasks and spawns a character session to process them.
 
 ### Improvements
 - [improved] Style gate upgraded to two-pass (Haiku syntax + Sonnet tropes).
@@ -24,6 +26,7 @@
 ### Fixes
 - [fix] Reduced false positives in chat correction detection.
 - [fix] Outcomes path resolved at call time, limit:0 edge case fixed.
+- [fix] Tana MCP client serializes concurrent requests with a mutex to prevent "Already connected to a transport" errors.
 
 ## v3.2.0 — 2026-03-23
 
