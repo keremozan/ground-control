@@ -2,6 +2,19 @@
 
 ## v3.4.1 — 2026-03-26
 
+### New
+- [new] Calendar snapshot diffing: `/api/calendar/snapshot` takes periodic snapshots of calendar events and logs diffs (added/removed/changed events) to `data/calendar-diffs.json`. Runs on every dashboard poll. Detects same-day additions, cancellations, and reschedules.
+- [new] Meeting prep nudges: Kybernetes registers external meetings in the morning. Coach auto-spawns 10 minutes before each meeting with a researched prep message (searches Gmail both accounts + Tana for the person).
+- [new] Pre-class teaching phrases: Tutor sends vocabulary-based teaching phrases 15 minutes before each class (Tuesday VA204/VA315, Thursday VA204). Timed delivery via the block nudge system.
+- [new] Quick-reply button extraction: character responses containing `[quick-reply: "A" | "B" | "C"]` patterns are automatically converted to Telegram inline keyboard buttons.
+- [new] Timed nudge system now supports two spawn types: Coach (meeting prep) and Tutor (teaching phrases), routed by person field prefix.
+
+### Fixes
+- [fix] Coach morning energy poll: silent logging after response. No confirmation message, no follow-up questions. Only exception: energy <= 3 gets one supportive sentence.
+- [fix] Kybernetes pulse: principles-based planning instead of rigid decision trees. Adapts to energy + sleep + stress signals holistically.
+- [fix] Proctor amber health dot: added `teaching.md` reference to `proctor-workshop` prerequisites.
+- [fix] Tutor WhatsApp references replaced with Telegram throughout `tutor-lesson` skill.
+
 ## v3.4.0 — 2026-03-26
 
 ### New

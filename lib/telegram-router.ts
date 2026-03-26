@@ -7,7 +7,7 @@
 import path from 'path';
 import fs from 'fs';
 import { TELEGRAM_GROUPS, TELEGRAM_USER_ID } from './config';
-import { TelegramUpdate, TelegramMessage, TelegramCallbackQuery, sendMessage, sendChatAction, downloadFile, markdownToTelegramHTML } from './telegram';
+import { TelegramUpdate, TelegramMessage, TelegramCallbackQuery, InlineKeyboardMarkup, sendMessage, sendChatAction, downloadFile, markdownToTelegramHTML } from './telegram';
 import { spawnAndCollect } from './spawn';
 import { getCharacters } from './characters';
 import { buildCharacterPrompt } from './prompt';
@@ -213,7 +213,8 @@ async function handleMessage(charName: string, msg: TelegramMessage): Promise<vo
 
     // Send response back to group with rich formatting
     if (response.trim()) {
-      await sendMessage(groupId, markdownToTelegramHTML(response), 'HTML');
+      const { text: cleanText, replyMarkup } = extractQuickReplies(response);
+      await sendMessage(groupId, markdownToTelegramHTML(cleanText), 'HTML', replyMarkup || undefined);
     }
 
     // Log outbound
@@ -235,6 +236,48 @@ async function handleMessage(charName: string, msg: TelegramMessage): Promise<vo
       await sendMessage(groupId, `Session failed: ${errorMsg.slice(0, 200)}. Try again.`);
     } catch { /* best effort */ }
   }
+}
+
+// ── Quick-Reply Extraction ──────────────────────
+
+/**
+ * Extract [quick-reply: "Option A" | "Option B" | ...] patterns from character output
+ * and convert them to Telegram InlineKeyboardMarkup buttons.
+ */
+function extractQuickReplies(text: string): { text: string; replyMarkup: InlineKeyboardMarkup | null } {
+  // Match patterns like: [quick-reply: "Option A" | "Option B" | "Option C"]
+  const pattern = /\[quick-reply:\s*([^\]]+)\]/gi;
+  const matches = [...text.matchAll(pattern)];
+
+  if (matches.length === 0) return { text, replyMarkup: null };
+
+  // Use the last match (most relevant)
+  const lastMatch = matches[matches.length - 1];
+  const optionsStr = lastMatch[1];
+
+  // Parse options: split by | and strip quotes
+  const options = optionsStr
+    .split('|')
+    .map(o => o.trim().replace(/^["']|["']$/g, '').trim())
+    .filter(o => o.length > 0);
+
+  if (options.length === 0) return { text, replyMarkup: null };
+
+  // Build inline keyboard (max 3 per row)
+  const rows: Array<Array<{ text: string; callback_data: string }>> = [];
+  for (let i = 0; i < options.length; i += 3) {
+    rows.push(
+      options.slice(i, i + 3).map(opt => ({
+        text: opt,
+        callback_data: opt.slice(0, 64), // Telegram callback_data limit is 64 bytes
+      }))
+    );
+  }
+
+  // Remove all [quick-reply: ...] patterns from the text
+  const cleanText = text.replace(pattern, '').trim();
+
+  return { text: cleanText, replyMarkup: { inline_keyboard: rows } };
 }
 
 // ── Callback Query Handling ──────────────────────

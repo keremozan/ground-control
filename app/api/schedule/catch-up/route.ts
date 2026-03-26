@@ -120,9 +120,10 @@ export async function POST(req: Request) {
 export async function GET() {
   const missed = getMissedJobs();
 
-  // Side-effect: check block nudges (piggyback on dashboard polling interval)
+  // Side-effects: check block nudges + calendar snapshot (piggyback on dashboard polling)
   const baseUrl = `http://localhost:${process.env.PORT || 3000}`;
   fetch(`${baseUrl}/api/blocks/check`).catch(() => {});
+  fetch(`${baseUrl}/api/calendar/snapshot`).catch(() => {});
 
   return apiOk({ missed, count: missed.length });
 }

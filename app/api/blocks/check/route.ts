@@ -16,9 +16,18 @@ type BlockEntry = {
   nudgeSent: boolean;
 };
 
+type MeetingPrepEntry = {
+  time: string;
+  prepTime: string;
+  person: string;
+  title: string;
+  sent: boolean;
+};
+
 type BlocksState = {
   date: string;
   blocks: BlockEntry[];
+  meetingPreps: MeetingPrepEntry[];
   crashDetected: boolean;
 };
 
@@ -122,11 +131,40 @@ export async function GET() {
     }
   }
 
+  // ── Meeting prep: spawn Coach for upcoming meetings ──
+  const prepsSpawned: string[] = [];
+
+  for (const prep of (state.meetingPreps || [])) {
+    if (prep.sent) continue;
+    if (!isBlockOverdue(prep.prepTime, state.date)) continue;
+
+    // Determine which character to spawn based on person field prefix
+    const isTutorPhrase = prep.person.startsWith('tutor-phrases-');
+    const charName = isTutorPhrase ? 'tutor' : 'coach';
+    const seedPrompt = isTutorPhrase
+      ? `Send 3-4 teaching phrases for ${prep.title} to the Tutor Telegram group. Phrases Kerem can use during class right now. Draw from this week's vocabulary and grammar targets in tutor-progress.md. One short message, just the phrases ready to use. No explanation.`
+      : `Meeting prep nudge. ${prep.person} at ${prep.time} today (event: "${prep.title}"). Search Gmail (BOTH accounts: personal and school) for threads involving or mentioning "${prep.person}" — search by name, not just email. Other people may have forwarded or discussed them. Also search Tana and contacts.md. Compose a prep message with what you found. Send ONE Telegram message to Coach group. If you find nothing, say "No prior context found for ${prep.person}."`;
+
+    try {
+      const baseUrl = `http://localhost:${process.env.PORT || 3000}`;
+      await fetch(`${baseUrl}/api/schedule/run`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ charName, seedPrompt }),
+      });
+      prep.sent = true;
+      prepsSpawned.push(prep.person);
+    } catch (err) {
+      console.error(`[blocks] Failed to spawn meeting prep for ${prep.person}:`, err);
+    }
+  }
+
   writeBlocks(state);
 
   return NextResponse.json({
     ok: true,
     nudgesSent,
+    prepsSpawned,
     crashDetected: state.crashDetected,
   });
 }
