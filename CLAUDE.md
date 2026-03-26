@@ -1,6 +1,6 @@
 # Ground Control
 
-Agent system dashboard. Next.js 16, localhost:3000.
+Dashboard and runtime for a multi-character AI agent system. Next.js 16, localhost:3000. Single user (Kerem). 17 characters with skills, memory, and shared knowledge files at `~/.claude/`. Characters are spawned as Claude sessions via `lib/spawn.ts`. Telegram is the primary interaction channel (per-character group chats). Tana is the PKM/task layer. Gmail pipeline auto-classifies and routes email. Scheduler runs jobs via cron-style config. This codebase is actively developed. You are already familiar with it. Do not explore unless you need a specific file.
 
 ## Setup
 
