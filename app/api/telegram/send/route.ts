@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
       charName,
       groupId,
       messageId: result.message_id,
-      text: message.slice(0, 500),
+      text: message.slice(0, 2000),
       timestamp: new Date().toISOString(),
     };
     logTelegramEntry(logEntry);
@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
     const errPath = path.join(process.cwd(), 'data', 'telegram-errors.json');
     try {
       const existing = JSON.parse(await fs.readFile(errPath, 'utf-8').catch(() => '[]'));
-      existing.push({ charName, message: message.slice(0, 500), error: errorMsg, timestamp: new Date().toISOString() });
+      existing.push({ charName, message: message.slice(0, 2000), error: errorMsg, timestamp: new Date().toISOString() });
       await fs.writeFile(errPath, JSON.stringify(existing.slice(-100), null, 2));
     } catch { /* best effort */ }
 

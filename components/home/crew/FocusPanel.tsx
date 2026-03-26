@@ -122,21 +122,21 @@ export default function FocusPanel({
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", background: selectedChar.color + "06", borderBottom: actions.length > 0 ? `1px solid ${selectedChar.color}15` : "none" }}>
         <SelectedIcon size={13} strokeWidth={1.5} style={{ color: selectedChar.color, flexShrink: 0, animation: isSelectedBusy ? "pulse-crew 1.5s ease-in-out infinite" : undefined }} />
-        <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", flexWrap: "nowrap" }}>
+        <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", overflow: "hidden" }}>
           <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 600, color: "var(--text)", whiteSpace: "nowrap" }}>{selectedChar.name}</span>
           <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "var(--text-3)", marginLeft: 6, whiteSpace: "nowrap" }}>{selectedChar.domain || selectedChar.tier}</span>
           {allCharacters && (() => {
             const children = allCharacters.filter(c => c.internal && c.parentChar === selectedChar.id);
             if (children.length === 0) return null;
             return (
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 4, marginLeft: 8 }}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 4, marginLeft: 8, overflow: "hidden", flexShrink: 1 }}>
                 {children.map(child => {
                   const ChildIcon = resolveIcon(child.icon);
                   return (
                     <span key={child.id} title={child.name} style={{
                       display: "inline-flex", alignItems: "center", gap: 3,
                       padding: "2px 6px", borderRadius: 3,
-                      border: "1px solid var(--border)",
+                      border: "1px solid var(--border)", whiteSpace: "nowrap", flexShrink: 0,
                     }}>
                       <ChildIcon size={9} strokeWidth={1.5} style={{ color: child.color }} />
                       <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 500, color: "var(--text-2)" }}>{child.name}</span>

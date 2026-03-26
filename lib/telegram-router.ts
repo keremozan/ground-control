@@ -176,7 +176,14 @@ async function handleMessage(charName: string, msg: TelegramMessage): Promise<vo
       .join('\n\n');
     taskContent = `## Conversation so far\n${historyText}\n\n## User's latest message\n${currentMessage}`;
   } else {
-    taskContent = currentMessage;
+    // No active session — inject only the character's last outbound message
+    // so it knows what it last said/asked. Minimal context, not full history.
+    const recentContext = getRecentContext(charName);
+    if (recentContext) {
+      taskContent = `## Recent conversation (last 12h)\n${recentContext}\n\n## Kerem's latest message\n${currentMessage}`;
+    } else {
+      taskContent = currentMessage;
+    }
   }
 
   const prompt = buildCharacterPrompt(charName, taskContent);
@@ -191,7 +198,7 @@ async function handleMessage(charName: string, msg: TelegramMessage): Promise<vo
     charName,
     groupId,
     messageId: msg.message_id,
-    text: (userText || '').slice(0, 500),
+    text: (userText || '').slice(0, 2000),
     mediaType,
     timestamp: new Date().toISOString(),
   });
@@ -224,7 +231,7 @@ async function handleMessage(charName: string, msg: TelegramMessage): Promise<vo
       charName,
       groupId,
       messageId: msg.message_id,
-      text: response.slice(0, 500),
+      text: response.slice(0, 2000),
       timestamp: new Date().toISOString(),
       durationMs,
     });
@@ -235,6 +242,32 @@ async function handleMessage(charName: string, msg: TelegramMessage): Promise<vo
     try {
       await sendMessage(groupId, `Session failed: ${errorMsg.slice(0, 200)}. Try again.`);
     } catch { /* best effort */ }
+  }
+}
+
+// ── Recent Outbound Context ─────────────────────
+
+/** Read recent messages (both directions) for a character from the Telegram log. */
+function getRecentContext(charName: string, maxMessages = 5, maxAgeHours = 12): string | null {
+  try {
+    const logPath = path.join(process.cwd(), 'data', 'telegram-log.json');
+    if (!fs.existsSync(logPath)) return null;
+    const raw = fs.readFileSync(logPath, 'utf-8');
+    const entries: Array<{ direction: string; charName: string; text?: string; timestamp: string }> = JSON.parse(raw);
+
+    const cutoff = Date.now() - maxAgeHours * 60 * 60 * 1000;
+    const recent = entries
+      .filter(e => e.charName === charName && e.text && new Date(e.timestamp).getTime() > cutoff)
+      .slice(-maxMessages);
+
+    if (recent.length === 0) return null;
+    return recent.map(e => {
+      const who = e.direction === 'outbound' ? 'You' : 'Kerem';
+      const time = new Date(e.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+      return `[${time}] ${who}: ${e.text}`;
+    }).join('\n\n');
+  } catch {
+    return null;
   }
 }
 
