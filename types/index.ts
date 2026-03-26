@@ -19,6 +19,7 @@ export interface CharacterInfo {
     autonomousInput?: boolean;
     inputPlaceholder?: string;
     endpoint?: string;
+    model?: string;
   }>;
   seeds?: Record<string, string>;
   skills?: string[];
@@ -96,11 +97,15 @@ export interface Email {
   accounts?: string[];
 }
 
+export type EffectivePriority = "urgent" | "high" | "medium" | "low";
+
 export interface Task {
   id: string;
   name: string;
   status: string;
   priority: "high" | "medium" | "low";
+  effectivePriority?: EffectivePriority;
+  overdue?: boolean;
   track: string;
   trackId: string | null;
   assigned: string | null;
@@ -148,6 +153,7 @@ export interface ActionInfo {
   autonomousInput?: boolean;
   inputPlaceholder?: string;
   endpoint?: string;
+  model?: string;
 }
 
 // --- Scheduler & process registry ---
@@ -162,7 +168,8 @@ export interface ScheduleJob {
   label: string;
   group?: string;
   mode?: string;
-  type?: "single" | "process-tasks";
+  type?: "single" | "process-tasks" | "api-call";
+  endpoint?: string;
   maxTurns?: number;
   enabled: boolean;
 }

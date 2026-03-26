@@ -8,6 +8,7 @@ import { styleGate } from './style-gate';
 import { mcpCall } from './tana';
 import { semanticSearch } from './semantic-search';
 import { TANA_INBOX_ID, GEMINI_API_KEY, SHARED_DIR } from './config';
+import { createCalendarEvent, findConflicts } from './google-calendar';
 import { ASSIGNED_BY_NAME, PRIORITY_BY_NAME } from './tana-schema';
 import { getCharacterList } from './characters';
 import { trackDraft, hashBody } from './draft-checker';
@@ -405,10 +406,34 @@ export async function processEmail(email: EmailInput): Promise<PipelineEntry> {
           break;
         }
 
-        case 'create_event':
-          // TODO: Wire up Google Calendar event creation
-          details.push(`event queued: "${action.title}" on ${action.date} at ${action.time}`);
+        case 'create_event': {
+          if (!action.date || !action.time) {
+            details.push(`event skipped: missing date or time for "${action.title}"`);
+            break;
+          }
+          const duration = action.duration || 60;
+          const startISO = `${action.date}T${action.time}:00+03:00`;
+          // Compute end time, keeping both in UTC for Google Calendar API
+          const startMs = new Date(startISO).getTime();
+          const endISO = new Date(startMs + duration * 60 * 1000).toISOString();
+
+          // Check for conflicts
+          const conflicts = await findConflicts(startISO, endISO);
+          const summary = conflicts.length > 0
+            ? `(CONFLICT) ${action.title || email.subject}`
+            : (action.title || email.subject);
+
+          // Convert start to UTC too for consistency
+          const startUTC = new Date(startMs).toISOString();
+          await createCalendarEvent({ summary, start: startUTC, end: endISO });
+
+          if (conflicts.length > 0) {
+            details.push(`event created with CONFLICT: "${summary}" on ${action.date} at ${action.time} (conflicts: ${conflicts.map(c => c.summary).join(', ')})`);
+          } else {
+            details.push(`event created: "${summary}" on ${action.date} at ${action.time}`);
+          }
           break;
+        }
 
         case 'draft_reply': {
           // Extract email address: "Name <user@example.com>" -> "user@example.com"
@@ -458,10 +483,23 @@ export async function processEmail(email: EmailInput): Promise<PipelineEntry> {
           break;
         }
 
-        case 'escalate':
-          // TODO: Spawn character session via /api/schedule/run
-          details.push(`escalated to ${action.character}: ${action.reason}`);
+        case 'escalate': {
+          // Create a high-priority task in Tana assigned to the character
+          const escalateChar = action.character || 'postman';
+          const escalateTitle = `Email escalation: ${action.reason || email.subject}`;
+
+          await createTanaTask({
+            title: escalateTitle,
+            character: escalateChar,
+            priority: 'high',
+            due: undefined,
+            track: undefined,
+            source: `escalated from ${email.from}, ${email.subject} (thread: ${email.threadId})`,
+            threadId: email.threadId,
+          });
+          details.push(`escalated to ${escalateChar}: task created "${escalateTitle}"`);
           break;
+        }
       }
     } catch (err) {
       details.push(`${action.type} failed: ${err}`);

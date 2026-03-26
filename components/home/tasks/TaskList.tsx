@@ -82,7 +82,9 @@ function TaskRow({
   onAction, onReschedule, onSetPriority, onStartWithPrompt, onPromptTaskChange,
   setPromptInput, setPromptChar, setPromptModel, setOpenDropdown,
 }: TaskRowProps) {
-  const priorityDot = taskPriority === "high" ? "var(--red)" : taskPriority === "medium" ? "var(--amber)" : "var(--accent-muted)";
+  const displayPriority = task.effectivePriority || taskPriority;
+  const priorityDot = displayPriority === "urgent" ? "var(--red)" : displayPriority === "high" ? "var(--red)" : displayPriority === "medium" ? "var(--amber)" : "var(--accent-muted)";
+  const priorityEscalated = task.effectivePriority && task.effectivePriority !== task.priority;
   const charKey = task.assigned ? task.assigned.charAt(0).toUpperCase() + task.assigned.slice(1) : "";
   const CharIcon = charKey ? charIcon[charKey] : null;
   const charCol = task.assigned ? charColor[task.assigned] || "var(--text-3)" : "var(--text-3)";
@@ -133,10 +135,10 @@ function TaskRow({
                 return [btn];
               })}
               <div ref={openDropdown === task.id ? dropdownRef : undefined} style={{ position: "relative", display: "inline-flex" }}>
-                <button className="item-action-btn task-priority-btn" data-tip="Priority" disabled={isBusy}
+                <button className="item-action-btn task-priority-btn" data-tip={priorityEscalated ? `${task.priority} → ${task.effectivePriority}` : "Priority"} disabled={isBusy}
                   onClick={e => { e.stopPropagation(); setOpenDropdown(openDropdown === task.id ? null : task.id); }}
                   style={{ cursor: isBusy ? "not-allowed" : "pointer" }}>
-                  <span style={{ width: 7, height: 7, borderRadius: "50%", background: priorityDot, flexShrink: 0 }} />
+                  <span style={{ width: 7, height: 7, borderRadius: priorityEscalated ? 2 : "50%", background: priorityDot, flexShrink: 0, outline: priorityEscalated ? "1.5px solid var(--red)" : "none", outlineOffset: 1 }} />
                 </button>
                 {openDropdown === task.id && (
                   <div style={{ position: "absolute", left: 0, top: "calc(100% + 2px)", zIndex: 50, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 6, boxShadow: "0 4px 12px rgba(0,0,0,0.15)", padding: "3px 0", minWidth: 110 }}>

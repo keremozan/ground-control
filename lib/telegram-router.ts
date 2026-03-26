@@ -7,7 +7,7 @@
 import path from 'path';
 import fs from 'fs';
 import { TELEGRAM_GROUPS, TELEGRAM_USER_ID } from './config';
-import { TelegramUpdate, TelegramMessage, sendMessage, sendChatAction, downloadFile, markdownToTelegramHTML } from './telegram';
+import { TelegramUpdate, TelegramMessage, TelegramCallbackQuery, sendMessage, sendChatAction, downloadFile, markdownToTelegramHTML } from './telegram';
 import { spawnAndCollect } from './spawn';
 import { getCharacters } from './characters';
 import { buildCharacterPrompt } from './prompt';
@@ -206,9 +206,10 @@ async function handleMessage(charName: string, msg: TelegramMessage): Promise<vo
       allowedTools: char?.allowedTools,
     });
 
-    // Add to conversation history
+    // Add to conversation history and persist
     session.history.push({ role: 'user', content: currentMessage });
     session.history.push({ role: 'assistant', content: response });
+    persistSessions();
 
     // Send response back to group with rich formatting
     if (response.trim()) {
@@ -234,6 +235,77 @@ async function handleMessage(charName: string, msg: TelegramMessage): Promise<vo
       await sendMessage(groupId, `Session failed: ${errorMsg.slice(0, 200)}. Try again.`);
     } catch { /* best effort */ }
   }
+}
+
+// ── Callback Query Handling ──────────────────────
+
+export async function processCallbackQuery(query: TelegramCallbackQuery): Promise<void> {
+  if (!query.message || !query.data) return;
+
+  // Security: only process callbacks from Kerem
+  if (query.from.id !== TELEGRAM_USER_ID) return;
+
+  const chatId = query.message.chat.id;
+  const charName = resolveCharacter(chatId);
+  if (!charName) return;
+
+  // Route callback data as a regular message to the character
+  // The callback data text (e.g., "Done", "Stuck", "Looks good") is sent as user text
+  const syntheticMsg: TelegramMessage = {
+    message_id: query.message.message_id,
+    from: { id: query.from.id, is_bot: false, first_name: query.from.first_name, username: query.from.username },
+    chat: query.message.chat,
+    date: Math.floor(Date.now() / 1000),
+    text: query.data,
+  };
+
+  enqueue(charName, () => handleMessage(charName, syntheticMsg));
+}
+
+// ── Session Persistence ─────────────────────────
+
+const SESSION_FILE = path.join(process.cwd(), 'data', 'telegram-sessions.json');
+
+type PersistedSession = {
+  charName: string;
+  history: HistoryEntry[];
+  lastActivity: number;
+};
+
+function persistSessions(): void {
+  try {
+    const data: PersistedSession[] = [];
+    for (const [charName, session] of sessions.entries()) {
+      data.push({
+        charName,
+        history: session.history,
+        lastActivity: session.lastActivity,
+      });
+    }
+    fs.writeFileSync(SESSION_FILE, JSON.stringify(data, null, 2));
+  } catch { /* best effort */ }
+}
+
+export function loadPersistedSessions(): void {
+  try {
+    if (!fs.existsSync(SESSION_FILE)) return;
+    const raw = fs.readFileSync(SESSION_FILE, 'utf-8');
+    const data: PersistedSession[] = JSON.parse(raw);
+    const now = Date.now();
+    const ONE_DAY = 24 * 60 * 60 * 1000;
+
+    for (const entry of data) {
+      // Prune sessions older than 24 hours
+      if (now - entry.lastActivity > ONE_DAY) continue;
+
+      const session: CharSession = {
+        history: entry.history,
+        lastActivity: entry.lastActivity,
+        timer: setTimeout(() => sessions.delete(entry.charName), SESSION_TIMEOUT_MS),
+      };
+      sessions.set(entry.charName, session);
+    }
+  } catch { /* best effort */ }
 }
 
 // ── Media Cleanup ────────────────────────────────

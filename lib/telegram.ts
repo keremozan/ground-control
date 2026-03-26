@@ -34,9 +34,27 @@ export type TelegramMessage = {
   caption?: string;
 };
 
+export type InlineKeyboardButton = {
+  text: string;
+  callback_data?: string;
+  url?: string;
+};
+
+export type InlineKeyboardMarkup = {
+  inline_keyboard: InlineKeyboardButton[][];
+};
+
+export type TelegramCallbackQuery = {
+  id: string;
+  from: TelegramUser;
+  message?: TelegramMessage;
+  data?: string;
+};
+
 export type TelegramUpdate = {
   update_id: number;
   message?: TelegramMessage;
+  callback_query?: TelegramCallbackQuery;
 };
 
 type TelegramFile = {
@@ -74,19 +92,26 @@ export async function sendMessage(
   chatId: number,
   text: string,
   parseMode?: string,
+  replyMarkup?: InlineKeyboardMarkup,
 ): Promise<TelegramMessage> {
   const chunks = splitMessage(text);
   let lastMessage: TelegramMessage | null = null;
 
-  for (const chunk of chunks) {
+  for (let i = 0; i < chunks.length; i++) {
+    const chunk = chunks[i];
+    // Only attach reply_markup to the last chunk
+    const isLast = i === chunks.length - 1;
+    const payload: Record<string, unknown> = {
+      chat_id: chatId,
+      text: chunk,
+      ...(parseMode ? { parse_mode: parseMode } : {}),
+      ...(isLast && replyMarkup ? { reply_markup: replyMarkup } : {}),
+    };
+
     const res = await fetch(buildApiUrl(TELEGRAM_BOT_TOKEN, 'sendMessage'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text: chunk,
-        ...(parseMode ? { parse_mode: parseMode } : {}),
-      }),
+      body: JSON.stringify(payload),
     });
     const data = await res.json();
     if (!data.ok) {
@@ -95,11 +120,7 @@ export async function sendMessage(
       const retry = await fetch(buildApiUrl(TELEGRAM_BOT_TOKEN, 'sendMessage'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: chatId,
-          text: chunk,
-          ...(parseMode ? { parse_mode: parseMode } : {}),
-        }),
+        body: JSON.stringify(payload),
       });
       const retryData = await retry.json();
       if (!retryData.ok) throw new Error(`sendMessage failed: ${retryData.description}`);
@@ -110,6 +131,21 @@ export async function sendMessage(
   }
 
   return lastMessage!;
+}
+
+/** Answer a callback query (removes loading state from inline buttons) */
+export async function answerCallbackQuery(
+  callbackQueryId: string,
+  text?: string,
+): Promise<void> {
+  await fetch(buildApiUrl(TELEGRAM_BOT_TOKEN, 'answerCallbackQuery'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      callback_query_id: callbackQueryId,
+      ...(text ? { text } : {}),
+    }),
+  });
 }
 
 export async function sendChatAction(chatId: number, action = 'typing'): Promise<void> {

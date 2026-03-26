@@ -116,7 +116,13 @@ export async function POST(req: Request) {
 }
 
 // GET: quick check without running (for dashboard polling)
+// Also triggers block nudge check as a side-effect (lightweight, runs every poll)
 export async function GET() {
   const missed = getMissedJobs();
+
+  // Side-effect: check block nudges (piggyback on dashboard polling interval)
+  const baseUrl = `http://localhost:${process.env.PORT || 3000}`;
+  fetch(`${baseUrl}/api/blocks/check`).catch(() => {});
+
   return apiOk({ missed, count: missed.length });
 }

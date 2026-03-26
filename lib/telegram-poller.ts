@@ -4,8 +4,8 @@
  */
 
 import { TELEGRAM_BOT_TOKEN } from './config';
-import { getUpdates, getMe, TelegramUser } from './telegram';
-import { processUpdate, cleanupOldMedia } from './telegram-router';
+import { getUpdates, getMe, TelegramUser, answerCallbackQuery } from './telegram';
+import { processUpdate, processCallbackQuery, cleanupOldMedia, loadPersistedSessions } from './telegram-router';
 
 let interval: ReturnType<typeof setInterval> | null = null;
 let offset = 0;
@@ -16,6 +16,15 @@ async function pollOnce(): Promise<void> {
     const updates = await getUpdates(offset, 2);
     for (const update of updates) {
       offset = update.update_id + 1;
+
+      // Handle callback queries from inline keyboard buttons
+      if (update.callback_query) {
+        processCallbackQuery(update.callback_query)
+          .then(() => answerCallbackQuery(update.callback_query!.id))
+          .catch(err => console.error('[telegram] callbackQuery error:', err));
+        continue;
+      }
+
       processUpdate(update).catch(err =>
         console.error('[telegram] processUpdate error:', err),
       );
@@ -38,6 +47,7 @@ export async function startPolling(): Promise<{ status: string; botUsername?: st
   botInfo = await getMe();
   console.log(`[telegram] Bot connected: @${botInfo.username}`);
 
+  loadPersistedSessions();
   cleanupOldMedia();
 
   interval = setInterval(pollOnce, 2000);

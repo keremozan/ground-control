@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { TELEGRAM_GROUPS, TELEGRAM_BOT_TOKEN } from '@/lib/config';
-import { sendMessage, markdownToTelegramHTML } from '@/lib/telegram';
+import { sendMessage, markdownToTelegramHTML, InlineKeyboardMarkup } from '@/lib/telegram';
 import { logTelegramEntry, TelegramLogEntry } from '@/lib/telegram-log';
 
 export const runtime = 'nodejs';
@@ -11,10 +11,11 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { charName, message, parseMode } = body as {
+  const { charName, message, parseMode, replyMarkup } = body as {
     charName?: string;
     message?: string;
     parseMode?: string;
+    replyMarkup?: InlineKeyboardMarkup;
   };
 
   if (!charName || !message) {
@@ -29,7 +30,7 @@ export async function POST(req: NextRequest) {
   try {
     const formattedMessage = parseMode ? message : markdownToTelegramHTML(message);
     const effectiveParseMode = parseMode || 'HTML';
-    const result = await sendMessage(groupId, formattedMessage, effectiveParseMode);
+    const result = await sendMessage(groupId, formattedMessage, effectiveParseMode, replyMarkup);
 
     const logEntry: TelegramLogEntry = {
       id: `out-${Date.now()}`,

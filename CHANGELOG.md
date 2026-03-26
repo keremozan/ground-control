@@ -1,5 +1,25 @@
 # Changelog
 
+## v3.4.0 — 2026-03-26
+
+### New
+- [new] Telegram inline keyboard buttons: characters can send messages with tap-to-respond buttons (InlineKeyboardMarkup). Callback queries routed through existing character sessions.
+- [new] Block nudge system: `/api/blocks/register` stores today's time blocks, `/api/blocks/check` sends transition nudges ("Block done?") with [Done] [Still going] [Stuck] [Skipped] buttons. Crash detection (2 consecutive stuck/skipped) auto-spawns Coach.
+- [new] Gmail pipeline `create_event`: emails requesting meetings now create Google Calendar events with conflict detection. Conflicting events marked with "(CONFLICT)" prefix.
+- [new] Gmail pipeline `escalate`: escalated emails create high-priority Tana tasks assigned to the relevant character.
+- [new] Calendar utilities: `findConflicts()`, `timeOverlaps()`, `findFreeSlots()` in google-calendar.ts. Free slot finder respects calendar events and configurable day bounds.
+- [new] Priority aging: tasks near due date auto-escalate (urgent if <= 1 day, high if <= 3 days). Overdue tasks flagged. Visual indicator in TasksPanel when effective priority differs from stored priority.
+- [new] Telegram session persistence: conversation history survives server restarts (data/telegram-sessions.json, 24h TTL).
+- [new] Per-action model overrides: character actions can specify a model (e.g., Workshop=opus, other Proctor actions=sonnet). Passed through chat trigger.
+
+### Scheduler
+- [new] `kybernetes-pulse` (07:30 daily): morning adaptive day plan via Telegram.
+- [new] `kybernetes-capture` (20:30 daily): evening plan-vs-actual comparison.
+- [new] `nightly-task-cleanup` (22:00 daily): Archivist archives completed tasks.
+- [change] `coach-morning` moved to 07:10, rewritten for energy poll (inline keyboard 1-10 buttons).
+- [change] `kybernetes-context` (07:12) replaced by `kybernetes-pulse` (07:30).
+- [change] Sunday job spacing: contact-patterns 21:30, weekly-learning 22:00 (was both 21:00/21:30).
+
 ## v3.3.2 — 2026-03-26
 
 ## v3.3.1 — 2026-03-26

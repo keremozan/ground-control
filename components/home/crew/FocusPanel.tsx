@@ -9,7 +9,7 @@ import { Loader2, Play, X, SlidersHorizontal, Bot, MessageSquare, ListChecks } f
 type ActionInfo = {
   label: string; icon: string; description: string;
   autonomous?: boolean; autonomousInput?: boolean;
-  inputPlaceholder?: string; endpoint?: string;
+  inputPlaceholder?: string; endpoint?: string; model?: string;
 };
 
 type CharacterInfo = {
@@ -87,7 +87,7 @@ export default function FocusPanel({
       setPromptInput("");
       setTimeout(() => promptRef.current?.focus(), 50);
     } else {
-      setTrigger({ charName, seedPrompt, action: action.label });
+      setTrigger({ charName, seedPrompt, action: action.label, model: action.model });
     }
   };
 

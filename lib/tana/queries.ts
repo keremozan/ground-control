@@ -21,6 +21,8 @@ const CLASS_TAG_ID = TANA.classTags.class;
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
+export type EffectivePriority = 'urgent' | 'high' | 'medium' | 'low';
+
 export type TanaTask = {
   id: string;
   name: string;
@@ -32,6 +34,8 @@ export type TanaTask = {
   dueDate: string | null;
   phaseId?: string;
   phaseName?: string;
+  effectivePriority?: EffectivePriority;
+  overdue?: boolean;
 };
 
 export type TanaPhase = {
@@ -226,7 +230,46 @@ export async function getTanaTasks(): Promise<TanaTask[]> {
     }
   }
 
-  return tasks;
+  return applyPriorityAging(tasks);
+}
+
+/** Apply priority aging based on task age and due date proximity */
+export function applyPriorityAging(tasks: TanaTask[]): TanaTask[] {
+  const now = new Date();
+  const todayStr = now.toISOString().split('T')[0];
+
+  return tasks.map(task => {
+    let effectivePriority: EffectivePriority = (task.priority as EffectivePriority) || 'medium';
+    let overdue = false;
+
+    // Age-based bumping (only bump up, never down)
+    if (task.dueDate) {
+      const dueMs = new Date(task.dueDate + 'T23:59:59').getTime();
+      const daysUntilDue = Math.ceil((dueMs - now.getTime()) / (1000 * 60 * 60 * 24));
+
+      if (daysUntilDue < 0) {
+        overdue = true;
+        effectivePriority = 'urgent';
+      } else if (daysUntilDue <= 1) {
+        effectivePriority = 'urgent';
+      } else if (daysUntilDue <= 3 && effectivePriority !== 'urgent') {
+        effectivePriority = 'high';
+      }
+    }
+
+    // Staleness-based bumping (for tasks without due dates or still far from due)
+    // We estimate age from the node ID pattern or use a heuristic
+    // Since Tana doesn't expose creation date in search results, we check
+    // status: tasks sitting in backlog for extended periods get bumped
+    // This is a conservative heuristic — Coach/Kybernetes refine weekly
+    if (task.status === 'backlog' && effectivePriority === 'low') {
+      // Without creation date, we can't compute exact age
+      // Priority aging by due date is the primary mechanism
+      // Stale task detection (30+ days) happens in kybernetes-capture via Tana query
+    }
+
+    return { ...task, effectivePriority, overdue };
+  });
 }
 
 // --- #workstream fetching ---
