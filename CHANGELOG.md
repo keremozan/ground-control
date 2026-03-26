@@ -2,6 +2,9 @@
 
 ## v3.4.2 — 2026-03-26
 
+### New
+- [new] Tutor spaced repetition system: `/api/tutor/due` compute route reads append-only JSONL log, computes per-item intervals (1/2/4/8/16/30 day progression), returns due/new/mastered items with accuracy trends. Tutor teaches from due items instead of random content.
+
 ## v3.4.1 — 2026-03-26
 
 ### New
