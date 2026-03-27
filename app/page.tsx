@@ -2,9 +2,7 @@
 import { ChatProvider } from "@/lib/chat-store";
 import { SharedDataProvider } from "@/lib/shared-data";
 import { WidgetErrorBoundary } from "@/components/ui/WidgetErrorBoundary";
-import InboxWidget from "@/components/home/inbox";
-import CalendarWidget from "@/components/home/calendar";
-import TasksWidget from "@/components/home/tasks";
+import ContextStrip from "@/components/home/context-strip";
 import CrewWidget from "@/components/home/crew";
 import ChatWidget from "@/components/home/chat";
 import StatusBar from "@/components/home/status";
@@ -14,21 +12,15 @@ export default function Home() {
     <SharedDataProvider>
     <ChatProvider>
       <div className="dashboard-grid">
-        <div style={{ gridColumn: "span 3", height: "100%" }}>
+        <div style={{ gridColumn: "span 2", height: "100%" }}>
           <WidgetErrorBoundary name="Status Bar">
             <StatusBar />
           </WidgetErrorBoundary>
         </div>
-        <WidgetErrorBoundary name="Inbox">
-          <InboxWidget />
+        <WidgetErrorBoundary name="Context Strip">
+          <ContextStrip />
         </WidgetErrorBoundary>
-        <WidgetErrorBoundary name="Calendar">
-          <CalendarWidget />
-        </WidgetErrorBoundary>
-        <WidgetErrorBoundary name="Tasks">
-          <TasksWidget />
-        </WidgetErrorBoundary>
-        <div style={{ gridColumn: "span 2", height: "100%", minHeight: 0, overflow: "hidden" }}>
+        <div style={{ minHeight: 0, overflow: "hidden" }}>
           <WidgetErrorBoundary name="Chat">
             <ChatWidget />
           </WidgetErrorBoundary>
