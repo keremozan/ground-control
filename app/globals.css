@@ -777,15 +777,17 @@ button:focus {
 .task-filter-pill {
   display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 3px 10px;
-  border-radius: 10px;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 3px;
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   color: var(--text-3);
   cursor: pointer;
-  border: none;
+  border: 1px solid transparent;
   background: transparent;
   white-space: nowrap;
   transition: all var(--ease-fast);
@@ -796,8 +798,9 @@ button:focus {
 }
 
 .task-filter-pill.active {
-  background: var(--text);
-  color: var(--surface);
+  border-color: var(--border);
+  background: var(--surface-2);
+  color: var(--text);
 }
 
 /* --- Task track groups --- */
