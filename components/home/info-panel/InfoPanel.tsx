@@ -18,7 +18,7 @@ export default function InfoPanel() {
   const [activeTab, setActiveTab] = useState<Tab>("tasks");
 
   return (
-    <div className="widget" style={{ flex: 1, minHeight: 0 }}>
+    <div className="widget">
       <div className="info-panel-tabs">
         {TABS.map(({ id, label, icon: Icon }) => (
           <button

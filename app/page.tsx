@@ -17,23 +17,17 @@ export default function Home() {
             <StatusBar />
           </WidgetErrorBoundary>
         </div>
-        <div style={{ height: "100%", minHeight: 0, overflow: "hidden" }}>
+        <div style={{ gridRow: "2 / 4", height: "100%", minHeight: 0, overflow: "hidden" }}>
           <WidgetErrorBoundary name="Chat">
             <ChatWidget />
           </WidgetErrorBoundary>
         </div>
-        <div style={{ height: "100%", display: "flex", flexDirection: "column", gap: 10, minHeight: 0 }}>
-          <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
-            <WidgetErrorBoundary name="Info Panel">
-              <InfoPanel />
-            </WidgetErrorBoundary>
-          </div>
-          <div style={{ flex: 1.4, minHeight: 0, display: "flex", flexDirection: "column" }}>
-            <WidgetErrorBoundary name="Crew">
-              <CrewWidget />
-            </WidgetErrorBoundary>
-          </div>
-        </div>
+        <WidgetErrorBoundary name="Info Panel">
+          <InfoPanel />
+        </WidgetErrorBoundary>
+        <WidgetErrorBoundary name="Crew">
+          <CrewWidget />
+        </WidgetErrorBoundary>
       </div>
     </ChatProvider>
     </SharedDataProvider>
