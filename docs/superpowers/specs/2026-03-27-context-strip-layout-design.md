@@ -43,14 +43,30 @@ Poll intervals match existing widgets: 10 minutes for inbox/tasks, 10 minutes fo
 ### Dropdown Overlay
 
 When a segment is clicked:
-- A container (max-height ~50vh, width matching the segment or spanning full width) appears below the strip
-- Contains the existing widget component (`InboxPanel`, `CalendarPanel`, `TasksPanel`) rendered unchanged
-- Positioned absolute, z-index above Chat/Crew
+- A container (max-height ~50vh, full dashboard width) appears below the strip
+- Contains the existing widget component (`InboxPanel`, `CalendarPanel`, `TasksPanel`) rendered unchanged, each wrapped in `WidgetErrorBoundary`
+- ContextStrip container has `position: relative`; dropdown is `position: absolute`, `z-index: 50`, anchored to top-left of the strip
 - Light shadow + border for separation
-- Widgets mount lazily (only when dropdown is first opened), stay mounted while open
-- Closing the dropdown unmounts the widget to save resources
+- Transition: fade + slide-down using `--ease-enter` (150ms), matching existing dashboard animation tokens
+- Widgets stay mounted but hidden (`display: none`) while dropdown is closed, avoiding re-fetch/loading flash on reopen. All three mount on first ContextStrip render.
 
-Click-outside detection via a backdrop div or `useEffect` with document click listener. Escape key closes via `useEffect` keydown listener.
+Click-outside detection via a backdrop div. Escape key closes via `useEffect` keydown listener.
+
+### CSS Grid Change (`app/globals.css`)
+
+```css
+/* before */
+grid-template-rows: 44px 1fr 1.4fr;
+grid-template-columns: 1fr 1fr 1fr;
+
+/* after */
+grid-template-rows: 44px 36px 1fr;
+grid-template-columns: 2fr 1fr;
+```
+
+The `height: calc(100vh - 44px)` rule on `.dashboard-grid` stays unchanged.
+
+Chat gets `grid-column: 1` (2fr), Crew gets `grid-column: 2` (1fr). StatusBar and ContextStrip both use `grid-column: span 2` to fill the full width. No responsive breakpoints (desktop-only dashboard, same as current).
 
 ### Page Layout Change (`app/page.tsx`)
 
@@ -66,25 +82,11 @@ Before:
 
 After:
 ```tsx
-<StatusBar />          // span 3
-<ContextStrip />       // span 3 (new)
-<ChatWidget />         // span 2
-<CrewWidget />         // col 3
+<StatusBar />          // span 2
+<ContextStrip />       // span 2 (new, wraps WidgetErrorBoundary for each dropdown panel)
+<ChatWidget />         // col 1
+<CrewWidget />         // col 2
 ```
-
-### CSS Grid Change (`app/globals.css`)
-
-```css
-/* before */
-grid-template-rows: 44px 1fr 1.4fr;
-grid-template-columns: 1fr 1fr 1fr;
-
-/* after */
-grid-template-rows: 44px 36px 1fr;
-grid-template-columns: 2fr 1fr;
-```
-
-Chat gets `grid-column: 1` (2fr), Crew gets `grid-column: 2` (1fr). No more span-2 hack.
 
 ## Styling
 
