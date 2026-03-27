@@ -1,17 +1,19 @@
 "use client";
 import { useState } from "react";
-import { Mail, CalendarDays, ListChecks } from "lucide-react";
+import { Mail, CalendarDays, ListChecks, FolderKanban } from "lucide-react";
 import { WidgetErrorBoundary } from "@/components/ui/WidgetErrorBoundary";
 import InboxPanel from "@/components/home/inbox";
 import CalendarPanel from "@/components/home/calendar";
 import TasksPanel from "@/components/home/tasks";
+import ProjectsPanel from "@/components/home/tasks/ProjectsPanel";
 
-type Tab = "mail" | "calendar" | "tasks";
+type Tab = "mail" | "calendar" | "tasks" | "projects";
 
 const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
   { id: "mail", label: "Inbox", icon: Mail },
   { id: "calendar", label: "Calendar", icon: CalendarDays },
   { id: "tasks", label: "Tasks", icon: ListChecks },
+  { id: "projects", label: "Projects", icon: FolderKanban },
 ];
 
 export default function InfoPanel() {
@@ -46,6 +48,11 @@ export default function InfoPanel() {
         <div style={{ display: activeTab === "tasks" ? "flex" : "none", flexDirection: "column", flex: 1, minHeight: 0 }}>
           <WidgetErrorBoundary name="Tasks">
             <TasksPanel />
+          </WidgetErrorBoundary>
+        </div>
+        <div style={{ display: activeTab === "projects" ? "flex" : "none", flexDirection: "column", flex: 1, minHeight: 0 }}>
+          <WidgetErrorBoundary name="Projects">
+            <ProjectsPanel />
           </WidgetErrorBoundary>
         </div>
       </div>

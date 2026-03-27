@@ -1,41 +1,18 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { RefreshCw, Loader2, Plus, X, ListChecks, BookOpen, FolderKanban } from "lucide-react";
+import { RefreshCw, Loader2, Plus, X, ListChecks } from "lucide-react";
 import { useSharedData } from "@/lib/shared-data";
 import { useChatTrigger } from "@/lib/chat-store";
 import { logAction } from "@/lib/action-log";
 import { buildColorMatcher } from "@/lib/colors";
-import type { Task, Project } from "@/types";
+import type { Task } from "@/types";
 import TaskList, { type PriorityFilter } from "./TaskList";
-import ProjectsTimeline from "./ProjectsTimeline";
-import ClassesTab from "./ClassesTab";
 
 type CharInfo = { id: string; name: string; model?: string; tier: string };
-type ActiveTab = "projects" | "tasks" | "classes";
-
-function TabBtn({ label, icon, active, onClick }: { label: string; icon?: React.ReactNode; active: boolean; onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        display: "flex", alignItems: "center", gap: 4,
-        padding: "3px 8px", borderRadius: 3,
-        fontFamily: "var(--font-display)", fontSize: 13, fontWeight: active ? 600 : 400,
-        color: active ? "var(--text)" : "var(--text-3)",
-        background: "transparent", border: "none", cursor: "pointer",
-        transition: "all 0.12s",
-      }}
-    >
-      {icon}{label}
-    </button>
-  );
-}
 
 export default function TasksPanel() {
   const { characters: sharedCharacters, config: sharedConfig } = useSharedData();
-  const [activeTab, setActiveTab] = useState<ActiveTab>("tasks");
   const [grouped, setGrouped] = useState<Record<string, Task[]>>({});
-  const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [priority, setPriority] = useState<PriorityFilter>("today");
   const [taskPriorities, setTaskPriorities] = useState<Record<string, string>>({});
@@ -90,19 +67,11 @@ export default function TasksPanel() {
       .catch(() => setLoading(false));
   }, []);
 
-  const fetchProjects = useCallback(() => {
-    fetch("/api/tana-projects")
-      .then(r => r.json())
-      .then(raw => { const d = raw?.data ?? raw; setProjects(d.projects || []); })
-      .catch(() => {});
-  }, []);
-
   useEffect(() => {
     fetchTasks();
-    fetchProjects();
     const interval = setInterval(fetchTasks, 10 * 60 * 1000);
     return () => clearInterval(interval);
-  }, [fetchTasks, fetchProjects]);
+  }, [fetchTasks]);
 
   useEffect(() => {
     setCharacters(sharedCharacters as CharInfo[]);
@@ -282,16 +251,6 @@ export default function TasksPanel() {
     }
   }
 
-  async function handleProjectClick(projectId: string) {
-    try {
-      await fetch("/api/tana-tasks/action", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nodeId: projectId, action: "open" }),
-      });
-    } catch {}
-  }
-
   const allTasks = Object.values(grouped).flat();
 
   const selectStyle: React.CSSProperties = {
@@ -328,24 +287,18 @@ export default function TasksPanel() {
   return (
     <div className="widget">
       <div className="widget-header">
-        <div style={{ display: "flex", alignItems: "center", gap: 0 }}>
-          <TabBtn label="Projects" icon={<FolderKanban size={13} strokeWidth={1.5} />} active={activeTab === "projects"} onClick={() => setActiveTab("projects")} />
-          <TabBtn label="Tasks" icon={<ListChecks size={13} strokeWidth={1.5} />} active={activeTab === "tasks"} onClick={() => setActiveTab("tasks")} />
-          <TabBtn label="Classes" icon={<BookOpen size={13} strokeWidth={1.5} />} active={activeTab === "classes"} onClick={() => setActiveTab("classes")} />
+        <span className="widget-header-label"><ListChecks size={13} strokeWidth={1.5} /> Tasks</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <button className="widget-toolbar-btn" data-tip="Add task" onClick={() => { setShowNewTask(true); setTimeout(() => newTaskRef.current?.focus(), 50); }}>
+            <Plus size={12} strokeWidth={1.5} />
+          </button>
+          <button className="widget-toolbar-btn" data-tip="Refresh" onClick={fetchTasks}>
+            <RefreshCw size={12} strokeWidth={1.5} style={loading ? { animation: "spin 1s linear infinite" } : undefined} />
+          </button>
         </div>
-        {activeTab === "tasks" && (
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <button className="widget-toolbar-btn" data-tip="Add task" onClick={() => { setShowNewTask(true); setTimeout(() => newTaskRef.current?.focus(), 50); }}>
-              <Plus size={12} strokeWidth={1.5} />
-            </button>
-            <button className="widget-toolbar-btn" data-tip="Refresh" onClick={fetchTasks}>
-              <RefreshCw size={12} strokeWidth={1.5} style={loading ? { animation: "spin 1s linear infinite" } : undefined} />
-            </button>
-          </div>
-        )}
       </div>
 
-      {activeTab === "tasks" && (
+      {(
         <>
           {showNewTask && (() => {
             const tracks = Object.entries(grouped).map(([name, tasks]) => ({
@@ -426,16 +379,6 @@ export default function TasksPanel() {
           />
         </>
       )}
-
-      {activeTab === "projects" && (
-        <ProjectsTimeline
-          projects={projects}
-          trackColor={trackColor}
-          onProjectClick={handleProjectClick}
-        />
-      )}
-
-      {activeTab === "classes" && <ClassesTab />}
     </div>
   );
 }
