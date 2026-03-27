@@ -111,7 +111,7 @@ function TaskRow({
       <div className="item-row" style={{ opacity: isBusy ? 0.6 : 1 }}>
         <div style={{ display: "flex", alignItems: "center", padding: "5px 10px", gap: 7, cursor: "pointer" }}>
           {/* Priority dot */}
-          <span style={{ width: 6, height: 6, borderRadius: priorityEscalated ? 2 : "50%", background: priorityDot, flexShrink: 0, outline: priorityEscalated ? "1.5px solid var(--red)" : "none", outlineOffset: 1 }} />
+          <span style={{ width: 5, height: 5, borderRadius: "50%", background: priorityDot, flexShrink: 0 }} />
 
           {/* Task name */}
           <span style={{ fontFamily: "var(--font-body)", fontSize: 12, fontWeight: 500, color: "var(--text)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.3 }}>
