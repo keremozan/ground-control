@@ -151,7 +151,7 @@ function TaskRow({
             <button className="item-action-btn task-priority-btn" data-tip={priorityEscalated ? `${task.priority} → ${task.effectivePriority}` : "Priority"} disabled={isBusy}
               onClick={e => { e.stopPropagation(); setOpenDropdown(openDropdown === task.id ? null : task.id); }}
               style={{ cursor: isBusy ? "not-allowed" : "pointer" }}>
-              <span style={{ width: 7, height: 7, borderRadius: priorityEscalated ? 2 : "50%", background: priorityDot, flexShrink: 0, outline: priorityEscalated ? "1.5px solid var(--red)" : "none", outlineOffset: 1 }} />
+              <span style={{ width: 5, height: 5, borderRadius: "50%", background: priorityDot, flexShrink: 0 }} />
             </button>
             {openDropdown === task.id && (
               <div style={{ position: "absolute", left: 0, top: "calc(100% + 2px)", zIndex: 50, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 6, boxShadow: "0 4px 12px rgba(0,0,0,0.15)", padding: "3px 0", minWidth: 110 }}>
