@@ -1,6 +1,6 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
-import { Play, CheckCircle, Archive, Trash2, Loader2, ChevronRight, X, ExternalLink, CalendarClock } from "lucide-react";
+import { Play, CheckCircle, Archive, Trash2, Loader2, X, ExternalLink, CalendarClock } from "lucide-react";
 import { charIcon, charColor } from "@/lib/char-icons";
 import { formatWhen, getDateUrgency, type DateUrgency } from "@/lib/date-format";
 import type { Task } from "@/types";
@@ -24,7 +24,6 @@ function dueBadge(dueDate: string | null): DateUrgency | null {
   return getDateUrgency(dueDate, "future", 7);
 }
 
-// Pure filter helper exported for parent re-use
 export function buildFiltered(
   grouped: Record<string, Task[]>,
   filter: PriorityFilter,
@@ -52,6 +51,17 @@ export function buildFiltered(
   }
   return out;
 }
+
+// --- Priority helpers ---
+
+const PRIORITY_COLOR: Record<string, string> = {
+  urgent: "var(--red)",
+  high: "var(--red)",
+  medium: "var(--amber)",
+  low: "var(--accent-muted)",
+};
+
+// --- TaskRow ---
 
 interface TaskRowProps {
   task: Task;
@@ -83,80 +93,81 @@ function TaskRow({
   setPromptInput, setPromptChar, setPromptModel, setOpenDropdown,
 }: TaskRowProps) {
   const displayPriority = task.effectivePriority || taskPriority;
-  const priorityDot = displayPriority === "urgent" ? "var(--red)" : displayPriority === "high" ? "var(--red)" : displayPriority === "medium" ? "var(--amber)" : "var(--accent-muted)";
+  const priorityDot = PRIORITY_COLOR[displayPriority] || "var(--accent-muted)";
   const priorityEscalated = task.effectivePriority && task.effectivePriority !== task.priority;
-  const charKey = task.assigned ? task.assigned.charAt(0).toUpperCase() + task.assigned.slice(1) : "";
-  const CharIcon = charKey ? charIcon[charKey] : null;
-  const charCol = task.assigned ? charColor[task.assigned] || "var(--text-3)" : "var(--text-3)";
+
+  const urgency = task.dueDate ? dueBadge(task.dueDate) : null;
+  const dueLabel = task.dueDate
+    ? (urgency?.level === "overdue" ? "overdue" : formatWhen(task.dueDate, false))
+    : null;
+  const dueColor = urgency?.level === "overdue"
+    ? "var(--red)"
+    : urgency?.level === "today"
+      ? "var(--text)"
+      : "var(--text-3)";
 
   return (
-    <div style={{ borderTop: "1px solid var(--border)" }}>
+    <div>
       <div className="item-row" style={{ opacity: isBusy ? 0.6 : 1 }}>
-        <div style={{ display: "flex", alignItems: "center", padding: "8px 14px", gap: 8, cursor: "pointer" }}>
-          <span style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 4 }}>
-            {task.dueDate && (() => {
-              const urgency = dueBadge(task.dueDate);
-              return (<>
-                <span style={{ width: 4, height: 4, borderRadius: "50%", background: urgency?.dot ? urgency.color : "transparent", flexShrink: 0 }} />
-                <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: urgency?.color || "var(--text-3)", whiteSpace: "nowrap" }}>
-                  {urgency?.level === "overdue" ? `overdue · ${formatWhen(task.dueDate, false)}` : formatWhen(task.dueDate, false)}
-                </span>
-              </>);
-            })()}
+        <div style={{ display: "flex", alignItems: "center", padding: "5px 10px", gap: 7, cursor: "pointer" }}>
+          {/* Priority dot */}
+          <span style={{ width: 6, height: 6, borderRadius: priorityEscalated ? 2 : "50%", background: priorityDot, flexShrink: 0, outline: priorityEscalated ? "1.5px solid var(--red)" : "none", outlineOffset: 1 }} />
+
+          {/* Task name */}
+          <span style={{ fontFamily: "var(--font-body)", fontSize: 12, fontWeight: 500, color: "var(--text)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.3 }}>
+            {task.name}
           </span>
-          {CharIcon && (
-            <span data-tip={charKey} style={{ display: "flex", flexShrink: 0 }}>
-              <CharIcon size={12} strokeWidth={1.5} style={{ color: charCol }} />
+
+          {isBusy && <Loader2 size={10} strokeWidth={1.5} style={{ color: "var(--text-3)", animation: "spin 1s linear infinite", flexShrink: 0 }} />}
+
+          {/* Due date -- right aligned */}
+          {dueLabel && (
+            <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 600, color: dueColor, flexShrink: 0, whiteSpace: "nowrap" }}>
+              {dueLabel}
             </span>
           )}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-              <span style={{ fontFamily: "var(--font-body)", fontSize: 12, fontWeight: 500, color: "var(--text)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {task.name}
-              </span>
-              {isBusy && <Loader2 size={10} strokeWidth={1.5} style={{ color: "var(--text-3)", animation: "spin 1s linear infinite", flexShrink: 0 }} />}
-            </div>
-            <div className="item-actions" style={{ padding: "4px 0 0 0" }}>
-              {itemActions.flatMap(({ icon: ActionIcon, label, colorClass }) => {
-                const btn = (
-                  <button key={label} className={`item-action-btn ${colorClass}`} data-tip={label}
-                    disabled={isBusy} onClick={() => onAction(task, label)} style={{ cursor: isBusy ? "not-allowed" : "pointer" }}>
-                    <ActionIcon size={12} strokeWidth={1.5} />
-                  </button>
-                );
-                if (label === "Archive" && task.dueDate && dueBadge(task.dueDate)?.level === 'overdue') {
-                  return [btn, (
-                    <button key="Reschedule" className="item-action-btn item-action-btn-amber" data-tip="Reschedule"
-                      disabled={isBusy} onClick={e => { e.stopPropagation(); onReschedule(task); }} style={{ cursor: isBusy ? "not-allowed" : "pointer" }}>
-                      <CalendarClock size={12} strokeWidth={1.5} />
-                    </button>
-                  )];
-                }
-                return [btn];
-              })}
-              <div ref={openDropdown === task.id ? dropdownRef : undefined} style={{ position: "relative", display: "inline-flex" }}>
-                <button className="item-action-btn task-priority-btn" data-tip={priorityEscalated ? `${task.priority} → ${task.effectivePriority}` : "Priority"} disabled={isBusy}
-                  onClick={e => { e.stopPropagation(); setOpenDropdown(openDropdown === task.id ? null : task.id); }}
-                  style={{ cursor: isBusy ? "not-allowed" : "pointer" }}>
-                  <span style={{ width: 7, height: 7, borderRadius: priorityEscalated ? 2 : "50%", background: priorityDot, flexShrink: 0, outline: priorityEscalated ? "1.5px solid var(--red)" : "none", outlineOffset: 1 }} />
+        </div>
+
+        {/* Actions row -- shown on hover via CSS */}
+        <div className="item-actions" style={{ padding: "0 10px 4px", display: "flex", gap: 2 }}>
+          {itemActions.flatMap(({ icon: ActionIcon, label, colorClass }) => {
+            const btn = (
+              <button key={label} className={`item-action-btn ${colorClass}`} data-tip={label}
+                disabled={isBusy} onClick={() => onAction(task, label)} style={{ cursor: isBusy ? "not-allowed" : "pointer" }}>
+                <ActionIcon size={12} strokeWidth={1.5} />
+              </button>
+            );
+            if (label === "Archive" && task.dueDate && dueBadge(task.dueDate)?.level === 'overdue') {
+              return [btn, (
+                <button key="Reschedule" className="item-action-btn item-action-btn-amber" data-tip="Reschedule"
+                  disabled={isBusy} onClick={e => { e.stopPropagation(); onReschedule(task); }} style={{ cursor: isBusy ? "not-allowed" : "pointer" }}>
+                  <CalendarClock size={12} strokeWidth={1.5} />
                 </button>
-                {openDropdown === task.id && (
-                  <div style={{ position: "absolute", left: 0, top: "calc(100% + 2px)", zIndex: 50, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 6, boxShadow: "0 4px 12px rgba(0,0,0,0.15)", padding: "3px 0", minWidth: 110 }}>
-                    {([
-                      { p: "high", color: "var(--red)", label: "High" },
-                      { p: "medium", color: "var(--amber)", label: "Medium" },
-                      { p: "low", color: "var(--accent-muted)", label: "Low" },
-                    ] as const).map(({ p, color, label }) => (
-                      <button key={p} onClick={e => { e.stopPropagation(); onSetPriority(task, p); setOpenDropdown(null); }}
-                        style={{ display: "flex", alignItems: "center", gap: 7, width: "100%", padding: "5px 10px", border: "none", background: taskPriority === p ? "var(--surface-2)" : "transparent", cursor: "pointer", textAlign: "left", color: taskPriority === p ? "var(--text)" : "var(--text-2)" }}>
-                        <span style={{ width: 7, height: 7, borderRadius: "50%", background: color, flexShrink: 0 }} />
-                        <span style={{ fontFamily: "var(--font-mono)", fontSize: 10 }}>{label}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
+              )];
+            }
+            return [btn];
+          })}
+          <div ref={openDropdown === task.id ? dropdownRef : undefined} style={{ position: "relative", display: "inline-flex" }}>
+            <button className="item-action-btn task-priority-btn" data-tip={priorityEscalated ? `${task.priority} → ${task.effectivePriority}` : "Priority"} disabled={isBusy}
+              onClick={e => { e.stopPropagation(); setOpenDropdown(openDropdown === task.id ? null : task.id); }}
+              style={{ cursor: isBusy ? "not-allowed" : "pointer" }}>
+              <span style={{ width: 7, height: 7, borderRadius: priorityEscalated ? 2 : "50%", background: priorityDot, flexShrink: 0, outline: priorityEscalated ? "1.5px solid var(--red)" : "none", outlineOffset: 1 }} />
+            </button>
+            {openDropdown === task.id && (
+              <div style={{ position: "absolute", left: 0, top: "calc(100% + 2px)", zIndex: 50, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 6, boxShadow: "0 4px 12px rgba(0,0,0,0.15)", padding: "3px 0", minWidth: 110 }}>
+                {([
+                  { p: "high", color: "var(--red)", label: "High" },
+                  { p: "medium", color: "var(--amber)", label: "Medium" },
+                  { p: "low", color: "var(--accent-muted)", label: "Low" },
+                ] as const).map(({ p, color, label }) => (
+                  <button key={p} onClick={e => { e.stopPropagation(); onSetPriority(task, p); setOpenDropdown(null); }}
+                    style={{ display: "flex", alignItems: "center", gap: 7, width: "100%", padding: "5px 10px", border: "none", background: taskPriority === p ? "var(--surface-2)" : "transparent", cursor: "pointer", textAlign: "left", color: taskPriority === p ? "var(--text)" : "var(--text-2)" }}>
+                    <span style={{ width: 7, height: 7, borderRadius: "50%", background: color, flexShrink: 0 }} />
+                    <span style={{ fontFamily: "var(--font-mono)", fontSize: 10 }}>{label}</span>
+                  </button>
+                ))}
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>
@@ -194,6 +205,8 @@ function TaskRow({
     </div>
   );
 }
+
+// --- TaskList ---
 
 interface Props {
   tasks: Task[];
@@ -260,10 +273,6 @@ export default function TaskList({
     }
   }
 
-  const toggleTrack = (track: string) => {
-    setExpanded(prev => { const next = new Set(prev); next.has(track) ? next.delete(track) : next.add(track); return next; });
-  };
-
   function handleAction(task: Task, action: string) {
     if (busy.has(task.id)) return;
     if (action === "Start") {
@@ -281,39 +290,40 @@ export default function TaskList({
 
   const rowProps = { busy, taskPriorities, characters, openDropdown, dropdownRef, promptTask, promptInput, promptRef, promptChar, promptModel, onAction: handleAction, onReschedule, onSetPriority, onStartWithPrompt, onPromptTaskChange, setPromptInput, setPromptChar, setPromptModel, setOpenDropdown };
 
-  const filterChips = [
-    { key: "today" as const, label: `Today (${todayCount})`, dot: "var(--amber)" },
-    { key: "week" as const,  label: `Week (${weekCount})`,   dot: "var(--teal)" },
-    { key: "high" as const,  label: `High (${priorityCounts.high})`,   dot: "var(--red)" },
-    { key: "medium" as const, label: `Med (${priorityCounts.medium})`, dot: "var(--amber)" },
-    { key: "low" as const,   label: `Low (${priorityCounts.low})`,     dot: "var(--accent-muted)" },
+  const dateFilters: { key: PriorityFilter; label: string; count: number }[] = [
+    { key: "today", label: "Today", count: todayCount },
+    { key: "week",  label: "Week",  count: weekCount },
+  ];
+
+  const priorityFilters: { key: PriorityFilter; label: string; count: number; dot: string }[] = [
+    { key: "high",   label: "High", count: priorityCounts.high,   dot: "var(--red)" },
+    { key: "medium", label: "Med",  count: priorityCounts.medium, dot: "var(--amber)" },
+    { key: "low",    label: "Low",  count: priorityCounts.low,    dot: "var(--accent-muted)" },
   ];
 
   return (
     <div className="col-full">
-      <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "6px 16px 2px", borderBottom: "1px solid var(--border)" }}>
-        {filterChips.map(({ key, label, dot }) => {
-          const active = filterKey === key;
-          return (
-            <button key={key} onClick={() => onFilterChange(key)} style={{
-              fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 500,
-              letterSpacing: "0.04em", textTransform: "uppercase", padding: "3px 8px", borderRadius: 3,
-              border: "1px solid", borderColor: active ? "var(--border)" : "transparent",
-              background: active ? "var(--surface-2)" : "transparent",
-              color: active ? "var(--text)" : "var(--text-3)", cursor: "pointer",
-              transition: "all 0.15s ease", display: "flex", alignItems: "center", gap: 4,
-            }}>
-              <span style={{ width: 5, height: 5, borderRadius: "50%", background: dot, flexShrink: 0 }} />
-              {label}
-            </button>
-          );
-        })}
+      {/* Filter bar: date | priority */}
+      <div style={{ display: "flex", alignItems: "center", gap: 0, padding: "5px 10px", borderBottom: "1px solid var(--border)" }}>
+        {dateFilters.map(({ key, label, count }) => (
+          <button key={key} onClick={() => onFilterChange(key)} className={`task-filter-pill${filterKey === key ? " active" : ""}`}>
+            {label} {count}
+          </button>
+        ))}
+        <span style={{ width: 1, height: 14, background: "var(--border)", margin: "0 4px", flexShrink: 0 }} />
+        {priorityFilters.map(({ key, label, count, dot }) => (
+          <button key={key} onClick={() => onFilterChange(key)} className={`task-filter-pill${filterKey === key ? " active" : ""}`}>
+            <span style={{ width: 5, height: 5, borderRadius: "50%", background: filterKey === key ? "#fff" : dot, flexShrink: 0 }} />
+            {label} {count}
+          </button>
+        ))}
         <span style={{ flex: 1 }} />
         <span className="mono-xs">
           {loading ? "..." : <><span style={{ color: "var(--blue)", fontWeight: 600 }}>{activeTasks}</span>/{totalFiltered}</>}
         </span>
       </div>
 
+      {/* Task list */}
       <div className="widget-body" style={{ padding: 0 }}>
         {loading && allTasks.length === 0 && (
           <div className="loading-row">
@@ -328,10 +338,9 @@ export default function TaskList({
             </span>
           </div>
         )}
-        {trackKeys.map((track, i) => {
+        {trackKeys.map((track) => {
           const trackTasks = filtered[track];
           const color = trackColor(track) ?? "var(--text-3)";
-          const isExpanded = expanded.has(track);
           const byPhase = new Map<string, Task[]>();
           const standalone: Task[] = [];
           for (const t of trackTasks) {
@@ -343,26 +352,20 @@ export default function TaskList({
           for (const [name, pts] of byPhase) groups.push({ name, tasks: pts });
 
           return (
-            <div key={track} style={{ paddingTop: i > 0 ? 10 : 0, paddingBottom: i < trackKeys.length - 1 ? 10 : 0, borderBottom: i < trackKeys.length - 1 ? "1px solid var(--border)" : "none" }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div onClick={() => toggleTrack(track)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 14px", cursor: "pointer", userSelect: "none" }}>
-                  <ChevronRight size={10} strokeWidth={2} style={{ color, flexShrink: 0, opacity: 0.6, transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.15s ease" }} />
-                  <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 500, color, textTransform: "uppercase", letterSpacing: "0.06em", opacity: 0.8, flex: 1 }}>{track}</span>
-                  <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "var(--text-3)", opacity: 0.6 }}>{trackTasks.length}</span>
+            <div key={track} className="task-track-group" style={{ borderLeftColor: color }}>
+              <div className="task-track-label" style={{ color }}>{track}</div>
+              {groups.map(group => (
+                <div key={group.name || '__standalone'}>
+                  {group.name && (
+                    <div style={{ fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 600, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.06em", padding: "4px 10px 1px", opacity: 0.7 }}>
+                      {group.name}
+                    </div>
+                  )}
+                  {group.tasks.map(task => (
+                    <TaskRow key={task.id} task={task} isBusy={busy.has(task.id)} taskPriority={taskPriorities[task.id] ?? task.priority} {...rowProps} />
+                  ))}
                 </div>
-                {isExpanded && groups.map(group => (
-                  <div key={group.name || '__standalone'}>
-                    {group.name && (
-                      <div style={{ fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 600, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.06em", padding: "6px 14px 2px 28px", opacity: 0.7 }}>
-                        {group.name}
-                      </div>
-                    )}
-                    {group.tasks.map(task => (
-                      <TaskRow key={task.id} task={task} isBusy={busy.has(task.id)} taskPriority={taskPriorities[task.id] ?? task.priority} {...rowProps} />
-                    ))}
-                  </div>
-                ))}
-              </div>
+              ))}
             </div>
           );
         })}

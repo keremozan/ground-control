@@ -771,3 +771,50 @@ button:focus {
   font-weight: 600;
   color: var(--text);
 }
+
+/* --- Task filter pills --- */
+
+.task-filter-pill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 10px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-3);
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  white-space: nowrap;
+  transition: all var(--ease-fast);
+}
+
+.task-filter-pill:hover {
+  color: var(--text-2);
+}
+
+.task-filter-pill.active {
+  background: var(--text);
+  color: var(--surface);
+}
+
+/* --- Task track groups --- */
+
+.task-track-group {
+  border-left: 3px solid var(--text-3);
+}
+
+.task-track-group + .task-track-group {
+  border-top: 1px solid var(--border);
+}
+
+.task-track-label {
+  padding: 6px 10px 2px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
