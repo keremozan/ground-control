@@ -1,0 +1,616 @@
+{
+  "lastChecked": "2026-03-27T14:35:00+03:00",
+  "prompts": [
+    {
+      "id": "2026-03-22-morning",
+      "channel": "whatsapp",
+      "type": "morning",
+      "sentAt": "2026-03-22T08:00:00+03:00",
+      "content": "Write a paragraph about the past week using third conditional and not only...but also structure.",
+      "targetVocab": [
+        "third conditional",
+        "not only...but also"
+      ],
+      "status": "answered"
+    },
+    {
+      "id": "2026-03-22-test",
+      "channel": "email",
+      "type": "email",
+      "sentAt": "2026-03-22T08:02:00+03:00",
+      "content": "Week 2 test: -ing/-ed adjectives, hedging, vocabulary, third conditional (10 questions)",
+      "targetVocab": [
+        "surprising",
+        "exhausted",
+        "boring",
+        "contingent",
+        "elicit",
+        "mitigate",
+        "pervasive",
+        "tentative",
+        "third conditional"
+      ],
+      "status": "answered"
+    },
+    {
+      "id": "2026-03-23-email",
+      "channel": "email",
+      "type": "email",
+      "sentAt": "2026-03-23T08:05:00+03:00",
+      "content": "Exercise: concession structures (although/despite/while) + vocabulary (ambiguous, substantiate, scrutinize, articulate, prevalent). 5 questions.",
+      "targetVocab": [
+        "although",
+        "despite",
+        "while",
+        "ambiguous",
+        "substantiate",
+        "scrutinize",
+        "articulate",
+        "prevalent"
+      ],
+      "status": "answered"
+    },
+    {
+      "id": "2026-03-23-morning",
+      "channel": "whatsapp",
+      "type": "morning",
+      "sentAt": "2026-03-23T08:06:00+03:00",
+      "content": "Write one paragraph about a project in progress using although/despite + prevalent + scrutinize.",
+      "targetVocab": [
+        "prevalent",
+        "scrutinize",
+        "although",
+        "despite"
+      ],
+      "status": "answered"
+    },
+    {
+      "id": "2026-03-24-email",
+      "channel": "email",
+      "type": "email",
+      "sentAt": "2026-03-24T08:10:00+03:00",
+      "content": "-ing/-ed adjectives + AWL set 3 (coherent, implicit, derive, constitute, dimension). 5 questions.",
+      "targetVocab": [
+        "boring",
+        "bored",
+        "confusing",
+        "confused",
+        "coherent",
+        "implicit",
+        "derive",
+        "constitute",
+        "dimension"
+      ],
+      "status": "answered"
+    },
+    {
+      "id": "2026-03-24-morning",
+      "channel": "whatsapp",
+      "type": "morning",
+      "sentAt": "2026-03-24T08:10:00+03:00",
+      "content": "Write one paragraph about something from your week that was interesting, exhausting, or surprising. Use at least two -ing/-ed adjectives and one AWL set 3 word.",
+      "targetVocab": [
+        "interesting",
+        "interested",
+        "exhausting",
+        "exhausted",
+        "surprising",
+        "surprised",
+        "coherent",
+        "implicit",
+        "derive",
+        "constitute",
+        "dimension"
+      ],
+      "status": "answered"
+    },
+    {
+      "id": "2026-03-25-test",
+      "channel": "email",
+      "type": "email",
+      "sentAt": "2026-03-25T08:20:00+03:00",
+      "content": "Week 3 test: -ing/-ed adjectives, concession structures (although/despite), AWL sets 2 & 3 (10 questions)",
+      "targetVocab": [
+        "exhausting",
+        "exhausted",
+        "interesting",
+        "interested",
+        "although",
+        "despite",
+        "scrutinize",
+        "implicit",
+        "dimension",
+        "prevalent",
+        "constitute"
+      ],
+      "status": "answered"
+    },
+    {
+      "id": "2026-03-25-morning",
+      "channel": "whatsapp",
+      "type": "morning",
+      "sentAt": "2026-03-25T08:15:00+03:00",
+      "content": "Write one paragraph about a method or approach you use in your teaching or research. Use a relative clause and inherent or facilitate.",
+      "targetVocab": [
+        "inherent",
+        "facilitate",
+        "relative clause"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "2026-03-25-afternoon",
+      "channel": "whatsapp",
+      "type": "afternoon",
+      "sentAt": "2026-03-25T14:00:00+03:00",
+      "content": "Do you think art can function as a form of research, or are they fundamentally different? Give your opinion in 4-6 sentences. Use at least one AWL set 4 word: inherent, facilitate, acknowledge, prominent, sustain.",
+      "targetVocab": [
+        "inherent",
+        "facilitate",
+        "acknowledge",
+        "prominent",
+        "sustain",
+        "AWL transfer"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "2026-03-26-email",
+      "channel": "email",
+      "type": "email",
+      "sentAt": "2026-03-26T08:30:00+03:00",
+      "content": "Quantifiers + AWL set 5 exercise (5 questions: formal quantifier fill-in, a-number-of verb agreement, comprises/generates/integrates, attributes, rewrite with quantifier + AWL word)",
+      "targetVocab": [
+        "several",
+        "a number of",
+        "the majority of",
+        "comprises",
+        "generates",
+        "integrates",
+        "attributes",
+        "framework"
+      ],
+      "status": "answered"
+    },
+    {
+      "id": "2026-03-26-morning",
+      "channel": "whatsapp",
+      "type": "morning",
+      "sentAt": "2026-03-26T08:30:00+03:00",
+      "content": "Write one paragraph about a space where you work -- studio, office, or classroom. Use one quantifier (several, a number of, the majority of, much of) and one AWL set 5 word (comprise, generate, integrate, attribute, framework).",
+      "targetVocab": [
+        "several",
+        "a number of",
+        "the majority of",
+        "much of",
+        "comprise",
+        "generate",
+        "integrate",
+        "attribute",
+        "framework"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "2026-03-26-vocab-review",
+      "channel": "telegram",
+      "type": "vocab-review",
+      "sentAt": "2026-03-26T08:00:00+03:00",
+      "content": "5-question vocab review: spelling (surprising), boring/bored fill-in, scrutinize spelling, prevalent sentence, articulate sentence",
+      "targetVocab": [
+        "surprising",
+        "boring",
+        "bored",
+        "scrutinize",
+        "prevalent",
+        "articulate"
+      ],
+      "status": "answered"
+    },
+    {
+      "id": "2026-03-26-afternoon",
+      "channel": "telegram",
+      "type": "afternoon",
+      "sentAt": "2026-03-26T14:00:00+03:00",
+      "content": "Opinion prompt: Is direct feedback more effective than open-ended questions in a studio critique? 4-6 sentences. Focus on -ing/-ed adjective free recall.",
+      "targetVocab": [
+        "-ing/-ed adjectives",
+        "satisfying",
+        "challenging",
+        "motivated",
+        "compelling"
+      ],
+      "status": "answered"
+    },
+    {
+      "id": "2026-03-27-email",
+      "channel": "email",
+      "type": "email",
+      "sentAt": "2026-03-27T06:15:07.517206+00:00",
+      "content": "if vs whether + noun number agreement + AWL Set 6 (empirical, paradigm, inhibit, concurrent, mediate). 5 questions.",
+      "targetVocab": [
+        "whether",
+        "one of the most",
+        "empirical",
+        "paradigm",
+        "inhibit",
+        "concurrent",
+        "mediate"
+      ],
+      "status": "answered"
+    },
+    {
+      "id": "2026-03-27-morning",
+      "channel": "telegram",
+      "type": "morning",
+      "sentAt": "2026-03-27T06:15:07.517206+00:00",
+      "content": "Write one paragraph about a constraint or limitation you work with. Use whether and one AWL Set 6 word.",
+      "targetVocab": [
+        "whether",
+        "empirical",
+        "paradigm",
+        "inhibit",
+        "concurrent",
+        "mediate"
+      ],
+      "status": "answered"
+    },
+    {
+      "id": "2026-03-27-vocab-review",
+      "channel": "telegram",
+      "type": "vocab-review",
+      "sentAt": "2026-03-27T06:15:07.517206+00:00",
+      "content": "5 words due: surprising (fill-in), scrutinize (spell), articulate (fill-in), constitute (fill-in), scrutinizing (fill-in -ing form)",
+      "targetVocab": [
+        "surprising",
+        "scrutinize",
+        "articulate",
+        "constitute"
+      ],
+      "status": "answered"
+    }
+  ],
+  "submissions": [
+    {
+      "promptId": "2026-03-22-morning",
+      "channel": "whatsapp",
+      "receivedAt": "2026-03-22T08:19:33+03:00",
+      "content": "The past week was not only so packed but also quite disorganized. If I had planned earlier, it would have been less stressful.",
+      "feedbackGiven": true,
+      "feedbackAt": "2026-03-23T08:05:00+03:00"
+    },
+    {
+      "promptId": "2026-03-22-test",
+      "channel": "email",
+      "receivedAt": "2026-03-22T08:31:38+03:00",
+      "content": "1) suprising 2) exhausted 3) [skipped] Q4 hedging rewrite correct 5) direct 6) contingent 7) elicited 8) mitigate pervasive tentative 9) If I had studied... 10) If she had told me...",
+      "feedbackGiven": true,
+      "feedbackAt": "2026-03-23T08:05:00+03:00",
+      "score": "8.5/10",
+      "scorePercent": 85
+    },
+    {
+      "promptId": "2026-03-23-email",
+      "channel": "email",
+      "receivedAt": "2026-03-23T09:27:05+03:00",
+      "content": "1) Although the project had several delays, it was completed on time. 2) Despite being tired, she finished the text. 3) ambiguous 4) articulate 5) While many artists define themselves multidisciplinary, certain media is more prevalent in their practice.",
+      "feedbackGiven": true,
+      "feedbackAt": "2026-03-24T08:10:00+03:00",
+      "score": "4.5/5",
+      "scorePercent": 90,
+      "errors": [
+        {
+          "type": "grammar",
+          "detail": "define themselves multidisciplinary -> define themselves AS multidisciplinary (missing preposition)",
+          "drilled": false,
+          "fixedCount": 0,
+          "lastDrilled": null
+        },
+        {
+          "type": "grammar",
+          "detail": "certain media IS -> certain media ARE (media is plural in formal academic writing)",
+          "drilled": false,
+          "fixedCount": 0,
+          "lastDrilled": null
+        }
+      ]
+    },
+    {
+      "promptId": "2026-03-23-morning",
+      "channel": "whatsapp",
+      "receivedAt": "2026-03-23T09:32:11+03:00",
+      "content": "Although I collected enough publications for my research, I still need to spend lots of time on them because they are still raw. Yesterday I briefly checked them and I noticed prevalent data errors. This means I should spend a day to scrutinize all of them.",
+      "feedbackGiven": true,
+      "feedbackAt": "2026-03-24T08:10:00+03:00",
+      "errors": [
+        {
+          "type": "vocab",
+          "detail": "prevalent data errors -- prevalent collocates with widespread phenomena across a field/population, not within a single dataset. Use widespread/recurring instead.",
+          "drilled": true,
+          "fixedCount": 0,
+          "lastDrilled": "2026-03-24T08:10:00+03:00"
+        }
+      ]
+    },
+    {
+      "promptId": "2026-03-24-email",
+      "channel": "email",
+      "receivedAt": "2026-03-24T09:24:17+03:00",
+      "content": "1) boring 2) confused 3) coherent 4) implicit 5) This idea is actually derived from DeLanda's latest book // (I realized I have difficulty using 'constitute'; maybe I'll need more examples.)",
+      "feedbackGiven": true,
+      "feedbackAt": "2026-03-25T08:05:00+03:00",
+      "score": "4/5",
+      "scorePercent": 80,
+      "errors": [
+        {
+          "type": "grammar",
+          "detail": "Q1: only answered first blank (boring) \u2014 second blank needed 'bored' (students felt bored)",
+          "drilled": false,
+          "fixedCount": 0,
+          "lastDrilled": null
+        },
+        {
+          "type": "grammar",
+          "detail": "Q2: only answered first blank (confused) \u2014 second blank needed 'confusing' (brief was confusing)",
+          "drilled": false,
+          "fixedCount": 0,
+          "lastDrilled": null
+        }
+      ]
+    },
+    {
+      "promptId": "2026-03-24-morning",
+      "channel": "whatsapp",
+      "receivedAt": "2026-03-24T10:18:16+03:00",
+      "content": "Yesterday was quite exhausting for me because I had not enough sleep the day before. Feeling tired all the day is neither productive nor fun but this is life and it happens. The most interesting thing happened yesterday was seeing the migrating birds. It made me feel relieved after a tiring day",
+      "feedbackGiven": true,
+      "feedbackAt": "2026-03-25T08:05:00+03:00",
+      "errors": [
+        {
+          "type": "grammar",
+          "detail": "had not enough sleep -> had not had enough sleep (past perfect = had + past participle/noun phrase)",
+          "drilled": true,
+          "fixedCount": 0,
+          "lastDrilled": "2026-03-25T08:10:00+03:00"
+        },
+        {
+          "type": "grammar",
+          "detail": "all the day -> all day (no article with 'all day/week/year')",
+          "drilled": true,
+          "fixedCount": 0,
+          "lastDrilled": "2026-03-25T08:10:00+03:00"
+        },
+        {
+          "type": "grammar",
+          "detail": "The most interesting thing happened -> The most interesting thing that happened (defining relative clause requires relative pronoun)",
+          "drilled": true,
+          "fixedCount": 0,
+          "lastDrilled": "2026-03-25T08:10:00+03:00"
+        },
+        {
+          "type": "vocab",
+          "detail": "No AWL set 3 word used \u2014 prompt required at least one (coherent, implicit, derive, constitute, dimension)",
+          "drilled": false,
+          "fixedCount": 0,
+          "lastDrilled": null
+        }
+      ]
+    },
+    {
+      "promptId": "2026-03-25-test",
+      "channel": "email",
+      "receivedAt": "2026-03-25T09:56:47+03:00",
+      "content": "exhausting/exhausted, interested/interesting, although, despite, scruntinize, implicit, dimension, The plague was prevalent across the population..., My teaching constitute interactive activities., is not are",
+      "feedbackGiven": true,
+      "feedbackAt": "2026-03-26T08:30:00+03:00",
+      "score": "9/10",
+      "scorePercent": 90,
+      "errors": [
+        {
+          "type": "spelling",
+          "detail": "scruntinize -> scrutinize (extra n before t)",
+          "drilled": true,
+          "fixedCount": 0,
+          "lastDrilled": "2026-03-26T08:30:00+03:00"
+        },
+        {
+          "type": "grammar",
+          "detail": "My teaching constitute -> constitutes (singular subject); direction: put smaller elements first as subject",
+          "drilled": true,
+          "fixedCount": 0,
+          "lastDrilled": "2026-03-26T08:30:00+03:00"
+        }
+      ]
+    },
+    {
+      "promptId": "2026-03-26-vocab-review",
+      "channel": "telegram",
+      "receivedAt": "2026-03-26T10:30:00+03:00",
+      "content": "Surprised 2)boring / bored 3)scrutinize 4) It was a prevalent belief 5) it is similar to summary / I articulated all the process",
+      "feedbackGiven": true,
+      "feedbackAt": "2026-03-26T11:00:00+03:00",
+      "score": "3.5/5",
+      "scorePercent": 70,
+      "errors": [
+        {
+          "type": "grammar",
+          "detail": "Q1: wrote 'surprised' instead of 'surprising' (-ing/-ed free recall error; -ed is default under recall)",
+          "drilled": true,
+          "fixedCount": 0,
+          "lastDrilled": "2026-03-26T11:00:00+03:00"
+        },
+        {
+          "type": "vocab",
+          "detail": "Q5: articulate confused with summarize in first attempt; second attempt 'all the process' is not a standard collocate",
+          "drilled": true,
+          "fixedCount": 0,
+          "lastDrilled": "2026-03-26T11:00:00+03:00"
+        }
+      ]
+    },
+    {
+      "promptId": "2026-03-26-afternoon",
+      "channel": "telegram",
+      "receivedAt": "2026-03-26T14:49:01.500Z",
+      "content": "I don't think it is really possible to ask whether feedback or open-ended questions are more effective than each other because they are both necessary for a motivating lesson. One of the most challenging thing in a studio lesson...",
+      "feedbackGiven": true,
+      "feedbackAt": "2026-03-26T15:17:00Z",
+      "errors": [
+        {
+          "type": "grammar",
+          "detail": "One of the most challenging thing -> things (plural after \"one of the most\")",
+          "drilled": false,
+          "fixedCount": 0,
+          "lastDrilled": null
+        },
+        {
+          "type": "grammar",
+          "detail": "no matter what type of they are -> no matter what type they are (extra \"of\")",
+          "drilled": false,
+          "fixedCount": 0,
+          "lastDrilled": null
+        },
+        {
+          "type": "grammar",
+          "detail": "if it is satisfying -> whether it is satisfying (formal embedded question; also drop redundant \"or not\")",
+          "drilled": false,
+          "fixedCount": 0,
+          "lastDrilled": null
+        },
+        {
+          "type": "vocab",
+          "detail": "No -ed adjective used; prompt asked for both -ing and -ed free recall",
+          "drilled": false,
+          "fixedCount": 0,
+          "lastDrilled": null
+        }
+      ]
+    },
+    {
+      "promptId": "2026-03-26-email",
+      "channel": "email",
+      "receivedAt": "2026-03-26T08:15:13+03:00",
+      "content": "1) numerous projects (removed the) 2) it should be have 3) comprise 4) attributes 5) considerable number of the projects integrate digital and physical elements together",
+      "feedbackGiven": true,
+      "feedbackAt": "2026-03-27T06:15:07.517206+00:00",
+      "score": "4/5",
+      "scorePercent": 80,
+      "errors": [
+        {
+          "type": "grammar",
+          "detail": "comprise -> comprises (singular subject: The course comprises)",
+          "drilled": true,
+          "fixedCount": 0,
+          "lastDrilled": "2026-03-27T06:15:07.517206+00:00"
+        },
+        {
+          "type": "grammar",
+          "detail": "Missing article: A considerable number of (not considerable number of)",
+          "drilled": true,
+          "fixedCount": 0,
+          "lastDrilled": "2026-03-27T06:15:07.517206+00:00"
+        }
+      ]
+    },
+    {
+      "promptId": "2026-03-27-email",
+      "channel": "telegram",
+      "receivedAt": "2026-03-27T14:35:00+03:00",
+      "content": "Q1: The jury discussed wheter the work fulfilled the brief. Q2: one of the most significant challenges. Q3: empirical. Q4: paradigm. Q5: Lacking critical thinking skills inhibits mediation process heavily.",
+      "feedbackGiven": false,
+      "errors": [
+        {
+          "type": "spelling",
+          "detail": "Q1: wheter -> whether (typo; concept correct)",
+          "drilled": false,
+          "fixedCount": 0,
+          "lastDrilled": null
+        },
+        {
+          "type": "grammar",
+          "detail": "Q5: inhibits mediation process -> inhibits the mediation process (missing article)",
+          "drilled": false,
+          "fixedCount": 0,
+          "lastDrilled": null
+        }
+      ]
+    },
+    {
+      "promptId": "2026-03-27-vocab-review",
+      "channel": "telegram",
+      "receivedAt": "2026-03-27T14:35:00+03:00",
+      "content": "Q1: surprising (correct). Q2: borind/bored (typo for boring; concept correct). Q3: scrun-ti-ze (still wrong). Q4: articulately his ideas throughly. Q5: the program comprise four modules.",
+      "feedbackGiven": false,
+      "score": "2.5/5",
+      "scorePercent": 50,
+      "errors": [
+        {
+          "type": "spelling",
+          "detail": "Q3: scrutinize mispronounced/spelled as scrun-ti-ze (extra n before t); pattern persists",
+          "drilled": false,
+          "fixedCount": 0,
+          "lastDrilled": null
+        },
+        {
+          "type": "grammar",
+          "detail": "Q4: articulately -> articulated (wrong word class; needed past tense verb, not adverb); throughly -> thoroughly (spelling)",
+          "drilled": false,
+          "fixedCount": 0,
+          "lastDrilled": null
+        },
+        {
+          "type": "grammar",
+          "detail": "Q5: comprise -> comprises (singular subject: the program)",
+          "drilled": false,
+          "fixedCount": 0,
+          "lastDrilled": null
+        },
+        {
+          "type": "positive",
+          "detail": "Q1: surprising CORRECT (free recall of -ing form) -- previous pattern of defaulting to -ed may be resolving",
+          "drilled": false,
+          "fixedCount": 0,
+          "lastDrilled": null
+        }
+      ]
+    },
+    {
+      "promptId": "2026-03-27-morning",
+      "channel": "telegram",
+      "receivedAt": "2026-03-27T14:35:00+03:00",
+      "content": "I've been thinking a lot whether I should draw more often or focus installation as I've been doing for few years. I then later realized they don't exclude each other because installations can comprise drawings too. It is always possible to integrate different media into each other.",
+      "feedbackGiven": false,
+      "errors": [
+        {
+          "type": "grammar",
+          "detail": "focus installation -> focus on installation (missing preposition; focus on = to direct attention)",
+          "drilled": false,
+          "fixedCount": 0,
+          "lastDrilled": null
+        },
+        {
+          "type": "grammar",
+          "detail": "for few years -> for a few years (missing article before few)",
+          "drilled": false,
+          "fixedCount": 0,
+          "lastDrilled": null
+        },
+        {
+          "type": "positive",
+          "detail": "AWL Set 5 words used: comprise and integrate both appear in paragraph (correct). No gap to flag.",
+          "drilled": false,
+          "fixedCount": 0,
+          "lastDrilled": null
+        },
+        {
+          "type": "positive",
+          "detail": "whether used correctly in embedded question context. comprise used correctly with plural subject (installations). integrate used naturally.",
+          "drilled": false,
+          "fixedCount": 0,
+          "lastDrilled": null
+        }
+      ]
+    }
+  ],
+  "pendingFeedback": []
+}

@@ -1,5 +1,19 @@
 # Changelog
 
+## v3.5.0 — 2026-03-27
+
+### New
+- [new] Tutor passive grammar scan: nightly job (21:30) reads last 24h of Telegram messages and dashboard chat to detect grammar/spelling/word-choice errors. Errors enter SRS after 2 passive observations with 7-day starter interval. Silent -- no feedback sent.
+- [new] Chat logging: user messages in dashboard chat logged to `data/chat-log.jsonl` for Tutor passive scan.
+- [new] Grammar SRS: grammar errors from writing submissions now enter full spaced repetition (same interval curve as vocab) instead of simple counter. Errors logged to `tutor-log.jsonl`, drilled via `/api/tutor/due`.
+- [new] Stealth interleaving: due SRS items (vocab + grammar) embedded as natural constraints in exercises and writing prompts without explicit labels. Learner practices without knowing it's a review.
+
+### Fixes
+- [fix] Catch-up scheduler: daily jobs now use `lastRunDate` (YYYY-MM-DD) check instead of interval math. Morning wake-up no longer fires evening jobs from the previous night.
+- [fix] Catch-up staleness window: daily jobs only catch up if the missed slot is within 2 hours. Morning jobs don't fire at 6pm.
+- [fix] `blocks/register` preserves `sent: true` and `nudgeSent: true` on same-day re-registration. Tutor phrases and meeting preps no longer re-fire when kybernetes-pulse runs multiple times.
+- [fix] Pencil button hidden for `api-call` type jobs in Schedules tab (no seed prompt to edit).
+
 ## v3.4.2 — 2026-03-26
 
 ### New
