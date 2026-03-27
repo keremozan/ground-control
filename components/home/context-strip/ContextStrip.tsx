@@ -74,15 +74,20 @@ export default function ContextStrip() {
     return () => document.removeEventListener("keydown", handler);
   }, [openPanel]);
 
-  const segments: { id: PanelId; icon: React.ElementType; label: string }[] = [
-    { id: "inbox", icon: Mail, label: inboxLabel },
-    { id: "calendar", icon: CalendarDays, label: calLabel },
-    { id: "tasks", icon: ListChecks, label: taskLabel },
+  const segments: { id: PanelId; icon: React.ElementType; label: string; panel: React.ReactNode }[] = [
+    { id: "inbox", icon: Mail, label: inboxLabel, panel: <WidgetErrorBoundary name="Inbox"><InboxPanel /></WidgetErrorBoundary> },
+    { id: "calendar", icon: CalendarDays, label: calLabel, panel: <WidgetErrorBoundary name="Calendar"><CalendarPanel /></WidgetErrorBoundary> },
+    { id: "tasks", icon: ListChecks, label: taskLabel, panel: <WidgetErrorBoundary name="Tasks"><TasksPanel /></WidgetErrorBoundary> },
   ];
 
   return (
     <div className="context-strip" style={{ gridColumn: "span 2" }}>
-      {segments.map(({ id, icon: Icon, label }) => (
+      {/* Backdrop for click-outside */}
+      {openPanel && (
+        <div className="context-strip-backdrop" onClick={() => setOpenPanel(null)} />
+      )}
+
+      {segments.map(({ id, icon: Icon, label, panel }) => (
         <div
           key={id}
           className={`context-strip-segment${openPanel === id ? " active" : ""}`}
@@ -90,35 +95,17 @@ export default function ContextStrip() {
         >
           <Icon size={14} />
           <span>{label}</span>
+
+          {/* Popover -- always mounted so widget keeps fetch state */}
+          <div
+            className="context-strip-popover"
+            style={openPanel === id ? undefined : { visibility: "hidden", pointerEvents: "none", maxHeight: 0, overflow: "hidden" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {panel}
+          </div>
         </div>
       ))}
-
-      {/* Backdrop for click-outside */}
-      {openPanel && (
-        <div className="context-strip-backdrop" onClick={() => setOpenPanel(null)} />
-      )}
-
-      {/* Dropdown overlay -- always mounted so widgets keep their fetch state */}
-      <div
-        className="context-strip-dropdown"
-        style={openPanel ? undefined : { visibility: "hidden", pointerEvents: "none", maxHeight: 0, overflow: "hidden" }}
-      >
-        <div style={{ display: openPanel === "inbox" ? "flex" : "none", flexDirection: "column", flex: 1, minHeight: 0 }}>
-          <WidgetErrorBoundary name="Inbox">
-            <InboxPanel />
-          </WidgetErrorBoundary>
-        </div>
-        <div style={{ display: openPanel === "calendar" ? "flex" : "none", flexDirection: "column", flex: 1, minHeight: 0 }}>
-          <WidgetErrorBoundary name="Calendar">
-            <CalendarPanel />
-          </WidgetErrorBoundary>
-        </div>
-        <div style={{ display: openPanel === "tasks" ? "flex" : "none", flexDirection: "column", flex: 1, minHeight: 0 }}>
-          <WidgetErrorBoundary name="Tasks">
-            <TasksPanel />
-          </WidgetErrorBoundary>
-        </div>
-      </div>
     </div>
   );
 }

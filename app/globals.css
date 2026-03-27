@@ -759,6 +759,7 @@ button:focus {
   transition: background var(--ease-fast), color var(--ease-fast);
   border-right: 1px solid var(--border);
   user-select: none;
+  position: relative;
 }
 
 .context-strip-segment:last-child {
@@ -776,16 +777,15 @@ button:focus {
   box-shadow: inset 0 -2px 0 var(--text-3);
 }
 
-.context-strip-dropdown {
+.context-strip-popover {
   position: absolute;
-  top: 100%;
+  top: calc(100% + 1px);
   left: -1px;
-  right: -1px;
+  width: calc(100% + 2px);
   max-height: 50vh;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-top: none;
-  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  border-radius: var(--radius-lg);
   box-shadow: 0 4px 12px rgba(0,0,0,0.08);
   z-index: 50;
   overflow-y: auto;
