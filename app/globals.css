@@ -177,6 +177,10 @@ body {
   border-radius: 0;
 }
 
+.widget .widget > .widget-header {
+  display: none;
+}
+
 .widget-header {
   padding: 10px var(--sp-4);
   border-bottom: 1px solid var(--border);
