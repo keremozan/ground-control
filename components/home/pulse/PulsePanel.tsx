@@ -3,12 +3,8 @@ import { useEffect, useState, useCallback } from "react";
 
 // ── Types ─────────────────────────────────────────
 
-interface SphereHours {
-  research: number;
-  collegium: number;
-  practice: number;
-  life: number;
-  travel: number;
+interface CategoryHours {
+  [category: string]: number;
 }
 
 interface CrewEntry {
@@ -25,8 +21,8 @@ interface Alert {
 }
 
 interface PulseData {
-  spheres: { today: SphereHours; week: SphereHours };
-  breakdown: Record<string, Record<string, number>>;
+  categories: { today: CategoryHours; week: CategoryHours };
+  colors: Record<string, string>;
   crew: CrewEntry[];
   dayPulse: { planTotal: number | null; planDone: number | null; energy: number | null };
   density: { bookedHours: number; freeHours: number };
@@ -34,16 +30,6 @@ interface PulseData {
 }
 
 // ── Constants ─────────────────────────────────────
-
-const SPHERE_COLORS: Record<string, string> = {
-  practice: "#7c3aed",
-  research: "#2563eb",
-  collegium: "#f97316",
-  life: "#059669",
-  travel: "#94a3b8",
-};
-
-const SPHERE_ORDER: (keyof SphereHours)[] = ["research", "collegium", "practice", "life", "travel"];
 
 const ALERT_DOT: Record<string, string> = {
   red: "var(--red)",
@@ -67,10 +53,19 @@ function formatHours(h: number): string {
   return `${h}h`;
 }
 
+function sortedCategories(hours: CategoryHours): string[] {
+  return Object.entries(hours)
+    .filter(([, h]) => h > 0)
+    .sort((a, b) => b[1] - a[1])
+    .map(([cat]) => cat);
+}
+
 // ── Sub-components ────────────────────────────────
 
-function SphereBar({ data, label }: { data: SphereHours; label: string }) {
-  const total = SPHERE_ORDER.reduce((sum, s) => sum + data[s], 0);
+function CategoryBar({ data, colors, label }: { data: CategoryHours; colors: Record<string, string>; label: string }) {
+  const sorted = sortedCategories(data);
+  const total = sorted.reduce((sum, cat) => sum + data[cat], 0);
+
   if (total === 0) return (
     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
       <span className="section-label" style={{ width: 40, textTransform: "none", fontSize: 10 }}>{label}</span>
@@ -83,15 +78,15 @@ function SphereBar({ data, label }: { data: SphereHours; label: string }) {
     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
       <span className="section-label" style={{ width: 40, textTransform: "none", fontSize: 10 }}>{label}</span>
       <div style={{ flex: 1, height: 14, display: "flex", borderRadius: 3, overflow: "hidden" }}>
-        {SPHERE_ORDER.filter(s => data[s] > 0).map(s => (
+        {sorted.map(cat => (
           <div
-            key={s}
+            key={cat}
             style={{
-              width: `${(data[s] / total) * 100}%`,
-              background: SPHERE_COLORS[s],
+              width: `${(data[cat] / total) * 100}%`,
+              background: colors[cat] || "#6b7280",
               minWidth: 4,
             }}
-            title={`${s}: ${formatHours(data[s])}`}
+            title={`${cat}: ${formatHours(data[cat])}`}
           />
         ))}
       </div>
@@ -100,25 +95,24 @@ function SphereBar({ data, label }: { data: SphereHours; label: string }) {
   );
 }
 
-function SphereBreakdown({ breakdown, weekHours }: { breakdown: Record<string, Record<string, number>>; weekHours: SphereHours }) {
+function CategoryBreakdown({ hours, colors }: { hours: CategoryHours; colors: Record<string, string> }) {
+  const sorted = sortedCategories(hours);
+  if (sorted.length === 0) return null;
+
   return (
     <div style={{ marginTop: 8 }}>
-      {SPHERE_ORDER.filter(s => weekHours[s] > 0).map(sphere => (
-        <div key={sphere} style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 3 }}>
+      {sorted.map(cat => (
+        <div key={cat} style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 3 }}>
           <span style={{
             display: "inline-block", width: 6, height: 6, borderRadius: "50%",
-            background: SPHERE_COLORS[sphere], flexShrink: 0, marginTop: 2,
+            background: colors[cat] || "#6b7280", flexShrink: 0, marginTop: 2,
           }} />
           <span style={{ fontSize: 11, color: "var(--text)", fontWeight: 500 }}>
-            {sphere.charAt(0).toUpperCase() + sphere.slice(1)} {formatHours(weekHours[sphere])}
+            {cat.charAt(0).toUpperCase() + cat.slice(1)}
           </span>
-          {breakdown[sphere] && (
-            <span style={{ fontSize: 10, color: "var(--text-3)" }}>
-              {Object.entries(breakdown[sphere]).map(([label, h], i) => (
-                <span key={label}>{i > 0 ? " · " : ""}{label} {formatHours(h)}</span>
-              ))}
-            </span>
-          )}
+          <span style={{ fontSize: 10, color: "var(--text-3)" }}>
+            {formatHours(hours[cat])}
+          </span>
         </div>
       ))}
     </div>
@@ -258,10 +252,10 @@ export default function PulsePanel() {
 
   return (
     <div style={{ padding: "8px 12px", overflowY: "auto", flex: 1 }}>
-      <Section label="Time by Sphere">
-        <SphereBar data={data.spheres.today} label="Today" />
-        <SphereBar data={data.spheres.week} label="Week" />
-        <SphereBreakdown breakdown={data.breakdown} weekHours={data.spheres.week} />
+      <Section label="Time by Category">
+        <CategoryBar data={data.categories.today} colors={data.colors} label="Today" />
+        <CategoryBar data={data.categories.week} colors={data.colors} label="Week" />
+        <CategoryBreakdown hours={data.categories.week} colors={data.colors} />
       </Section>
 
       <Section label="Crew This Week">

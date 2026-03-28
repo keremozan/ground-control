@@ -239,19 +239,20 @@ const config = {
     "#b45309": "admin|meeting|office|budget",
   } as Record<string, string>,
 
-  // Calendar colorId → sphere mapping for Pulse tab
-  // Maps Google Calendar event colorId to a label and sphere
-  calendarSphereMapping: {
-    "1":  { label: "academia", sphere: "research" },
-    "2":  { label: "meeting", sphere: "collegium" },
-    "3":  { label: "free time", sphere: "life" },
-    "4":  { label: "exercise", sphere: "life" },
-    "5":  { label: "social", sphere: "life" },
-    "6":  { label: "chores", sphere: "life" },
-    "8":  { label: "travel", sphere: "travel" },
-    "9":  { label: "studio", sphere: "practice" },
-    "10": { label: "academia", sphere: "research" },
-  } as Record<string, { label: string; sphere: string }>,
+  // Calendar colorId → category label for Pulse tab
+  // Maps Google Calendar event colorId to your category name
+  // Colors come from Google's fixed palette, only labels are configurable
+  calendarCategoryMapping: {
+    "1":  "study",
+    "2":  "meeting",
+    "3":  "free time",
+    "4":  "exercise",
+    "5":  "social",
+    "6":  "chores",
+    "8":  "travel",
+    "9":  "studio",
+    "10": "academia",
+  } as Record<string, string>,
 };
 
 export default config;
