@@ -2,6 +2,9 @@
 
 ## v3.6.2 — 2026-03-28
 
+### New
+- [new] Sensor ingestion pipeline: `POST /api/sensors` endpoint accepts typed sensor events (sleep, health biomarkers) and appends to `data/sensor-log.json`. Includes reader library, validation, pruning, and dedup helpers.
+
 ## v3.6.1 — 2026-03-28
 
 ### Fixes
