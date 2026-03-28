@@ -10,7 +10,6 @@ import {
   isDuplicate,
   readLog,
   writeLog,
-  SENSOR_LOG_PATH,
   type SensorEvent,
 } from "@/lib/sensors";
 

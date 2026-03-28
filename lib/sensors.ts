@@ -1,5 +1,5 @@
 import fs from "fs";
-import { join } from "path";
+import { join, dirname } from "path";
 
 // ── Types ────────────────────────────────────────
 
@@ -36,7 +36,7 @@ export function readLog(): SensorEvent[] {
 }
 
 export function writeLog(entries: SensorEvent[]) {
-  const dir = SENSOR_LOG_PATH.replace(/\/[^/]+$/, "");
+  const dir = dirname(SENSOR_LOG_PATH);
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(SENSOR_LOG_PATH, JSON.stringify(entries, null, 2));
 }
