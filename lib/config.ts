@@ -76,6 +76,10 @@ export const EMAIL_LABEL_COLORS: Record<string, { color: string; bg: string }> =
 /** Calendar event title → character color mapping (regex patterns) */
 export const CALENDAR_COLOR_PATTERNS: Record<string, string> = (userConfig as Record<string, unknown>).calendarColorPatterns as Record<string, string> || {};
 
+/** Calendar colorId → sphere mapping for Pulse tab */
+export const CALENDAR_SPHERE_MAPPING: Record<string, { label: string; sphere: string }> =
+  (userConfig as Record<string, unknown>).calendarSphereMapping as Record<string, { label: string; sphere: string }> || {};
+
 // ── Gemini ──────────────────────────────────────
 
 export const GEMINI_API_KEY = ((userConfig as Record<string, unknown>).gemini as { apiKey?: string } | undefined)?.apiKey || '';
