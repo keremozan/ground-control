@@ -4,10 +4,16 @@ import { SCHEDULE_JOBS } from '@/lib/scheduler';
 import { readJobState } from '@/lib/job-state';
 import { apiOk } from '@/lib/api-helpers';
 
-/** Parse a simple cron string like "08:00 daily" or "Monday 08:00" into expected interval in ms */
+/** Parse the scheduled HH:MM from a cron string. Returns null if not found. */
+function parseScheduledTime(cron: string): { h: number; m: number } | null {
+  const match = cron.match(/(\d{1,2}):(\d{2})/);
+  if (!match) return null;
+  return { h: parseInt(match[1], 10), m: parseInt(match[2], 10) };
+}
+
+/** Expected interval for non-daily jobs (weekly, monthly). */
 function expectedIntervalMs(cron: string): number {
   const lower = cron.toLowerCase();
-  if (lower.includes('daily')) return 24 * 60 * 60 * 1000;
   if (lower.includes('1st')) return 30 * 24 * 60 * 60 * 1000;
   const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
   if (days.some(d => lower.includes(d))) {
@@ -37,28 +43,44 @@ const DEFAULT_PRIORITY = 50;
 
 function getMissedJobs() {
   const state = readJobState();
-  const now = Date.now();
+  const nowMs = Date.now();
+  const nowDate = new Date(nowMs);
+  const todayStr = nowDate.toISOString().slice(0, 10); // YYYY-MM-DD
   const missed: { jobId: string; charName: string; label: string; missedSince: string; priority: number }[] = [];
 
   for (const job of SCHEDULE_JOBS) {
     if (!job.enabled) continue;
 
-    const startedAt = state[job.id]?.startedAt;
-    if (startedAt && now - new Date(startedAt).getTime() < MAX_JOB_DURATION_MS) continue;
+    const entry = state[job.id];
+    const startedAt = entry?.startedAt;
+    if (startedAt && nowMs - new Date(startedAt).getTime() < MAX_JOB_DURATION_MS) continue;
 
-    const last = state[job.id]?.lastRunAt;
-    const interval = expectedIntervalMs(job.cron);
-    const threshold = interval + 30 * 60 * 1000;
-
-    if (!last || (now - new Date(last).getTime()) > threshold) {
-      missed.push({
-        jobId: job.id,
-        charName: job.charName,
-        label: job.label,
-        missedSince: last || 'never',
-        priority: PRIORITY[job.id] ?? DEFAULT_PRIORITY,
-      });
+    if (job.cron.toLowerCase().includes('daily')) {
+      // Daily job: fire only if (a) scheduled time has passed today, and (b) hasn't run today yet
+      const t = parseScheduledTime(job.cron);
+      if (t) {
+        const scheduledToday = new Date(nowDate);
+        scheduledToday.setHours(t.h, t.m, 0, 0);
+        if (nowDate < scheduledToday) continue; // not time yet today
+        const staleMs = nowMs - scheduledToday.getTime();
+        if (staleMs > 2 * 60 * 60 * 1000) continue; // missed by >2h, skip
+      }
+      if (entry?.lastRunDate === todayStr) continue; // already ran today
+    } else {
+      // Weekly/monthly: use interval threshold
+      const last = entry?.lastRunAt;
+      const interval = expectedIntervalMs(job.cron);
+      const threshold = interval + 30 * 60 * 1000;
+      if (last && (nowMs - new Date(last).getTime()) <= threshold) continue;
     }
+
+    missed.push({
+      jobId: job.id,
+      charName: job.charName,
+      label: job.label,
+      missedSince: entry?.lastRunAt || 'never',
+      priority: PRIORITY[job.id] ?? DEFAULT_PRIORITY,
+    });
   }
 
   return missed.sort((a, b) => a.priority - b.priority);

@@ -2,6 +2,18 @@
 
 ## v3.6.0 — 2026-03-27
 
+### New
+- [new] /api/backup: automated git backup endpoint for ~/.claude/ agent system, commits and pushes on GET request (cron-triggered)
+
+### Fixes
+- [fix] job-state: add lastRunDate (YYYY-MM-DD) field; catch-up scheduler uses date comparison for daily jobs + 2h staleness window
+- [fix] tutor/due: add passive source type; items with 2+ passive-only observations enter SRS with 7-day starter interval instead of being ignored
+- [fix] LogsTab: clear injected-jobs localStorage cache when clearing logs
+
+### System
+- [sys] telegram-router: prepend [TELEGRAM-INTERACTIVE] tag to all Telegram session prompts for passive scan discrimination
+- [sys] .gitignore: track tutor-submissions.json, tutor-vocab-bank.json, tutor-scan-state.json in version control
+
 ## v3.5.0 — 2026-03-27
 
 ### New

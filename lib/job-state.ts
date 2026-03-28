@@ -5,6 +5,7 @@ const STATE_FILE = path.join(process.cwd(), 'data', 'job-state.json');
 
 export type JobState = Record<string, {
   lastRunAt: string;
+  lastRunDate?: string;  // YYYY-MM-DD, set on every successful/error run
   lastResult?: 'success' | 'error';
   startedAt?: string;
 }>;
@@ -31,7 +32,13 @@ export function markJobStarted(jobId: string) {
 
 export function markJobRun(jobId: string, result: 'success' | 'error') {
   const state = readJobState();
-  state[jobId] = { lastRunAt: new Date().toISOString(), lastResult: result, startedAt: undefined };
+  const now = new Date();
+  state[jobId] = {
+    lastRunAt: now.toISOString(),
+    lastRunDate: now.toISOString().slice(0, 10),
+    lastResult: result,
+    startedAt: undefined,
+  };
   writeJobState(state);
 }
 

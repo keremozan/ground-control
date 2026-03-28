@@ -7,6 +7,17 @@ import { wrapWithAutoReview, detectIntent, type AutoReviewConfig } from '@/lib/a
 import { apiError, apiStream } from '@/lib/api-helpers';
 import { recordOutcome } from '@/lib/outcome-tracker';
 import { recordUsage } from '@/lib/usage-analytics';
+import { appendFile } from 'fs/promises';
+import { join } from 'path';
+import { HOME } from '@/lib/config';
+
+const CHAT_LOG_PATH = join(HOME, 'Projects/ground-control/data/chat-log.jsonl');
+
+async function logChatMessage(characterId: string, text: string) {
+  if (!text || text.trim().length < 10) return;
+  const entry = JSON.stringify({ ts: new Date().toISOString(), char: characterId, text: text.trim() }) + '\n';
+  await appendFile(CHAT_LOG_PATH, entry, 'utf-8').catch(() => {});
+}
 
 const CORRECTION_PATTERNS = [
   /^no[,.\s](?!problem|need|worries|rush)/i,
@@ -101,6 +112,9 @@ export async function POST(req: Request) {
       });
     }
   }
+
+  // Log user message for passive Tutor scan
+  await logChatMessage(characterId, message);
 
   // Detect active skill for characters with autoReviewConfig on first messages only
   const autoReviewConfig = char.autoReviewConfig as AutoReviewConfig | undefined;

@@ -41,7 +41,10 @@ yarn-error.log*
 next-env.d.ts
 
 # job results (server-side state)
-/data/
+/data/*
+!/data/tutor-submissions.json
+!/data/tutor-vocab-bank.json
+!/data/tutor-scan-state.json
 
 # user config (secrets)
 ground-control.config.ts

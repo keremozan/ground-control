@@ -1,5 +1,5 @@
 {
-  "lastChecked": "2026-03-27T14:35:00+03:00",
+  "lastChecked": "2026-03-28T14:00:00+03:00",
   "prompts": [
     {
       "id": "2026-03-22-morning",
@@ -268,6 +268,54 @@
         "constitute"
       ],
       "status": "answered"
+    },
+    {
+      "id": "2026-03-28-email",
+      "channel": "email",
+      "type": "email",
+      "sentAt": "2026-03-28T06:00:00+03:00",
+      "content": "define as / describe as + AWL Set 7 (pragmatic, analogous, preliminary, aggregate, contradict). 5 questions.",
+      "targetVocab": [
+        "define as",
+        "describe as",
+        "preliminary",
+        "contradict",
+        "pragmatic",
+        "analogous",
+        "aggregate",
+        "scrutinize",
+        "comprises"
+      ],
+      "status": "answered"
+    },
+    {
+      "id": "2026-03-28-morning",
+      "channel": "telegram",
+      "type": "morning",
+      "sentAt": "2026-03-28T06:00:00+03:00",
+      "content": "Write one paragraph about your current art practice or a recent project. Use describe as / define as + one AWL Set 7 word.",
+      "targetVocab": [
+        "describe as",
+        "define as",
+        "pragmatic",
+        "analogous",
+        "preliminary",
+        "aggregate",
+        "contradict"
+      ],
+      "status": "answered"
+    },
+    {
+      "id": "2026-03-28-afternoon",
+      "channel": "telegram",
+      "type": "afternoon",
+      "sentAt": "2026-03-28T14:00:00+03:00",
+      "content": "Do you ever feel a tension between your role as a teacher and your role as an artist? Give your opinion in 4-6 sentences. Focus on relative clauses in time expressions (there are times when...).",
+      "targetVocab": [
+        "relative adverb when",
+        "time expression clauses"
+      ],
+      "status": "pending"
     }
   ],
   "submissions": [
@@ -517,7 +565,7 @@
       "channel": "telegram",
       "receivedAt": "2026-03-27T14:35:00+03:00",
       "content": "Q1: The jury discussed wheter the work fulfilled the brief. Q2: one of the most significant challenges. Q3: empirical. Q4: paradigm. Q5: Lacking critical thinking skills inhibits mediation process heavily.",
-      "feedbackGiven": false,
+      "feedbackGiven": true,
       "errors": [
         {
           "type": "spelling",
@@ -533,14 +581,15 @@
           "fixedCount": 0,
           "lastDrilled": null
         }
-      ]
+      ],
+      "feedbackAt": "2026-03-28T06:00:00+03:00"
     },
     {
       "promptId": "2026-03-27-vocab-review",
       "channel": "telegram",
       "receivedAt": "2026-03-27T14:35:00+03:00",
       "content": "Q1: surprising (correct). Q2: borind/bored (typo for boring; concept correct). Q3: scrun-ti-ze (still wrong). Q4: articulately his ideas throughly. Q5: the program comprise four modules.",
-      "feedbackGiven": false,
+      "feedbackGiven": true,
       "score": "2.5/5",
       "scorePercent": 50,
       "errors": [
@@ -572,14 +621,15 @@
           "fixedCount": 0,
           "lastDrilled": null
         }
-      ]
+      ],
+      "feedbackAt": "2026-03-28T06:00:00+03:00"
     },
     {
       "promptId": "2026-03-27-morning",
       "channel": "telegram",
       "receivedAt": "2026-03-27T14:35:00+03:00",
       "content": "I've been thinking a lot whether I should draw more often or focus installation as I've been doing for few years. I then later realized they don't exclude each other because installations can comprise drawings too. It is always possible to integrate different media into each other.",
-      "feedbackGiven": false,
+      "feedbackGiven": true,
       "errors": [
         {
           "type": "grammar",
@@ -605,6 +655,50 @@
         {
           "type": "positive",
           "detail": "whether used correctly in embedded question context. comprise used correctly with plural subject (installations). integrate used naturally.",
+          "drilled": false,
+          "fixedCount": 0,
+          "lastDrilled": null
+        }
+      ],
+      "feedbackAt": "2026-03-28T06:00:00+03:00"
+    },
+    {
+      "promptId": "2026-03-28-email",
+      "channel": "email",
+      "receivedAt": "2026-03-28T11:30:00+03:00",
+      "content": "Q1: AS (describe as correct). Q2: PRELIMINARY. Q3: could not find word (answer: contradicted). Q4: SCRUTINIZED. Q5: compriseS.",
+      "feedbackGiven": true,
+      "feedbackAt": "2026-03-28T11:30:00+03:00",
+      "score": "4/5",
+      "scorePercent": 80,
+      "errors": [
+        {
+          "type": "vocab",
+          "detail": "Q3: could not produce contradicted for fill-in; used contradict correctly in free writing immediately after",
+          "drilled": false,
+          "fixedCount": 0,
+          "lastDrilled": null
+        }
+      ]
+    },
+    {
+      "promptId": "2026-03-28-morning",
+      "channel": "telegram",
+      "receivedAt": "2026-03-28T11:30:00+03:00",
+      "content": "I describe my current practice as a systematic curiosity, analogous to many other inquiries in science or philosophy, except the fact that art is less pragmatic. I usually aggregate many different entities in my works and there are times they contradict each other.",
+      "feedbackGiven": true,
+      "feedbackAt": "2026-03-28T11:30:00+03:00",
+      "errors": [
+        {
+          "type": "grammar",
+          "detail": "except the fact that -> except that (redundant; standard form drops \"the fact\")",
+          "drilled": false,
+          "fixedCount": 0,
+          "lastDrilled": null
+        },
+        {
+          "type": "grammar",
+          "detail": "there are times they contradict -> there are times when they contradict (missing relative adverb when)",
           "drilled": false,
           "fixedCount": 0,
           "lastDrilled": null

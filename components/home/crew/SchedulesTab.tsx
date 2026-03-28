@@ -200,7 +200,7 @@ export default function SchedulesTab({
                         {lastResult && <span>last: {formatLastRun(lastResult)}</span>}
                       </div>
                     </div>
-                    {job.type !== 'process-tasks' && (
+                    {job.type !== 'process-tasks' && job.type !== 'api-call' && (
                       <button onClick={() => setEditingJob({ id: job.id, label: job.label, seedPrompt: jobOverrides[job.id] ?? job.seedPrompt })} data-tip="Edit command" style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 20, height: 20, flexShrink: 0, background: jobOverrides[job.id] ? color + "16" : "transparent", border: `1px solid ${jobOverrides[job.id] ? color + "40" : "var(--border)"}`, borderRadius: 4, cursor: "pointer", color: jobOverrides[job.id] ? color : "var(--text-3)", transition: "all 0.15s ease" }}>
                         <Pencil size={9} strokeWidth={2} />
                       </button>

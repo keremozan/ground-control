@@ -169,20 +169,20 @@ async function handleMessage(charName: string, msg: TelegramMessage): Promise<vo
   }
 
   // Build prompt with history (same pattern as dashboard /api/chat)
-  let taskContent = '';
+  let taskContent = '[TELEGRAM-INTERACTIVE]\n\n';
   if (session.history.length > 0) {
     const historyText = session.history
       .map(m => `${m.role === 'user' ? 'User' : 'You'}: ${m.content}`)
       .join('\n\n');
-    taskContent = `## Conversation so far\n${historyText}\n\n## User's latest message\n${currentMessage}`;
+    taskContent += `## Conversation so far\n${historyText}\n\n## User's latest message\n${currentMessage}`;
   } else {
     // No active session — inject only the character's last outbound message
     // so it knows what it last said/asked. Minimal context, not full history.
     const recentContext = getRecentContext(charName);
     if (recentContext) {
-      taskContent = `## Recent conversation (last 12h)\n${recentContext}\n\n## Kerem's latest message\n${currentMessage}`;
+      taskContent += `## Recent conversation (last 12h)\n${recentContext}\n\n## Kerem's latest message\n${currentMessage}`;
     } else {
-      taskContent = currentMessage;
+      taskContent += currentMessage;
     }
   }
 

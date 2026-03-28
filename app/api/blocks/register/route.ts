@@ -53,7 +53,11 @@ export async function POST(req: NextRequest) {
   const state: BlocksState = {
     date,
     blocks: blocks
-      ? blocks.map(b => ({ end: b.end, description: b.description, status: 'planned' as const, nudgeSent: false }))
+      ? blocks.map(b => {
+          // Preserve nudgeSent:true from existing entries to prevent re-sending nudges
+          const existingBlock = existing?.blocks?.find(e => e.end === b.end && e.description === b.description);
+          return { end: b.end, description: b.description, status: existingBlock?.status ?? 'planned' as const, nudgeSent: existingBlock?.nudgeSent || false };
+        })
       : (existing?.blocks || []),
     meetingPreps: meetingPreps
       ? meetingPreps.map(m => {
@@ -62,7 +66,9 @@ export async function POST(req: NextRequest) {
           const totalMin = h * 60 + min - 10;
           const prepH = String(Math.floor(totalMin / 60)).padStart(2, '0');
           const prepM = String(totalMin % 60).padStart(2, '0');
-          return { time: m.time, prepTime: `${prepH}:${prepM}`, person: m.person, title: m.title, sent: false };
+          // Preserve sent:true from existing entries to prevent re-spawning on same-day re-registration
+          const existingPrep = existing?.meetingPreps?.find(e => e.person === m.person && e.title === m.title);
+          return { time: m.time, prepTime: `${prepH}:${prepM}`, person: m.person, title: m.title, sent: existingPrep?.sent || false };
         })
       : (existing?.meetingPreps || []),
     crashDetected: existing?.crashDetected || false,

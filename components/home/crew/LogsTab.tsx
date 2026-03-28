@@ -107,6 +107,7 @@ export default function LogsTab({
   const handleClear = () => {
     clearLog();
     setEntries([]);
+    try { localStorage.removeItem("gc-injected-jobs"); } catch {}
   };
 
   return (

@@ -15,7 +15,7 @@ type LogEntry = {
   type: 'vocab' | 'grammar' | 'writing';
   item: string;
   result: 'correct' | 'wrong' | 'partial';
-  source: 'drill' | 'test' | 'exercise';
+  source: 'drill' | 'test' | 'exercise' | 'passive';
   note?: string;
 };
 
@@ -119,6 +119,28 @@ function computeStats(entries: LogEntry[], curriculumItems: Array<{ item: string
     seen.add(key);
     const sorted = itemEntries.sort((a, b) => a.date.localeCompare(b.date));
     const last = sorted[sorted.length - 1];
+
+    // Passive-only items: accumulate silently until 2+ observations, then enter SRS with interval 7
+    const nonPassive = sorted.filter(e => e.source !== 'passive');
+    const passiveCount = sorted.filter(e => e.source === 'passive').length;
+    if (nonPassive.length === 0) {
+      // All entries are passive
+      if (passiveCount < 2) continue; // not enough signal yet, skip entirely
+      // 2+ passive observations: enter as active with 7-day interval
+      stats.push({
+        item: last.item,
+        type: last.type,
+        streak: 0,
+        interval: 7,
+        lastDate: last.date,
+        nextDue: addDays(last.date, 7),
+        status: 'active',
+        totalCorrect: 0,
+        totalAttempts: passiveCount,
+        lastNote: [...sorted].reverse().find(e => e.note)?.note,
+      });
+      continue;
+    }
 
     // Compute streak (consecutive correct from the end)
     // partial freezes the streak (doesn't increment or reset), wrong resets to 0
