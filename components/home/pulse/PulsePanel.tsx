@@ -21,7 +21,7 @@ interface Alert {
 }
 
 interface PulseData {
-  categories: { today: CategoryHours; week: CategoryHours };
+  categories: { today: CategoryHours; week: CategoryHours; month: CategoryHours };
   colors: Record<string, string>;
   crew: CrewEntry[];
   dayPulse: { planTotal: number | null; planDone: number | null; energy: number | null };
@@ -255,7 +255,8 @@ export default function PulsePanel() {
       <Section label="Time by Category">
         <CategoryBar data={data.categories.today} colors={data.colors} label="Today" />
         <CategoryBar data={data.categories.week} colors={data.colors} label="Week" />
-        <CategoryBreakdown hours={data.categories.week} colors={data.colors} />
+        <CategoryBar data={data.categories.month} colors={data.colors} label="Month" />
+        <CategoryBreakdown hours={data.categories.month} colors={data.colors} />
       </Section>
 
       <Section label="Crew This Week">

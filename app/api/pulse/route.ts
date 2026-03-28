@@ -1,5 +1,5 @@
 import { apiOk, apiError } from '@/lib/api-helpers';
-import { getTodayEvents, getFullWeekEvents, CalendarEvent } from '@/lib/google-calendar';
+import { getTodayEvents, getFullWeekEvents, getMonthEvents, CalendarEvent } from '@/lib/google-calendar';
 import { CALENDAR_CATEGORY_MAPPING } from '@/lib/config';
 import { JOB_RESULTS_PATH } from '@/lib/config';
 import { charColor } from '@/lib/char-icons';
@@ -41,10 +41,12 @@ const GCAL_COLORS: Record<string, string> = {
 
 // ── Helpers ───────────────────────────────────────
 
-function eventHours(ev: CalendarEvent): number {
+function eventHours(ev: CalendarEvent, now: Date): number {
   if (ev.allDay) return 0;
-  const ms = new Date(ev.end).getTime() - new Date(ev.start).getTime();
-  return Math.max(0, ms / (1000 * 60 * 60));
+  const start = new Date(ev.start).getTime();
+  const end = Math.min(new Date(ev.end).getTime(), now.getTime());
+  if (end <= start) return 0;
+  return (end - start) / (1000 * 60 * 60);
 }
 
 function classifyEvent(ev: CalendarEvent): { category: string; color: string } | null {
@@ -54,7 +56,7 @@ function classifyEvent(ev: CalendarEvent): { category: string; color: string } |
   return { category: label, color: GCAL_COLORS[ev.colorId] || '#6b7280' };
 }
 
-function computeCategories(events: CalendarEvent[]): {
+function computeCategories(events: CalendarEvent[], now: Date): {
   hours: CategoryHours;
   colors: Record<string, string>;
 } {
@@ -64,7 +66,8 @@ function computeCategories(events: CalendarEvent[]): {
   for (const ev of events) {
     const cls = classifyEvent(ev);
     if (!cls) continue;
-    const h = eventHours(ev);
+    const h = eventHours(ev, now);
+    if (h <= 0) continue;
     hours[cls.category] = (hours[cls.category] || 0) + h;
     colors[cls.category] = cls.color;
   }
@@ -234,23 +237,30 @@ function computeAlerts(
 
 export async function GET() {
   try {
-    const [todayEvents, weekEvents, crew] = await Promise.all([
+    const now = new Date();
+    const [todayEvents, weekEvents, monthEvents, crew] = await Promise.all([
       getTodayEvents(),
       getFullWeekEvents(0),
+      getMonthEvents(now.getFullYear(), now.getMonth()),
       getCrewThisWeek(),
     ]);
 
-    const todayData = computeCategories(todayEvents);
-    const weekData = computeCategories(weekEvents);
+    const todayData = computeCategories(todayEvents, now);
+    const weekData = computeCategories(weekEvents, now);
+    const monthData = computeCategories(monthEvents, now);
     const density = computeCalendarDensity(todayEvents);
     const alerts = computeAlerts(weekData.hours, weekEvents);
+
+    // Merge colors from all time ranges
+    const colors = { ...monthData.colors, ...weekData.colors, ...todayData.colors };
 
     return apiOk({
       categories: {
         today: todayData.hours,
         week: weekData.hours,
+        month: monthData.hours,
       },
-      colors: weekData.colors,
+      colors,
       crew,
       // TODO: wire to Kybernetes (plan completion) and Coach (energy) data via Tana
       dayPulse: {
