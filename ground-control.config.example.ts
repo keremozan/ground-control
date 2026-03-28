@@ -238,6 +238,21 @@ const config = {
     "#059669": "yoga|gym|wellbeing",
     "#b45309": "admin|meeting|office|budget",
   } as Record<string, string>,
+
+  // Calendar colorId → category label for Pulse tab
+  // Maps Google Calendar event colorId to your category name
+  // Colors come from Google's fixed palette, only labels are configurable
+  calendarCategoryMapping: {
+    "1":  "study",
+    "2":  "meeting",
+    "3":  "free time",
+    "4":  "exercise",
+    "5":  "social",
+    "6":  "chores",
+    "8":  "travel",
+    "9":  "studio",
+    "10": "academia",
+  } as Record<string, string>,
 };
 
 export default config;
