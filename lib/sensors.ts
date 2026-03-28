@@ -60,3 +60,63 @@ export function getLastSleep(): SleepData | null {
   if (!event) return null;
   return event.data as unknown as SleepData;
 }
+
+// ── Valid sensor types ───────────────────────────
+
+const SENSOR_TYPES = ["workout", "sleep", "location", "screentime"] as const;
+
+const REQUIRED_FIELDS: Record<string, string[]> = {
+  workout: ["activity", "durationMin", "calories"],
+  sleep: ["bedtime", "wakeup", "totalMin", "deepMin", "remMin", "coreMin", "awakenings", "heartRateAvg"],
+  location: ["place", "event"],
+  screentime: ["totalMin", "pickups"],
+};
+
+// ── Ingestion helpers ────────────────────────────
+
+/** Validate an incoming sensor event body. Returns error string or null. */
+export function validateSensorEvent(
+  body: Record<string, unknown>,
+  validLocations: string[]
+): string | null {
+  const { type, timestamp, data } = body;
+  if (!type) return "type is required";
+  if (!timestamp) return "timestamp is required";
+  if (!data || typeof data !== "object") return "data is required";
+
+  if (!SENSOR_TYPES.includes(type as typeof SENSOR_TYPES[number])) {
+    return `unknown sensor type: ${type}`;
+  }
+
+  const t = type as string;
+  const d = data as Record<string, unknown>;
+  const required = REQUIRED_FIELDS[t];
+  const missing = required.filter((f) => d[f] == null);
+  if (missing.length > 0) {
+    return `${t} requires ${required.join(", ")}`;
+  }
+
+  if (t === "location" && !validLocations.includes(d.place as string)) {
+    return `unknown location: ${d.place}`;
+  }
+
+  return null;
+}
+
+/** Remove entries older than 90 days. */
+export function pruneOldEntries(entries: SensorEvent[], now = new Date()): SensorEvent[] {
+  const cutoff = now.getTime() - 90 * 24 * 60 * 60 * 1000;
+  return entries.filter((e) => new Date(e.timestamp).getTime() >= cutoff);
+}
+
+/** Check if a same-type event within 60 seconds already exists (dedup). */
+export function isDuplicate(
+  entries: SensorEvent[],
+  type: string,
+  timestamp: string
+): boolean {
+  const ts = new Date(timestamp).getTime();
+  return entries.some(
+    (e) => e.type === type && Math.abs(new Date(e.timestamp).getTime() - ts) < 60_000
+  );
+}
