@@ -95,3 +95,8 @@ const telegramConfig = (userConfig as Record<string, unknown>).telegram as {
 export const TELEGRAM_BOT_TOKEN = telegramConfig?.botToken || '';
 export const TELEGRAM_USER_ID = telegramConfig?.userId || 0;
 export const TELEGRAM_GROUPS: Record<string, number> = telegramConfig?.groups || {};
+
+// ── Sensors ──────────────────────────────────────
+
+export const SENSOR_LOCATIONS: string[] =
+  (userConfig as Record<string, unknown>).sensorLocations as string[] || ["home", "work"];

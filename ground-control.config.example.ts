@@ -253,6 +253,9 @@ const config = {
     "9":  "studio",
     "10": "academia",
   } as Record<string, string>,
+
+  // Sensor pipeline: valid location place names (used by Apple Shortcuts location events)
+  sensorLocations: ["home", "work"] as string[],
 };
 
 export default config;
