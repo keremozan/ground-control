@@ -41,10 +41,15 @@ for m in job_pattern.finditer(jobs_text):
     dom = month = "*"
     dow = "*"
 
+    times = []
     for part in parts:
         if ":" in part:
-            h, mi = part.split(":")
-            hour, minute = str(int(h)), str(int(mi))
+            # May be comma-separated multi-time: "10:00,14:00,18:00"
+            for t in part.split(","):
+                t = t.strip()
+                if ":" in t:
+                    h, mi = t.split(":")
+                    times.append((str(int(h)), str(int(mi))))
         elif part == "daily":
             dow = "*"
         elif part in DAY_MAP:
@@ -54,12 +59,16 @@ for m in job_pattern.finditer(jobs_text):
         elif part.startswith("Tu"):
             dow = "2"
 
+    if not times:
+        times = [("0", "0")]
+
     curl = (
         f'curl -sf -X POST http://localhost:3000/api/schedule/run '
         f'-H "Content-Type: application/json" '
         f"-d '{{\"jobId\":\"{job_id}\"}}' >> /tmp/gc-cron.log 2>&1"
     )
-    entries.append((int(hour), int(minute), f"{minute} {hour} {dom} {month} {dow}   {curl}"))
+    for h, mi in times:
+        entries.append((int(h), int(mi), f"{mi} {h} {dom} {month} {dow}   {curl}"))
 
 entries.sort()
 

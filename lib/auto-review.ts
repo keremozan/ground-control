@@ -153,6 +153,8 @@ export function wrapWithAutoReview(
                   if (typeof data.text === 'string') textBuffer += data.text;
                 } catch {}
               }
+            } else if (/^event: gate/m.test(part)) {
+              // Suppress: auto-review output supersedes the style gate pass
             } else {
               // status, tool_call, tool_result — emit immediately
               enqueue(part + '\n\n');
@@ -172,6 +174,8 @@ export function wrapWithAutoReview(
                 if (typeof data.text === 'string') textBuffer += data.text;
               } catch {}
             }
+          } else if (/^event: gate/m.test(rawBuffer)) {
+            // Suppress: auto-review output supersedes the style gate pass
           } else {
             enqueue(rawBuffer + '\n\n');
           }

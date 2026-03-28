@@ -28,6 +28,7 @@ const SYSTEM_CONTEXT_FILES = new Set([
   'work-patterns.md',
   'scribe-practices.md',
   'commit-rules.md',
+  'ai-writing-tropes.md',
 ]);
 
 export async function GET() {

@@ -2,6 +2,11 @@
 
 ## v3.6.1 — 2026-03-28
 
+### Fixes
+- [fix] system/health: add `ai-writing-tropes.md` to known system context files (prevents false amber health badge)
+- [fix] auto-review: suppress style gate pass events when auto-review output supersedes them
+- [fix] sync-crontab.py: support comma-separated multi-time schedules (e.g., "10:00,14:00,18:00")
+
 ## v3.6.0 — 2026-03-27
 
 ### New
