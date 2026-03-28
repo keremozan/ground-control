@@ -78,20 +78,37 @@ function computeSpheres(events: CalendarEvent[]): {
   return { hours, breakdown };
 }
 
+function mergeIntervals(intervals: [number, number][]): [number, number][] {
+  if (intervals.length === 0) return [];
+  intervals.sort((a, b) => a[0] - b[0]);
+  const merged: [number, number][] = [intervals[0]];
+  for (let i = 1; i < intervals.length; i++) {
+    const last = merged[merged.length - 1];
+    if (intervals[i][0] <= last[1]) {
+      last[1] = Math.max(last[1], intervals[i][1]);
+    } else {
+      merged.push(intervals[i]);
+    }
+  }
+  return merged;
+}
+
 function computeCalendarDensity(todayEvents: CalendarEvent[]): { bookedHours: number; freeHours: number } {
   const now = new Date();
   const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9, 0);
   const dayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 21, 0);
   const totalHours = 12;
 
-  let bookedMs = 0;
+  const intervals: [number, number][] = [];
   for (const ev of todayEvents) {
     if (ev.allDay) continue;
     const start = Math.max(new Date(ev.start).getTime(), dayStart.getTime());
     const end = Math.min(new Date(ev.end).getTime(), dayEnd.getTime());
-    if (end > start) bookedMs += end - start;
+    if (end > start) intervals.push([start, end]);
   }
 
+  const merged = mergeIntervals(intervals);
+  const bookedMs = merged.reduce((sum, [s, e]) => sum + (e - s), 0);
   const bookedHours = Math.round((bookedMs / (1000 * 60 * 60)) * 10) / 10;
   return { bookedHours, freeHours: Math.round((totalHours - bookedHours) * 10) / 10 };
 }
@@ -241,6 +258,7 @@ export async function GET() {
       },
       breakdown: weekSpheres.breakdown,
       crew,
+      // TODO: wire to Kybernetes (plan completion) and Coach (energy) data via Tana
       dayPulse: {
         planTotal: null,
         planDone: null,
