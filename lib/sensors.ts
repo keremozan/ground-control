@@ -26,13 +26,19 @@ export interface SleepData {
 
 export const SENSOR_LOG_PATH = join(process.cwd(), "data", "sensor-log.json");
 
-function readLog(): SensorEvent[] {
+export function readLog(): SensorEvent[] {
   try {
     const raw = fs.readFileSync(SENSOR_LOG_PATH, "utf-8");
     return JSON.parse(raw);
   } catch {
     return [];
   }
+}
+
+export function writeLog(entries: SensorEvent[]) {
+  const dir = SENSOR_LOG_PATH.replace(/\/[^/]+$/, "");
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(SENSOR_LOG_PATH, JSON.stringify(entries, null, 2));
 }
 
 // ── Public API ───────────────────────────────────
