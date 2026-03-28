@@ -1,5 +1,5 @@
 {
-  "lastChecked": "2026-03-28T14:00:00+03:00",
+  "lastChecked": "2026-03-28T14:30:00+03:00",
   "prompts": [
     {
       "id": "2026-03-22-morning",
@@ -315,7 +315,7 @@
         "relative adverb when",
         "time expression clauses"
       ],
-      "status": "pending"
+      "status": "answered"
     }
   ],
   "submissions": [
@@ -704,7 +704,23 @@
           "lastDrilled": null
         }
       ]
+    },
+    {
+      "promptId": "2026-03-28-afternoon",
+      "channel": "telegram",
+      "receivedAt": "2026-03-28T14:30:00+03:00",
+      "content": "I do always feel a tension between being a teacher and an artist. There are times when I want to just work as an artist but I can not because of school chores. Everybody thinks I am a very good teacher but it takes immense ammount of my energy to be honest. I am not sure if I would be a teacher If I had enough income. However I believe it is still one of the best jobs when it comes to living as an artist in Turkey.",
+      "feedbackGiven": false,
+      "notes": "Kerem asked: do not review now, just log. Defer to tomorrow morning lesson."
     }
   ],
-  "pendingFeedback": []
+  "pendingFeedback": [
+    {
+      "promptId": "2026-03-28-afternoon",
+      "channel": "telegram",
+      "receivedAt": "2026-03-28T14:30:00+03:00",
+      "content": "I do always feel a tension between being a teacher and an artist. There are times when I want to just work as an artist but I can not because of school chores. Everybody thinks I am a very good teacher but it takes immense ammount of my energy to be honest. I am not sure if I would be a teacher If I had enough income. However I believe it is still one of the best jobs when it comes to living as an artist in Turkey.",
+      "feedbackGiven": false
+    }
+  ]
 }
