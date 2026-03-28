@@ -64,7 +64,7 @@ function sortedCategories(hours: CategoryHours): string[] {
 
 function CategoryBar({ data, colors, label }: { data: CategoryHours; colors: Record<string, string>; label: string }) {
   const sorted = sortedCategories(data);
-  const total = sorted.reduce((sum, cat) => sum + data[cat], 0);
+  const total = Math.round(sorted.reduce((sum, cat) => sum + data[cat], 0) * 10) / 10;
 
   if (total === 0) return (
     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
