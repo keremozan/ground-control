@@ -11,6 +11,7 @@ export type CalendarEvent = {
   allDay: boolean;
   calendarId: string;
   htmlLink?: string;
+  colorId?: string;
 };
 
 async function calFetch(path: string, opts?: RequestInit) {
@@ -46,6 +47,7 @@ export async function fetchEventsInRange(timeMin: string, timeMax: string): Prom
             allDay,
             calendarId: cal.id,
             htmlLink: ev.htmlLink,
+            colorId: ev.colorId,
           });
         }
       } catch {}

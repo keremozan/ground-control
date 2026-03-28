@@ -143,6 +143,7 @@ export interface CalEvent {
   allDay: boolean;
   calendarId: string;
   htmlLink?: string;
+  colorId?: string;
 }
 
 export interface ActionInfo {
